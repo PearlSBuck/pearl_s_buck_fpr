@@ -1,8 +1,3 @@
-<svelte:head>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-</svelte:head>
-
-
 <div id="g_id_onload"
      data-client_id="490000336368-3fg0brv9lgvsbe33tmft6mrk402dmc5u.apps.googleusercontent.com"
      data-context="signin"
