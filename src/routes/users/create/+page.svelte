@@ -1,7 +1,9 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
     import { supabase } from '$lib/db'
-  // Wait for logic, just placeholder variables if needed
+
     let showPassword = false;
+
     function togglePassword() {
         showPassword = !showPassword;
     }
@@ -38,7 +40,7 @@
 </script>
 
 <div class="absolute top-4 left-4">
-    <button class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+    <button onclick={() => goto ('/users/edit')} class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
         </svg>
@@ -72,7 +74,7 @@
                         />
                         <button 
                             type="button"
-                            on:click={togglePassword}
+                            onclick={togglePassword}
                             class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                         >
                             {#if showPassword}
@@ -113,8 +115,8 @@
         </div>
 
         <div class="mt-6 flex justify-end gap-4">
-            <button on:click={createUser} class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded">Create</button>
-            <button on:click={clearForm} class="bg-gray-300 hover:bg-gray-400 text-black px-6 py-2 rounded">Clear</button>
+            <button onclick={createUser} class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded">Create</button>
+            <button onclick={clearForm} class="bg-gray-300 hover:bg-gray-400 text-black px-6 py-2 rounded">Clear</button>
         </div>
     </div>
 </div>

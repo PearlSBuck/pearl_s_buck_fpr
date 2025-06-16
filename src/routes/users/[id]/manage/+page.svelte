@@ -1,15 +1,15 @@
 <script lang="ts">
-    import type { PageData } from './$types';
-
-    let { data }: { data: PageData } = $props();
+    import { goto } from '$app/navigation';
+    export let data: { user: any };
+    let user = data.user;
 </script>
 
 <div class="p-6 space-y-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
-        <button class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+        <button onclick={() => goto ('/users/edit')} class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 18l-7-5 7-5"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
             Back
         </button>
@@ -27,8 +27,8 @@
             </svg>
         </div>
         <div>
-        <div class="text-2xl font-bold">Username</div>
-        <div class="text-gray-500 text-lg">Role</div>
+        <div class="text-2xl font-bold">{user?.username || 'Loading...'}</div>
+        <div class="text-gray-500 text-lg">{user?.role || 'Loading...'}</div>
         </div>
     </div>
     <div class="text-gray-600 text-center md:text-left text-base font-medium">
@@ -38,37 +38,47 @@
 
     <!-- Profile + Permissions Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <!-- Profile Details -->
-    <div class="bg-white rounded-xl shadow p-4 space-y-2 relative">
-        <div class="flex justify-between items-center border-b pb-2 mb-2">
-        <h2 class="font-bold text-lg">Profile Details</h2>
-        <button class="text-gray-500 hover:text-black p-1 rounded hover:bg-gray-100 transition-colors" aria-label="Edit profile" title="Edit profile">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-            </svg>
-        </button>
+        
+        <!-- Profile Details -->
+        <div class="bg-white rounded-xl shadow p-4 space-y-2 relative">
+            <div class="flex justify-between items-center border-b pb-2 mb-2">
+            <h2 class="font-bold text-lg">Profile Details</h2>
+            <button class="text-gray-500 hover:text-black p-1 rounded hover:bg-gray-100 transition-colors" aria-label="Edit profile" title="Edit profile">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+            </button>
+            </div>
+            <div><strong>Fullname:</strong> {user?.fullname || 'N/A'}</div>
+            <div><strong>Email:</strong> {user?.email || 'N/A'}</div>
+            <div><strong>Age:</strong> N/A</div>
+            <div><strong>Residence:</strong> N/A</div>
         </div>
-        <div><strong>Fullname:</strong> Juan Dela Cruz</div>
-        <div><strong>Birthdate:</strong> December 25, 2004</div>
-        <div><strong>Age:</strong> 20</div>
-        <div><strong>Residence:</strong> Muntinlupa City</div>
-    </div>
 
-    <!-- Access Permissions -->
-    <div class="bg-white rounded-xl shadow p-4 space-y-4">
-        <h2 class="font-bold text-lg border-b pb-2">Access Permissions</h2>
-        <div class="flex justify-between items-center">
-        <span>1. Allow to send reports.</span>
-        <input type="checkbox" class="toggle toggle-md" />
+        <!-- Access Permissions -->
+        <div class="bg-white rounded-xl shadow p-4 space-y-4">
+            <h2 class="font-bold text-lg border-b pb-2">Access Permissions</h2>
+            <div class="flex justify-between items-center">
+                <span>1. Allow to send reports.</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                </label>
+            </div>
+            <div class="flex justify-between items-center">
+                <span>2. Allow to view other's profile</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                </label>
+            </div>
+            <div class="flex justify-between items-center">
+                <span>3. Allow to have admin features</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                </label>
+            </div>
         </div>
-        <div class="flex justify-between items-center">
-        <span>2. Allow to view other's profile</span>
-        <input type="checkbox" class="toggle toggle-md" checked />
-        </div>
-        <div class="flex justify-between items-center">
-        <span>3. Allow to have admin features</span>
-        <input type="checkbox" class="toggle toggle-md" checked />
-        </div>
-    </div>
     </div>
 </div>

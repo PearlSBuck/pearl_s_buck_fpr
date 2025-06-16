@@ -17,7 +17,6 @@
     "node_modules",
     "build",
     "dist",
-    ".svelte-kit",
     ".storybook",
     ".github",
     "eslint.config.js",    
