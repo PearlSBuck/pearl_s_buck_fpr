@@ -1,9 +1,10 @@
 import type { StorybookConfig } from '@storybook/sveltekit';
-
+import 'flowbite'
 const config: StorybookConfig = {
   "stories": [
     "../src/**/*.mdx",
     "../src/**/*.stories.@(js|ts|svelte)"
+    
   ],
   "addons": [
     {
