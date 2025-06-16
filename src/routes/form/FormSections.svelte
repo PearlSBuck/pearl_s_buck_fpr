@@ -14,6 +14,7 @@
 
     const formFields: IFormFields[] = $state([]);
 
+    // initializing the form field
     function createFieldHandler() {
         currentField = {
             id: 0, // placeholder
@@ -30,6 +31,7 @@
         showFormPopup = true;
     }
 
+    // initializing the field option
     function createOptionHandler() {
         currentOption = {
             label: "",
@@ -38,23 +40,36 @@
         showOptionPrompt = true;
     }
 
+    // adding the newly made field
     function addFieldHandler() {
         if (currentField) {
-            formFields.push(currentField);
+            if (currentField.type === "") {
+                alert("Type cannot be empty!");
+            } else if (currentField.label === "") {
+                alert("Label cannot be empty!");
+            } else {
+                formFields.push(currentField);
+                showFormPopup = false;
+            }
         }
-        showFormPopup = false;
+        
     }
 
+    // adding the newly made option
     function addOptionHandler() {
-        if (currentField) {
-            if (!currentField.options) {
-                currentField.options = [];
-            }
-            if (currentField.options && currentOption) {
-                currentField.options.push(currentOption);
+        if (currentField && currentOption) {
+            if (currentOption.label != "") {
+                if (!currentField.options) {
+                    currentField.options = [];
+                } else {
+                    currentField.options.push(currentOption);
+                    showOptionPrompt = false;
+                }
+            } else {
+                alert("Label cannot be empty!");
             }
         }
-        showOptionPrompt = false;
+        
     }
 </script>
 
@@ -63,57 +78,81 @@
         <div>
             {#if !showEditTitle}
                 <p>Section Title: {title}</p>
-                <button onclick={() => showEditTitle = true} class="bg-[#0C376C] text-white rounded-lg">Edit Title</button> 
+                <button onclick={() => showEditTitle = true} class="bg-[#0C376C] text-white rounded-lg px-5">Edit Title</button> 
             {:else}
                 <input type="text" id="title" name="title" bind:value={title} required />
-                <button onclick={() => showEditTitle = false} class="bg-[#0C376C] text-white rounded-lg">Save</button> 
+                <button onclick={() => showEditTitle = false} class="bg-[#0C376C] text-white rounded-lg px-5">Save</button> 
             {/if}
         </div>
         {#each formFields as field}
+            <!-- placeholder -->
             <p>Label: {field.label}</p>
-            <p>Name: {field.name}</p>
             <p>Required: {field.required}</p>
             <p>Type: {field.type}</p>
+            {#each field.options as option}
+                <label>
+                    <input type="checkbox" id="option" name="option" disabled />
+                    {option.label}
+                </label>
+            {/each}
         {/each}
+        <!-- currently broken, have to make this part a popup -->
         <div>
             {#if !showFormPopup}
-                <button onclick={createFieldHandler}>Add Question</button>
+                <button onclick={createFieldHandler} class="bg-[#0C376C] text-white rounded-lg px-5">Add Question</button>
             {:else}
                 {#if currentField}
                     <!-- need to make this a popup -->
-                    <div class="shadow-md rounded-lg">
-                        <select id="type" name="type" bind:value={currentField.type} required>
-                            <option value="text">Text</option>
-                            <option value="number">Number</option>
-                            <option value="date">Date</option>
-                            <option value="multiple_choice">Multiple Choice</option>
-                        </select>
-                        <label>
-                            Label:
-                            <input type="text" id="label" name="label" bind:value={currentField.label} required placeholder="Add Label" />
-                        </label>
-                        <label>
-                            <input type="checkbox" id="required" name="required" bind:checked={currentField.required} />
-                            Required
-                        </label>
-                        
-                        {#if currentField.options}
-                            {#each currentField.options as option}
-                                <label>
-                                    <input type="checkbox" id="option" name="option" readonly />
-                                    {option.label}
-                                </label>
-                            {/each}
-                        {/if}
+                    <div class="flex flex-col shadow-md rounded-lg">
+                        <div>
+                            <select id="type" name="type" bind:value={currentField.type} >
+                                <option value="" disabled hidden>Select Type of Question</option>
+                                <option value="text">Text</option>
+                                <option value="number">Number</option>
+                                <option value="date">Date</option>
+                                <option value="multiple_choice">Multiple Choice</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>
+                                Label:
+                                <input type="text" id="label" name="label" bind:value={currentField.label} required placeholder="Add Label" />
+                            </label>
+                        </div>
+                        <div>
+                            <label>
+                                <input type="checkbox" id="required" name="required" bind:checked={currentField.required} />
+                                Required
+                            </label>
+                        </div>
+                        <div>
+                            {#if currentField.options}
+                                {#each currentField.options as option}
+                                    <label>
+                                        <input type="checkbox" id="option" name="option" readonly />
+                                        {option.label}
+                                    </label>
+                                {/each}
+                            {/if}
+                        </div>
+                        <!-- another popup for options as well -->
                         {#if currentField.type === "multiple_choice" && !showOptionPrompt}
-                            <button onclick={createOptionHandler} class="bg-[#0C376C] text-white rounded-lg">Add Option</button>
+                            <div>
+                                <button onclick={createOptionHandler} class="bg-[#0C376C] text-white rounded-lg px-5">Add Option</button>
+                            </div>
                         {:else if currentOption}
-                            <input type="text" id="option" name="option" bind:value={currentOption.label} placeholder="Add Option" />
-                            <button onclick={() => showFormPopup = false} class="bg-[#0C376C] text-white rounded-lg">Cancel</button>
-                            <button onclick={addOptionHandler} class="bg-[#0C376C] text-white rounded-lg">Confirm</button> 
+                            <div>
+                                <input type="text" id="option" name="option" bind:value={currentOption.label} placeholder="Add Option" />
+                            </div>
+                            <div>
+                                <button onclick={() => showFormPopup = false} class="bg-[#0C376C] text-white rounded-lg px-5">Cancel</button>
+                                <button onclick={addOptionHandler} class="bg-[#0C376C] text-white rounded-lg px-5">Confirm</button> 
+                            </div>
                         {/if}
-                        <button onclick={() => showFormPopup = false} class="bg-[#0C376C] text-white rounded-lg">Cancel</button>
-                        <button onclick={addFieldHandler} class="bg-[#0C376C] text-white rounded-lg">Confirm</button> 
+                        <div>
+                            <button onclick={() => showFormPopup = false} class="bg-[#0C376C] text-white rounded-lg px-5">Cancel</button>
+                            <button onclick={addFieldHandler} class="bg-[#0C376C] text-white rounded-lg px-5">Confirm</button> 
+                        </div>
                     </div>
                 {/if}
             {/if}

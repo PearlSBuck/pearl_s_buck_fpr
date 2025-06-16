@@ -1,3 +1,11 @@
+<!-- TODO:
+- Make popups for questions
+- Add edit functionality
+- Add delete functionality
+- Connect to database
+- Frontend
+-->
+
 <script lang='ts'>
     import FormSections from './FormSections.svelte';
     import type { IForms, IFormSections } from './model.ts';
@@ -13,11 +21,13 @@
 
     const formSections: IFormSections[] = $state([]);
 
+    // initializing the form
     function CreateFormHandler() {
         titleInput = "";
         showTitleInput = true;
     }
 
+    // adding the newly made form
     function AddFormHandler() {
         if (titleInput != "") {
             let currentDate = new Date();
@@ -33,6 +43,7 @@
         }
     }
 
+    // adding a new section
     function AddSectionHandler() {
         if (form) {
             formSections.push({
