@@ -1,20 +1,50 @@
 <script lang="ts">
-    import ScInformation from "./SCInformation.svelte";
-    import EducationBackground from "./EducationBackground.svelte";
-    import AddMember from "./AddMember.svelte";
-     import FamilyIncome from "./FamilyIncome.svelte";
+	import DataInput from './DataInput.svelte';
+	import { onMount } from 'svelte';
+	import { fetchSectionFields } from '../lib/api/fetchSectionFields';
+    import { fetchSections } from '../lib/api/fetchSectionFields';
 
-    interface Props {
-        formTitle: string;
-    }
-  const { sectionTitle = 'Family Progress Report'}: Props = $props();
+	export let rows: any[] = [];
+    export let sections: any[] = [];
+	let error: string | null = null;
+
+	onMount(async () => {
+		if (rows.length === 0) {
+			try {
+                //remember to add version argument
+                sections = await fetchSections('Family Progress Report');
+                for (const section of sections) {
+			        section.rows = await fetchSectionFields(section.title);
+		        }
+
+			} catch (err) {
+				error = (err as Error).message;
+			}
+		}
+	});
 </script>
-<div class="bg-[#F6F8FF] top-0 left-0 absolute w-full">
-    <div class="w-1/2 bg-white rounded-xl shadow-lg space-y-4 px-6 py-4 my-4 center place-self-center">
-        <div class="text-3xl font-bold pb-4">{sectionTitle}</div> 
-    </div>
-    <ScInformation />
-    <EducationBackground />
-    <AddMember />
-    <FamilyIncome />
+{#each sections as section}
+<div class="w-1/2 bg-white rounded-xl shadow-lg space-y-4 px-6 py-4 mb-4 center place-self-center">
+    
+        <div class="text-3xl font-bold pb-4">{section.title}</div>
+        
+        <ul>
+            {#each rows as row, i}
+                <DataInput
+                    type = {row.type}
+                    label={row.label}
+                    name={row.name}
+                    placeholder={row.placeholder}
+                    required={row.required}
+                    options={row.options}
+                    value=""
+
+                />
+            {/each}
+        </ul>
+
 </div>
+{/each}
+    
+    
+

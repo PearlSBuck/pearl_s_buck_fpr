@@ -105,7 +105,6 @@
             { "label": "Tricycle","value": "tricycle" },
             { "label": "Bus", "value": "bus" },
             { "label": "Train","value": "train" },
-            // will change after creating a radio option with a text input
             { "label": "Others", "value": "others" }
         ]}
         required={true}
