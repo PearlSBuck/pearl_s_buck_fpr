@@ -1,11 +1,7 @@
 <script module>
   import { defineMeta } from '@storybook/addon-svelte-csf';
   import Button from './Button.svelte';
-<<<<<<< HEAD
   import { fn } from 'storybook/test';
-=======
-  import { fn } from '@storybook/test';
->>>>>>> 7a0a5279eaa12b34b04ed4968830cf37c82ca0ed
 
   // More on how to set up stories at: https://storybook.js.org/docs/writing-stories
   const { Story } = defineMeta({
@@ -20,11 +16,7 @@
       },
     },
     args: {
-<<<<<<< HEAD
       onclick: fn(),
-=======
-      onClick: fn(),
->>>>>>> 7a0a5279eaa12b34b04ed4968830cf37c82ca0ed
     }
   });
 </script>

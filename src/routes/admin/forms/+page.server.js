@@ -3,11 +3,11 @@ import { supabase } from "$lib/supabaseClient";
 import { fail } from '@sveltejs/kit';
 
 export async function load() {
-    // Using correct table name "Forms" and camelCase columns
+    // Using correct table name "forms" and mapping columns
     const { data, error } = await supabase
-        .from("Forms")
+        .from("forms")
         .select('*')
-        .order('createdAt', { ascending: false });
+        .order('createdat', { ascending: false });
 
     if (error) {
         console.error('Error fetching forms:', error);
@@ -22,8 +22,17 @@ export async function load() {
     console.log('Server: Fetched forms count:', data?.length || 0);
     console.log('Server: First form structure:', data?.[0] || 'No forms');
     
+    // Map database columns to camelCase for frontend
+    const mappedForms = data?.map(form => ({
+        ...form,
+        createdAt: form.createdat, // Map createdat to createdAt
+        // Add other mappings if needed
+    })) ?? [];
+
+    console.log('Server: Mapped forms:', mappedForms[0]);
+
     return {
-        forms: data ?? [],
+        forms: mappedForms,
     };
 }
 

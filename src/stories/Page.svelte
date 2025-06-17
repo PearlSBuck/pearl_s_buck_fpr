@@ -1,27 +1,15 @@
-<<<<<<< HEAD
 <script>
   import './page.css';
   import Header from './Header.svelte';
 
   let user = $state(null);
-=======
-<script lang="ts">
-  import './page.css';
-  import Header from './Header.svelte';
-
-  let user = $state<{ name: string }>();
->>>>>>> 7a0a5279eaa12b34b04ed4968830cf37c82ca0ed
 </script>
 
 <article>
   <Header
     {user}
     onLogin={() => (user = { name: 'Jane Doe' })}
-<<<<<<< HEAD
     onLogout={() => (user = null)}
-=======
-    onLogout={() => (user = undefined)}
->>>>>>> 7a0a5279eaa12b34b04ed4968830cf37c82ca0ed
     onCreateAccount={() => (user = { name: 'Jane Doe' })}
   />
 
