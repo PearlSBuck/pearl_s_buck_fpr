@@ -1,11 +1,11 @@
 import { supabase } from '$lib/supabaseClient';
 
-export async function fetchSections(formName: string){
+export async function fetchSections(formName: string, date: string){
   const { data: form, error: formIdError } = await supabase
-    .from('Forms')
+    .from('forms')
     .select('id')
     .eq('title', formName)
-    .eq('createdAt', '2025-06-17 15:52:37')
+    .eq('createdat', date)
     .single();
 
   if (formIdError || !form) {
@@ -13,9 +13,10 @@ export async function fetchSections(formName: string){
   }
 
   const { data: rows, error: rowsError } = await supabase
-    .from('FormSection')
+    .from('form_section')
     .select('*')
-    .eq('formId', form.id);
+    .eq('formid', form.id)
+    .order('orderindex', { ascending: true });
 
   if (rowsError) {
     throw new Error(rowsError.message);
@@ -25,22 +26,24 @@ export async function fetchSections(formName: string){
 }
 
 export async function fetchSectionFields(sectionName: string) {
-  // Step 1: Get the section ID from the section name
+  // Get exactly one matching section by title
   const { data: section, error: sectionIdError } = await supabase
-    .from('FormSection')
+    .from('form_section')
     .select('id')
     .eq('title', sectionName)
-    .single();
+    .maybeSingle(); // safer than .single()
 
   if (sectionIdError || !section) {
-    throw new Error(sectionIdError?.message || 'Section not found');
+    throw new Error(sectionIdError?.message || `Section not found or ambiguous: "${sectionName}"`);
   }
 
-  // Step 2: Fetch form fields with the matching section ID
+  // Get all fields for the section
   const { data: rows, error: rowsError } = await supabase
-    .from('FormFields')
+    .from('form_fields')
     .select('*')
-    .eq('sectionId', section.id);
+    .eq('sectionid', section.id)
+    .order('orderindex', { ascending: true });
+
 
   if (rowsError) {
     throw new Error(rowsError.message);
@@ -48,3 +51,4 @@ export async function fetchSectionFields(sectionName: string) {
 
   return rows;
 }
+

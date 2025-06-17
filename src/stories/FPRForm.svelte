@@ -12,24 +12,29 @@
 		if (rows.length === 0) {
 			try {
                 //remember to add version argument
-                sections = await fetchSections('Family Progress Report');
-                for (const section of sections) {
-			        section.rows = await fetchSectionFields(section.title);
-		        }
+                sections = await fetchSections('Family Progress Report', '2025-06-17 15:52:37');
+                const sectionsWithRows = await Promise.all(
+				sections.map(async (section) => ({
+					...section,
+					rows: await fetchSectionFields(section.title)
+				}))
+			);
 
+			sections = sectionsWithRows;
 			} catch (err) {
 				error = (err as Error).message;
 			}
 		}
 	});
 </script>
+
 {#each sections as section}
 <div class="w-1/2 bg-white rounded-xl shadow-lg space-y-4 px-6 py-4 mb-4 center place-self-center">
     
         <div class="text-3xl font-bold pb-4">{section.title}</div>
         
         <ul>
-            {#each rows as row, i}
+            {#each section.rows as row}
                 <DataInput
                     type = {row.type}
                     label={row.label}
