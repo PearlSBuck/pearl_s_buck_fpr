@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <script>
   import './header.css';
   import Button from './Button.svelte';
@@ -12,6 +13,20 @@
 
   /** @type {Props} */
   const { user, onLogin, onLogout, onCreateAccount } = $props();
+=======
+<script lang="ts">
+  import './header.css';
+  import Button from './Button.svelte';
+
+  interface Props {
+    user?: { name: string };
+    onLogin?: () => void;
+    onLogout?: () => void;
+    onCreateAccount?: () => void;
+  }
+
+  const { user, onLogin, onLogout, onCreateAccount }: Props = $props();
+>>>>>>> 7a0a5279eaa12b34b04ed4968830cf37c82ca0ed
 </script>
 
 <header>
@@ -37,10 +52,17 @@
         <span class="welcome">
           Welcome, <b>{user.name}</b>!
         </span>
+<<<<<<< HEAD
         <Button size="small" onclick={onLogout} label="Log out" />
       {:else}
         <Button size="small" onclick={onLogin} label="Log in" />
         <Button primary size="small" onclick={onCreateAccount} label="Sign up" />
+=======
+        <Button size="small" onClick={onLogout} label="Log out" />
+      {:else}
+        <Button size="small" onClick={onLogin} label="Log in" />
+        <Button primary size="small" onClick={onCreateAccount} label="Sign up" />
+>>>>>>> 7a0a5279eaa12b34b04ed4968830cf37c82ca0ed
       {/if}
     </div>
   </div>
