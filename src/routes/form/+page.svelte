@@ -71,7 +71,8 @@
         <div>
             <p>Form Title: {form?.title}</p>
             <p>Date Created: {form?.dateCreated}</p>
-            <button onclick={AddSectionHandler} class="bg-[#0C376C] text-white rounded-lg px-5">Add Section</button>            
+            <button onclick={AddSectionHandler} class="bg-[#0C376C] text-white rounded-lg px-5">Add Section</button>
+            <button class="bg-green-600 text-white rounded-lg px-5 ml-2">Save Form</button>            
         </div>
         <div>
             {#each formSections as section}
