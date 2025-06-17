@@ -31,7 +31,7 @@ export async function createFormFieldsPerSection(
     ", "
   );
 
-  const values: Omit<IFormFields, "id">[];
+  const values: Omit<IFormFields, "id">[] = [];
   formFields.forEach((obj) => {
     values.push({
       formid: formId,
