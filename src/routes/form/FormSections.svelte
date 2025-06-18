@@ -1,10 +1,12 @@
+<svelte:options runes={true} />
 <script lang='ts'>
     import type { IFormSections, IFormFields, Options } from "./model.js";
     let {id,
          formId,
          title = $bindable(),
          orderIndex,
-    }: IFormSections = $props();
+         onFieldsChange = () => {}
+    }: IFormSections & { onFieldsChange?: (fields: IFormFields[]) => void } = $props();
     
     let showEditTitle: boolean = $state(false);
     let showFormPopup: boolean = $state(false);
@@ -14,12 +16,16 @@
 
     const formFields: IFormFields[] = $state([]);
 
+    $effect(() => {
+        onFieldsChange(formFields);
+    });
+
     // initializing the form field
     function createFieldHandler() {
         currentField = {
-            id: 0, // placeholder
-            formId: formId,
-            sectionId: id,
+            id: "", // placeholder
+            formid: formId,
+            sectionid: id,
             label: "",
             name: "",
             placeholder: undefined,
@@ -27,6 +33,7 @@
             value: "",
             options: undefined,
             type: "",
+            orderindex: 0
         };
         showFormPopup = true;
     }
