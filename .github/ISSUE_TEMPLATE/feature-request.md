@@ -10,6 +10,9 @@ assignees: ''
 # Description
 Put a description here
 
+# Success Criteria
+List down the success criteria here
+
 # Path
 `/sample/path`
 
