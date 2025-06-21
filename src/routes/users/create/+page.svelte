@@ -1,6 +1,104 @@
+<style>
+    .page-header {
+        background-color: white;
+        padding: 1rem 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        display: flex;            
+        justify-content: center;  
+        align-items: center;      
+    }
+    
+    .sub-header {
+        background-color: #474c58; /* Dark gray/blue color */
+        color: white;
+        padding: 0.05rem 2rem;
+        width: 100%;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .back-button {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        background-color: #1f5bb6; /* Blue button */
+        padding: 0.10rem .75rem;
+        margin: 0.30rem 0 0.30rem 1rem; /* small top/bottom margin */
+        border-radius: 2rem;
+        margin-left: 1.5rem; /* spacing between label and button */
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);       /* subtle shadow */
+        transition: background-color 0.2s, box-shadow 0.2s;
+    }
+
+    .back-button:hover {
+        background-color: #1d4ed8;                       /* slightly darker on hover */
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);         /* stronger shadow on hover */
+    }
+
+    .focus-gradient-input {
+        background: transparent;
+        transition: all 0.3s ease;
+        position: relative;
+        background-size: 200% 200%;
+    }
+    
+    .focus-gradient-input:focus {
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.03), transparent);
+        background-size: 100% 100%;
+        background-position: 0 0;
+    }
+
+    .custom-green-btn {
+        background-color: #38C90A;
+        color: #fff;
+        border-radius: 0.375rem;
+        padding: 0.75rem 2.5rem;
+        font-size: 1rem;
+        min-width: 160px;  
+        transition: background 0.2s;
+    }
+    .custom-green-btn:hover {
+        background-color: #2ea008; /* for hover */
+    }
+
+    .custom-gray-btn {
+        background-color: #e5e7eb;
+        color: #111827;
+        border-radius: 0.375rem;
+        padding: 0.75rem 2.5rem;
+        font-size: 1rem;
+        min-width: 160px;
+        transition: background 0.2s;
+    }
+
+    .custom-gray-btn:hover {
+        background-color: #d1d5db;
+    }
+
+    :global(body) {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+    }
+    
+    .app-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    
+    .content-area {
+        flex: 1;
+        background-color: #EFF6FF; /* bg-blue-50 equivalent */
+    }
+</style>
+
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { supabase } from '$lib/db'
+    import bcrypt from 'bcryptjs'; 
 
     let showPassword = false;
 
@@ -12,17 +110,103 @@
     let email = ''
     let password = ''
     let role = ''
+    let fullname = ''
+    let age = ''
+    let birthdate = ''
+    let residence = ''
 
     function clearForm() {
         username = ''
         email = ''
         password = ''
         role = ''
+        fullname = ''
+        age = ''
+        birthdate = ''
+        residence = ''
     }
 
     async function createUser() {
+
+        if (!username.trim()) {
+            alert('Username is required.');
+            return;
+        }
+        if (!email.trim()) {
+            alert('Email is required.');
+            return;
+        }
+
+        // Email format validation
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email)) {
+            alert('Please enter a valid email address.');
+            return;
+        }
+
+        if (!password.trim()) {
+            alert('Password is required.');
+            return;
+        }
+        if (!role.trim()) {
+            alert('Role is required.');
+            return;
+        }
+        if (!fullname.trim()) {
+            alert('Full name is required.');
+            return;
+        }
+
+        if (!age || isNaN(Number(age)) || Number(age) < 1) {
+            alert('Valid age is required.');
+            return;
+        }
+        if (!birthdate) {
+            alert('Birthdate is required.');
+            return;
+        }
+        if (!residence.trim()) {
+            alert('Residence is required.');
+            return;
+        }
+
+        // Check for existing username or email
+        const { data: existingUser } = await supabase
+            .from('users')
+            .select('id')
+            .or(`username.eq.${username},email.eq.${email}`)
+            .limit(1)
+            .single();
+
+        if (existingUser) {
+            // Check which field is duplicated
+            const { data: usernameCheck } = await supabase
+                .from('users')
+                .select('id')
+                .eq('username', username)
+                .single();
+
+            const { data: emailCheck } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', email)
+                .single();
+
+            if (usernameCheck) {
+                alert('Username already exists.');
+                return;
+            }
+            if (emailCheck) {
+                alert('Email already exists.');
+                return;
+            }
+        }
+
+        // Hash password before saving
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        
         const { data, error } = await supabase.from('users').insert([
-            { username, email, password, role }
+            { username, email, password: hashedPassword, role, fullname, age, birthdate, residence}
         ])
 
         if (error) {
@@ -35,88 +219,99 @@
             console.log('User created successfully:', data);
             alert('User created successfully!');
             clearForm();
+            goto('/users/edit'); // Redirect to users/edit page
         }
     }
 </script>
 
-<div class="absolute top-4 left-4">
-    <button onclick={() => goto ('/users/edit')} class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-        Back
-    </button>
-</div>
+<div class="app-container">
+    <header>
+        <div class="page-header">
+            <h1 class="text-3xl font-bold">Pearl S. Buck Foundation Philippines, Inc.</h1>
+        </div>
+        <div class="sub-header">
+            <h2 class="text-base font-semibold">Create User</h2>
+            <button onclick={() => goto('/users/edit')} class="back-button">
+                Back
+            </button>
+        </div>
+    </header>
 
-<div class="flex flex-col items-center justify-center min-h-screen p-8">
-    <div class="w-full max-w-4xl bg-white shadow-xl rounded-lg p-6">
-        <h1 class="text-2xl font-bold mb-4">Create User</h1>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Left Section: Form Inputs -->
-            <div class="space-y-4">
-                <div>
-                    <label for="username" class="font-semibold">Username</label> 
-                    <input id="username" type="text" bind:value={username} class="w-full border rounded p-2 focus:ring-green-500" placeholder="Enter username" />
-                </div>
-                <div>
-                    <label for="email" class="font-semibold">Email Address</label>
-                    <input id="email" type="email" bind:value={email} class="w-full border rounded p-2  focus:ring-green-500" placeholder="Enter email" />
-                </div>
-                <div>
-                    <label for="password" class="font-semibold">Password</label>
-                    <div class="relative">
-                        <input 
-                            id="password"
-                            type={showPassword ? "text" : "password"} 
-                            bind:value={password} 
-                            class="w-full border rounded p-2 pr-10 focus:ring-green-500" 
-                            placeholder="Enter password" 
-                        />
-                        <button 
-                            type="button"
-                            onclick={togglePassword}
-                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                            {#if showPassword}
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/>
-                                    <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>
-                                </svg>
-                            {:else}
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-                                </svg>
-                            {/if}
-                        </button>
+    <div class="content-area flex flex-col items-center bg-blue-50 pt-8 px-8 pb-8">
+        <div class="w-full max-w-4xl bg-white shadow-md rounded-lg p-10 mt-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <!-- Left Column -->
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label for="username" class="font-semibold">Username</label> 
+                        <input id="username" type="text" bind:value={username} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" placeholder="Enter username" />
+                    </div>
+                    <div>
+                        <label for="email" class="font-semibold">Email Address</label>
+                        <input id="email" type="email" bind:value={email} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" placeholder="Enter email" />
+                    </div>
+                    <div>
+                        <label for="password" class="font-semibold">Password</label>
+                        <div class="relative">
+                            <input 
+                                id="password"
+                                type={showPassword ? "text" : "password"} 
+                                bind:value={password} 
+                                class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" 
+                                placeholder="Enter password" 
+                            />
+                            <button 
+                                type="button"
+                                onclick={togglePassword}
+                                class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                {#if showPassword}
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/>
+                                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>
+                                    </svg>
+                                {:else}
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                {/if}
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="role" class="block font-semibold">Role</label>
+                        <select id="role" bind:value={role} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black">
+                            <option value="" class="text-gray-400">Select role</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Worker">Worker</option>
+                        </select>
                     </div>
                 </div>
-                <div>
-                    <label for="role" class="font-semibold">Role</label>
-                    <input id="role" type="text" bind:value={role} class="w-full border rounded p-2 focus:ring-green-500" placeholder="Enter role" />
+                <!-- Right Column -->
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label for="fullname" class="block font-semibold">Full Name</label> 
+                        <input id="fullname" type="text" bind:value={fullname} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" placeholder="Enter full name" />
+                    </div>
+                    <div>
+                        <label for="age" class="block font-semibold">Age</label>
+                        <input id="age" type="number" bind:value={age} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" placeholder="Enter age" min="1" max="120" />
+                    </div>
+                    <div>
+                        <label for="birthdate" class="block font-semibold">Birth Date</label>
+                        <input id="birthdate" type="date" bind:value={birthdate} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" />
+                    </div>
+                    <div>
+                        <label for="residence" class="block font-semibold">Residence</label>
+                        <input id="residence" type="text" bind:value={residence} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" placeholder="Enter residence/address" />
+                    </div>
                 </div>
-            </div>
-
-            <!-- Right Section: Profile Picture Preview and Upload -->
-            <div class="flex flex-col items-center space-y-4">
-                <div class="text-center font-semibold">Picture Preview</div>
-                <div class="w-32 h-32 bg-green-500 text-white rounded-full flex items-center justify-center">
-                    <svg class="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                    </svg>
-                </div>
-                <div class="text-center font-semibold">Photo Upload</div>
-                <label class="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-green-500 transition-colors block">
-                    <input type="file" class="hidden" accept="image/*" />
-                    <div class="text-gray-600">Click to select file or drag and drop</div>
-                    <div class="text-sm text-gray-400 mt-1">PNG, JPG</div>
-                </label>
             </div>
         </div>
-
         <div class="mt-6 flex justify-end gap-4">
-            <button onclick={createUser} class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded">Create</button>
-            <button onclick={clearForm} class="bg-gray-300 hover:bg-gray-400 text-black px-6 py-2 rounded">Clear</button>
+            <button onclick={createUser} class="custom-green-btn">Create</button>
+            <button onclick={clearForm} class="custom-gray-btn">Clear</button>
         </div>
     </div>
 </div>
