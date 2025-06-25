@@ -1,98 +1,39 @@
-<svelte:head>
-  <script src="https://accounts.google.com/gsi/client" async></script>
-</svelte:head>
-
 <script lang="ts">
-      import './login.css';
-      import { onSubmit, handleSignUp } from './login';
-      import { supabase } from "../../lib/db";
+      import { onSubmit } from './login';
 
       let email = '';
       let password = '';
-      let newEmail = '';
-      let newPassword = '';
-
-  async function handleSignInWithGoogle(response) {
-  try {
-    // Attempt to sign in with Google token
-    const { data: authData, error: authError } = await supabase.auth.signInWithIdToken({
-      provider: "google",
-      token: response.credential,
-    });
-
-    if (authError) throw authError;
-
-    //Extract the user's email from the JWT
-    const decodedJwt = parseJwt(response.credential);
-    const userEmail = decodedJwt.email;
-
-    if (!userEmail) throw new Error("No email found in Google token.");
-
-    //Insert the user in the "users" table
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .upsert(
-        {
-          email: userEmail,
-          last_login_at: new Date().toISOString(),
-        },
-        { onConflict: "email" } 
-      )
-      .select();
-
-    if (userError) throw userError;
-
-    console.log("User logged in and stored:", userData);
-  } catch (error) {
-    console.error("Error during Google sign-in:", error);
-  }
-}
-
-// Function to decode JWT
-function parseJwt(token) {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    console.error("Failed to decode JWT:", e);
-    return {};
-  }
-}
 </script>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
 
-<div class="central">
-  <input type="text" bind:value={email} class="field" placeholder="Email..."/>
-  <input type="password" bind:value={password} class="field" placeholder="Password..."/>
-  <button type="submit" class="login-submit" on:click={() => onSubmit(email, password)}>Login</button>
+<div class="bg-[#F6F8FF] min-h-screen">
+  <div class="bg-white h-16 flex items-center px-4 justify-center sm:justify-between">
+  <img src="/logo.jpg" alt="Logo" class="h-12 w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 sm:h-12 sm:w-12 lg:p-1.5 md:p-1.5 sm:p-0"/>
+  <h1 class="text-black -ml-14 lg:text-4xl md:text-3xl sm:text-2xl font-bold text-center flex-1 hidden sm:block">
+    Pearl S. Buck Foundation Philippines, Inc.
+  </h1>
 </div>
 
-<div class="central">
-  <input type="text" bind:value={newEmail} class="field" placeholder="New Email..."/>
-  <input type="password" bind:value={newPassword} class="field" placeholder="New Password..."/>
-  <button type="submit" class="login-submit" on:click={() => handleSignUp(newEmail, newPassword)}>Sign Up</button>
-</div>
-
-<div id="g_id_onload"
-     data-client_id="490000336368-3fg0brv9lgvsbe33tmft6mrk402dmc5u.apps.googleusercontent.com"
-     data-context="signup"
-     data-ux_mode="popup"
-     data-login_uri="https://euwhpolzjpfuqncfjczc.supabase.co/auth/v1/callback"
-     data-callback="handleSignInWithGoogle"
-     data-auto_prompt="false">
-</div>
-
-<div class="g_id_signin"
-     data-type="standard"
-     data-shape="pill"
-     data-theme="filled_blue"
-     data-text="signin_with"
-     data-size="large"
-     data-logo_alignment="left">
+  <div class="bg-[#474C58] h-10"></div>
+  <div class="relative container mx-auto px-4 lg:w-3xl md:w-2xl sm:w-xl">
+    <div class="font-[Coda Caption] text-white font-bold lg:text-3xl md:text-2xl sm:text-xl bg-[#1A5A9E] flex justify-center items-center rounded-lg h-20 mt-16 relative z-10">
+        Login
+    </div>
+    <div class="bg-white flex flex-col items-start rounded-lg h-100 -mt-4 relative z-0 shadow-2xl">
+      <p class="m-4 mt-10 font-bold lg:text-xl md:text-lg sm:text-md">Username:</p>
+      <input type="text" bind:value={email} class="ml-10 p-2 rounded-md lg:w-100 md:w-75 sm:w-50 bg-[#DDE1E6] border-0 shadow-lg" placeholder="Enter your email..." />
+      <p class="m-4 mt-10 font-bold lg:text-xl md:text-lg sm:text-md">Password:</p>
+      <input type="password" bind:value={password} class="ml-10 p-2 rounded-md lg:w-100 md:w-75 sm:w-50 bg-[#DDE1E6] border-0 shadow-lg" placeholder="Enter your password..." />
+      <div class="w-full mt-10 flex justify-end">
+        <button
+          on:click={() => onSubmit(email, password)}
+          class="bg-[#1A5A9E] text-white font-bold p-2 rounded-md lg:w-50 md:w-40 sm:w-30 mt-6 mr-10 shadow-lg hover:cursor-pointer"
+        >
+          Sign-in
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
