@@ -1,16 +1,8 @@
-<svelte:head>
-  <script src="https://accounts.google.com/gsi/client" async></script>
-</svelte:head>
-
 <script lang="ts">
-      import './login.css';
-      import { onSubmit, handleSignUp } from './login';
-      import { supabase } from "../../lib/db";
+      import { onSubmit } from './login';
 
       let email = '';
       let password = '';
-      let newEmail = '';
-      let newPassword = '';
 </script>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
