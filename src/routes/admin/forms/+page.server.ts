@@ -1,5 +1,5 @@
 // +page.server.js
-import { supabase } from "$lib/supabaseClient";
+import { supabase } from "$lib/db";
 import { fail } from '@sveltejs/kit';
 
 export async function load() {
