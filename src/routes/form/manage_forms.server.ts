@@ -51,3 +51,30 @@ export async function createFormFieldsPerSection(
     );
   }
 }
+
+export async function updateFormTitle(data: IForms) {
+  await pgDb.query(
+    `UPDATE public.forms SET title = $1 WHERE id = $2`,
+    [data.title, data.id]
+  );
+}
+
+export async function updateFormSectionTitle(data: IFormSections) {
+  await pgDb.query(
+    `UPDATE public.form_sections SET title = $1 WHERE id = $2`,
+    [data.title, data.id]
+  );
+}
+
+export async function updateFormSectionIndex(data: IFormSections, index: number) {
+  await pgDb.query(
+    `UPDATE public.form_sections SET orderIndex = $1 WHERE id = $2`,
+    [index, data.id]
+  );
+}
+
+export async function updateField(data: IFormFields) {
+  await pgDb.query(
+    `UPDATE public.formfields SET `
+  )
+}
