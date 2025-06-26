@@ -7,7 +7,7 @@
 
 <div class="bg-[#F6F8FF]">
 
-  <Header name={pageName} />
+  <Header name={pageName} search backButton/>
 
   <div class="flex justify-end gap-0 mt-28 pr-10 relative bg-[#F6F8FF]">
     <!-- Button 1: Progress Report -->
@@ -40,6 +40,11 @@
         </svg>
         <span>Filter</span>
       </div>
+      {#if selected === 'progress_report'}
+        <!--TODO-->
+      {:else if selected === 'intro_sheet'}
+        <!--TODO-->
+      {/if}
     </div>
   </div>
 </div>
