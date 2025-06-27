@@ -1,6 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+// src/lib/db.ts
+import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '$env/static/private';
 
-export const supabase = createClient(
-  process.env.SUAPABASE_ANON_KEY ?? "",
-  process.env.SUPABASE_KEY ?? "" // Ensure to replace with your actual Supabase project URL and key
-);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
