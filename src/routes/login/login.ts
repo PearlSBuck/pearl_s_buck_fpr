@@ -12,7 +12,10 @@ export async function handleSignIn(email: string, password: string) {
     console.error("Error signing in:", error);
   }
 
-  return data.user;
+  return {
+    user: data.user,
+    session: data.session,
+  };
 }
 
 export async function handleSignUp(email: string, password: string) {
@@ -29,8 +32,8 @@ export async function handleSignUp(email: string, password: string) {
 }
 
 export async function onSubmit(email: string, password: string) {
-  const user = await handleSignIn(email, password);
-  if (user) {
+  const result = await handleSignIn(email, password);
+  if (result && result.user) {
     goto("/home");
   } else {
     alert("Sign-in failed. Please check your credentials.");
