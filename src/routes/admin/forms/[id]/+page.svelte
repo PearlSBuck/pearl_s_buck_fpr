@@ -1,5 +1,5 @@
 <script lang="ts">
-    // +page.svelte - Enhanced form display component with version support and fixed slug handling
+    // +page.svelte - Enhanced form display component with household member management
     import { enhance } from '$app/forms';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
@@ -22,26 +22,56 @@
     let formTitle = data.form?.title || '';
     let formVersion = data.form?.version || 1.0;
 
+    // Household member management - now tracking sections instead of instances
+    let formSections: any[] = [];
+    let householdMemberCount = 0;
+
     onMount(() => {
         if (data.form) {
             console.log('Initializing form with', data.form.sections.length, 'sections');
             console.log('Form version:', data.form.version);
-            // Initialize field values
-            data.form.sections.forEach((section: any) => {
-                console.log(`Section "${section.title}" has ${section.fields.length} fields`);
-                section.fields.forEach((field: any) => {
-                    const initialValue = getInitialFieldValue(field);
-                    fieldValues[field.id] = initialValue;
-                    originalFieldValues[field.id] = initialValue;
-                    
-                    // Initialize "Others" text values for radio_with_other fields
-                    if (field.type === 'radio_with_other') {
-                        otherTextValues[field.id] = field.otherValue || '';
-                        originalOtherTextValues[field.id] = field.otherValue || '';
-                    }
-                });
+            
+            // Initialize form sections
+            formSections = [...data.form.sections];
+            
+            // Count existing household member sections
+            householdMemberCount = formSections.filter(section => isHouseholdSection(section)).length;
+            
+            // Initialize field values for all sections
+            formSections.forEach((section: any) => {
+                console.log(`Section "${section.title}" has ${section.fields.length} fields, repeatable: ${section.repeatable}`);
+                
+                if (section.repeatable && section.instances) {
+                    // Initialize repeatable section with instances
+                    section.instances.forEach((instance: any) => {
+                        instance.fields.forEach((field: any) => {
+                            const initialValue = getInitialFieldValue(field);
+                            fieldValues[field.name] = initialValue; // Use field.name which includes instance ID
+                            originalFieldValues[field.name] = initialValue;
+                            
+                            if (field.type === 'radio_with_other') {
+                                otherTextValues[field.name] = field.otherValue || '';
+                                originalOtherTextValues[field.name] = field.otherValue || '';
+                            }
+                        });
+                    });
+                } else {
+                    // Initialize regular section fields
+                    section.fields.forEach((field: any) => {
+                        const initialValue = getInitialFieldValue(field);
+                        fieldValues[field.id] = initialValue;
+                        originalFieldValues[field.id] = initialValue;
+                        
+                        if (field.type === 'radio_with_other') {
+                            otherTextValues[field.id] = field.otherValue || '';
+                            originalOtherTextValues[field.id] = field.otherValue || '';
+                        }
+                    });
+                }
             });
+            
             console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
+            console.log('Initialized household member sections:', householdMemberCount);
         }
     });
 
@@ -65,6 +95,9 @@
             formVersion = data.form?.version || 1.0;
             fieldValues = { ...originalFieldValues };
             otherTextValues = { ...originalOtherTextValues };
+            // Reset sections to original state
+            formSections = [...data.form.sections];
+            householdMemberCount = formSections.filter(section => isHouseholdSection(section)).length;
         }
         clearMessages();
     }
@@ -72,6 +105,9 @@
     function hasChanges(): boolean {
         if (formTitle !== data.form?.title) return true;
         if (formVersion !== data.form?.version) return true;
+        
+        // Check if sections have been added/removed
+        if (formSections.length !== data.form.sections.length) return true;
         
         // Check regular field changes
         const fieldChanges = Object.keys(fieldValues).some(fieldId => {
@@ -167,8 +203,13 @@
     }
 
     function getTotalFieldsCount(): number {
-        if (!data.form?.sections) return 0;
-        return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
+        if (!formSections) return 0;
+        return formSections.reduce((acc: number, section: any) => {
+            if (section.repeatable && section.instances) {
+                return acc + section.instances.reduce((instAcc: number, inst: any) => instAcc + (inst.fields?.length || 0), 0);
+            }
+            return acc + (section.fields?.length || 0);
+        }, 0);
     }
 
     // Check if field type should always be editable (text inputs, textareas, etc.)
@@ -181,62 +222,10 @@
         return ['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'textarea', 'select', 'dropdown', 'radio', 'checkbox', 'radio_with_other'].includes(fieldType);
     }
 
-    // Generate the form slug for URL (matches server-side createSlug function)
-    function generateFormSlug(title: string, version: number): string {
-        const cleanTitle = title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
-            .replace(/^-+|-+$/g, '');     // Remove leading/trailing hyphens
-        return `${cleanTitle}-${version}`;
-    }
-
-    // Parse form name and version from slug (matches server-side parseFormSlug)
-    function parseFormSlug(slug: string): { name: string, version: number } {
-        // Handle URL-encoded spaces and normalize
-        const normalizedSlug = decodeURIComponent(slug).trim();
-        
-        // Try multiple version patterns
-        const patterns = [
-            /^(.+?)-v(\d+(?:\.\d+)?)$/,     // name-v1.0
-            /^(.+?)-(\d+(?:\.\d+)?)$/,      // name-1.0
-            /^(.+?)\+v?(\d+(?:\.\d+)?)$/    // name+1.0 or name+v1.0
-        ];
-        
-        for (const pattern of patterns) {
-            const match = normalizedSlug.match(pattern);
-            if (match) {
-                const [, nameSlug, version] = match;
-                return { 
-                    name: nameSlug, 
-                    version: parseFloat(version) 
-                };
-            }
-        }
-        
-        // If no version pattern found, assume it's a title and version 1.0
-        return { 
-            name: normalizedSlug, 
-            version: 1.0 
-        };
-    }
-
-    // Get the current form slug from URL params
-    $: currentFormSlug = $page.params.id || '';
-    
-    // Parse form name and version from current slug
-    $: parsedSlug = parseFormSlug(currentFormSlug);
-
-    // Helper function to create a proper slug from title (matches server-side)
-    function createSlug(name: string): string {
-        return name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
-    }
-
     // Returns a display value for a field (for read-only mode)
-    function getFieldDisplayValue(field: any): string {
-        const value = fieldValues[field.id];
+    function getFieldDisplayValue(field: any, fieldKey: string = ''): string {
+        const key = fieldKey || field.id;
+        const value = fieldValues[key];
         
         if (field.type === 'checkbox') {
             if (Array.isArray(value) && value.length > 0) {
@@ -277,8 +266,8 @@
                     );
                     
                     // If this is the "Others" option and there's text input
-                    if (typeof opt === 'object' && opt.showTextField && otherTextValues[field.id]) {
-                        return `${opt.label}: ${otherTextValues[field.id]}`;
+                    if (typeof opt === 'object' && opt.showTextField && otherTextValues[key]) {
+                        return `${opt.label}: ${otherTextValues[key]}`;
                     }
                     
                     return typeof opt === 'object' ? opt.label : opt || value;
@@ -293,6 +282,169 @@
         }
         return 'No value';
     }
+
+    // Add new household member section - MODIFIED TO INSERT AFTER ORIGINAL HOUSEHOLD SECTION
+    function addHouseholdMember() {
+        const maxMembers = 20; // Maximum household members allowed
+        
+        if (householdMemberCount >= maxMembers) {
+            error = `Maximum ${maxMembers} household members allowed`;
+            return;
+        }
+
+        // Find the original household section template
+        const originalHouseholdSection = data.form.sections.find((section: any) => isHouseholdSection(section));
+        
+        if (!originalHouseholdSection) {
+            error = 'No household section template found';
+            return;
+        }
+
+        // Find the index of the original household section in formSections
+        const originalHouseholdIndex = formSections.findIndex((section: any) => isOriginalHouseholdSection(section));
+        
+        if (originalHouseholdIndex === -1) {
+            error = 'Original household section not found in form sections';
+            return;
+        }
+
+        householdMemberCount++;
+        
+        // Create new section based on the original household section
+        const newSection = {
+            ...originalHouseholdSection,
+            id: `household_member_${householdMemberCount}`,
+            title: `Household Data Member ${householdMemberCount}`,
+            fields: originalHouseholdSection.fields.map((field: any) => ({
+                ...field,
+                id: `${field.id}_member_${householdMemberCount}`,
+                name: `${field.name || field.id}_member_${householdMemberCount}`,
+                value: getInitialFieldValue(field)
+            }))
+        };
+
+        // Find the insertion point: after the last household section (original + any added ones)
+        let insertIndex = originalHouseholdIndex + 1;
+        
+        // Move insertion point to after all existing household sections
+        while (insertIndex < formSections.length && isHouseholdSection(formSections[insertIndex])) {
+            insertIndex++;
+        }
+
+        // Insert new section at the calculated position
+        const newFormSections = [...formSections];
+        newFormSections.splice(insertIndex, 0, newSection);
+        formSections = newFormSections;
+
+        // Initialize field values for new section
+        newSection.fields.forEach((field: any) => {
+            const initialValue = getInitialFieldValue(field);
+            fieldValues[field.id] = initialValue;
+            originalFieldValues[field.id] = initialValue;
+            
+            if (field.type === 'radio_with_other') {
+                otherTextValues[field.id] = '';
+                originalOtherTextValues[field.id] = '';
+            }
+        });
+
+        // Call server action to sync with database
+        const formData = new FormData();
+        formData.append('memberNumber', householdMemberCount.toString());
+        formData.append('sectionData', JSON.stringify(newSection));
+
+        fetch('?/addHouseholdMemberSection', {
+            method: 'POST',
+            body: formData
+        }).then(response => response.json()).then(result => {
+            if (result.type === 'success') {
+                successMessage = `Added Household Data Member ${householdMemberCount}`;
+                setTimeout(() => {
+                    successMessage = null;
+                }, 3000);
+            } else {
+                error = result.data?.message || 'Failed to add household member';
+                // Rollback on error
+                householdMemberCount--;
+                formSections = formSections.filter(section => section.id !== newSection.id);
+            }
+        }).catch(err => {
+            console.error('Error adding household member:', err);
+            error = 'Failed to add household member';
+            // Rollback on error
+            householdMemberCount--;
+            formSections = formSections.filter(section => section.id !== newSection.id);
+        });
+
+        clearMessages();
+    }
+
+    // Remove household member section
+    function removeHouseholdMember(sectionId: string) {
+        const sectionIndex = formSections.findIndex(section => section.id === sectionId);
+        
+        if (sectionIndex === -1) {
+            error = 'Section not found';
+            return;
+        }
+
+        const sectionToRemove = formSections[sectionIndex];
+        
+        // Don't allow removal if it's the only household section
+        if (householdMemberCount <= 1) {
+            error = 'At least one household member is required';
+            return;
+        }
+
+        // Remove field values for this section
+        sectionToRemove.fields.forEach((field: any) => {
+            delete fieldValues[field.id];
+            delete originalFieldValues[field.id];
+            delete otherTextValues[field.id];
+            delete originalOtherTextValues[field.id];
+        });
+
+        // Remove section from formSections
+        formSections = formSections.filter((_, index) => index !== sectionIndex);
+        householdMemberCount--;
+
+        // Call server action to sync with database
+        const formData = new FormData();
+        formData.append('sectionId', sectionId);
+
+        fetch('?/removeHouseholdMemberSection', {
+            method: 'POST',
+            body: formData
+        }).then(response => response.json()).then(result => {
+            if (result.type === 'success') {
+                successMessage = `Removed household member section`;
+                setTimeout(() => {
+                    successMessage = null;
+                }, 3000);
+            } else {
+                error = result.data?.message || 'Failed to remove household member';
+            }
+        }).catch(err => {
+            console.error('Error removing household member:', err);
+            error = 'Failed to remove household member';
+        });
+
+        clearMessages();
+    }
+
+    // Check if section is a household member type
+    function isHouseholdSection(section: any): boolean {
+        return section.repeatable && (
+            section.sectionType === 'household_member' || 
+            section.title.toLowerCase().includes('household') ||
+            section.title.toLowerCase().includes('member')
+        );
+    }
+
+    // Check if this is the original household section (not a dynamically added one)
+    function isOriginalHouseholdSection(section: any): boolean {
+        return isHouseholdSection(section) && !section.id.includes('household_member_');
+    }
 </script>
 
 <head>
@@ -301,32 +453,29 @@
 
 <div class="bg-[#F6F8FF] min-h-screen">
     <!-- Header Section -->
-
     <Header 
         name={data.form?.title || 'Form View'} 
         search={false} 
         backButton={true} 
     />
-   
 
     <!-- Main Content Container -->
     <div class="pt-4">
         {#if data.form}
             <!-- Form Title Header -->
             <div class="font-[Coda Caption] text-white font-bold lg:text-3xl md:text-2xl sm:text-xl bg-[#1A5A9E] flex justify-center items-end rounded-lg h-20 mt-16 relative z-10">
-    {#if editMode}
-        <input 
-            type="text" 
-            bind:value={formTitle}
-            placeholder="Form Title"
-            class="bg-white text-[#1A5A9E] px-4 py-2 mb-2 rounded-md font-bold lg:text-3xl md:text-2xl sm:text-xl text-center w-full max-w-lg mx-4"
-            on:focus={clearMessages}
-        />
-    {:else}
-        <div class="mb-2">{data.form.title}</div>
-    {/if}
-</div>
-
+                {#if editMode}
+                    <input 
+                        type="text" 
+                        bind:value={formTitle}
+                        placeholder="Form Title"
+                        class="bg-white text-[#1A5A9E] px-4 py-2 mb-2 rounded-md font-bold lg:text-3xl md:text-2xl sm:text-xl text-center w-full max-w-lg mx-4"
+                        on:focus={clearMessages}
+                    />
+                {:else}
+                    <div class="mb-2">{data.form.title}</div>
+                {/if}
+            </div>
 
             <!-- Main Form Container -->
             <div class="bg-white flex flex-col rounded-lg -mt-4 relative z-0 shadow-2xl">
@@ -337,8 +486,9 @@
                         <div class="text-sm text-gray-600 grid grid-cols-2 gap-4">
                             <div><strong>Form ID:</strong> {data.form.id}</div>
                             <div><strong>Created:</strong> {formatDate(data.form.createdAt)}</div>
-                            <div><strong>Sections:</strong> {data.form.sections.length}</div>
+                            <div><strong>Sections:</strong> {formSections.length}</div>
                             <div><strong>Fields:</strong> {getTotalFieldsCount()}</div>
+                            <div><strong>Household Members:</strong> {householdMemberCount}</div>
                         </div>
 
                         <!-- Action Buttons -->
@@ -383,15 +533,6 @@
                                             // Update original values
                                             originalFieldValues = { ...fieldValues };
                                             originalOtherTextValues = { ...otherTextValues };
-                                            // Update form data
-                                            data.form.sections.forEach((section: any) => {
-                                                section.fields.forEach((field: any) => {
-                                                    field.value = fieldValues[field.id] || '';
-                                                    if (field.type === 'radio_with_other') {
-                                                        field.otherValue = otherTextValues[field.id] || '';
-                                                    }
-                                                });
-                                            });
                                         } else if (result.type === 'failure') {
                                             error = typeof result.data?.message === 'string'
                                                 ? result.data.message
@@ -400,13 +541,25 @@
                                     };
                                 }}>
                                     <input type="hidden" name="formId" value={data.form.id} />
-                                    {#each data.form.sections as section}
-                                        {#each section.fields as field}
-                                            <input type="hidden" name="field_{field.id}" value={Array.isArray(fieldValues[field.id]) ? fieldValues[field.id].join(',') : (fieldValues[field.id] || '')} />
-                                            {#if field.type === 'radio_with_other'}
-                                                <input type="hidden" name="field_{field.id}_other" value={otherTextValues[field.id] || ''} />
-                                            {/if}
-                                        {/each}
+                                    <!-- Include all field values in the form -->
+                                    {#each formSections as section}
+                                        {#if section.repeatable && section.instances}
+                                            {#each section.instances as instance}
+                                                {#each instance.fields as field}
+                                                    <input type="hidden" name={field.name} value={Array.isArray(fieldValues[field.name]) ? fieldValues[field.name].join(',') : (fieldValues[field.name] || '')} />
+                                                    {#if field.type === 'radio_with_other'}
+                                                        <input type="hidden" name="{field.name}_other" value={otherTextValues[field.name] || ''} />
+                                                    {/if}
+                                                {/each}
+                                            {/each}
+                                        {:else}
+                                            {#each section.fields as field}
+                                                <input type="hidden" name="field_{field.id}" value={Array.isArray(fieldValues[field.id]) ? fieldValues[field.id].join(',') : (fieldValues[field.id] || '')} />
+                                                {#if field.type === 'radio_with_other'}
+                                                    <input type="hidden" name="field_{field.id}_other" value={otherTextValues[field.id] || ''} />
+                                                {/if}
+                                            {/each}
+                                        {/if}
                                     {/each}
                                     <button type="submit" class="bg-green-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || !hasChanges()}>
                                         {#if isLoading}
@@ -444,13 +597,42 @@
                 {/if}
 
                 <!-- Form Sections -->
-                {#if data.form.sections && data.form.sections.length > 0}
+                {#if formSections && formSections.length > 0}
                     <div class="p-6 space-y-8">
-                        {#each data.form.sections as section, sectionIndex}
+                        {#each formSections as section, sectionIndex}
                             <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
-                                <div class="bg-[#474C58] text-white px-6 py-4">
+                                <div class="bg-[#474C58] text-white px-6 py-4 flex justify-between items-center">
                                     <h2 class="text-xl font-bold">{section.title}</h2>
+                                    
+                                    <div class="flex items-center gap-3">
+                                        <!-- Add Household Member Button (only for household sections) -->
+                                        {#if isHouseholdSection(section) && isOriginalHouseholdSection(section)}
+                                            <button 
+                                                type="button" 
+                                                class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-md shadow-lg transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+                                                on:click={addHouseholdMember}
+                                                disabled={isLoading || householdMemberCount >= 20}
+                                            >
+                                                <span class="text-lg">+</span>
+                                                Add Member
+                                                <span class="text-sm opacity-75">({householdMemberCount}/20)</span>
+                                            </button>
+                                        {/if}
+                                        
+                                        <!-- Remove Household Member Button (only for dynamically added sections) -->
+                                        {#if isHouseholdSection(section) && !isOriginalHouseholdSection(section) && (editMode || isAlwaysEditableField('text'))}
+                                            <button 
+                                                type="button" 
+                                                class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded-md text-sm transition-colors duration-200 flex items-center gap-1"
+                                                on:click={() => removeHouseholdMember(section.id)}
+                                                disabled={isLoading}
+                                            >
+                                                <span class="text-lg">×</span>
+                                                Remove
+                                            </button>
+                                        {/if}
+                                    </div>
                                 </div>
                                 
                                 <!-- Section Content -->
@@ -645,6 +827,3 @@
             animation: spin 1s linear infinite;
         }
 </style>
-
-
-                                                    
