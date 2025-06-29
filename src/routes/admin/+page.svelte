@@ -2,8 +2,10 @@
     This route creates a basic page as an example
 -->
 
-<script>
- import { getData } from "./index";
+<script lang="ts">
+  import Header from '../../components/Header.svelte'; // adjust the path as needed
 
+  let pageName = "rinaldo baldcado";
+  let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
 </script>
-<p>Hello world!</p>
+<Header name={pageName} search backButton />;
