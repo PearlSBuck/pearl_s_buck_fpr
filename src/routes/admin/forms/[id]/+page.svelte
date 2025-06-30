@@ -4,8 +4,18 @@
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
     import Header from './Header.svelte'; // Import the Header component
-
+	import EditPopUp from '../editPopUp.svelte';
     export let data;
+
+// 
+    let showPopup = false;
+    let selectedField:any;
+  function togglePopup(field:any) {
+    showPopup = !showPopup;
+    selectedField = field;
+  }
+
+// 
 
     let editMode = false;
     let isLoading = false;
@@ -298,6 +308,7 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
+   
 
 <div class="bg-[#F6F8FF] min-h-screen">
     <!-- Header Section -->
@@ -308,7 +319,7 @@
         backButton={true} 
     />
    
-
+<!-------------- ---------------------------->
     <!-- Main Content Container -->
     <div class="pt-4">
         {#if data.form}
@@ -464,8 +475,38 @@
                                                         {#if field.required}
                                                             <span class="text-red-600">*</span>
                                                         {/if}
+                                                        {#if editMode}
+                                                        <button
+                                                            class="p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                                                            on:click={() => togglePopup(field)}
+                                                        >
+                                                            Edit
+                                                        </button>
+
+                                                        
+                                                        {/if}
+
                                                     </label>
+                                                
+                                                    <!-- -------------------------------------------------------------------------------------------------------------------------------
+                                                     
                                                     
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    
+                                                    -->
+                                                    <!-- edit mode of each text field -->
                                                     {#if editMode || isAlwaysEditableField(field.type)}
                                                         {#if field.type === 'textarea'}
                                                             <textarea
@@ -634,6 +675,10 @@
         {/if}
     </div>
 </div>
+<EditPopUp 
+    bind:field={selectedField} 
+    bind:open={showPopup}
+    />
 
 <style>
     @keyframes spin {
