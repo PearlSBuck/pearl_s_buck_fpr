@@ -47,12 +47,12 @@ $: if(open && field){
 <div class="fixed inset-0 bg-gray-950/70 z-60 flex items-start justify-center overflow-y-auto p-6">
     <div class="rounded shadow-lg w-full max-w-md mt-20 mb-20">
         <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
-            <button class="float-right text-gray-500" on:click={() => (open = false)}>×</button>
+            <button class="float-right text-gray-500 block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm" on:click={() => (open = false)}>×</button>
             <!-- Field Type -->
             <!-- Displays Current Values in the field -->
             <div>
+                <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">Edit {field.label} Field</h1>
                 <p>Current Field Type: {field.type}</p>
-                <p>Current Field Label: {field.label}</p>
 
                 
                 <!-- Conditional Display-->
@@ -150,6 +150,10 @@ $: if(open && field){
 
 
             <!-- Save Button For Pop Up -->
+            <div class='flex justify-end'>
+                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Cancel</button>
+                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Confirm</button>
+            </div>
         </div>
     </div>
 </div>
