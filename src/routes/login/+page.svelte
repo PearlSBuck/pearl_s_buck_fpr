@@ -1,5 +1,6 @@
 <script lang="ts">
       import { onSubmit } from './login';
+      import Header from '../../components/Header.svelte';
 
       let email = '';
       let password = '';
@@ -8,13 +9,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 
-<div class="bg-[#F6F8FF] min-h-screen">
-  <div class="bg-white h-16 flex items-center px-4 justify-center sm:justify-between">
-  <img src="/logo.jpg" alt="Logo" class="h-12 w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 sm:h-12 sm:w-12 lg:p-1.5 md:p-1.5 sm:p-0"/>
-  <h1 class="text-black -ml-14 lg:text-4xl md:text-3xl sm:text-2xl font-bold text-center flex-1 hidden sm:block">
-    Pearl S. Buck Foundation Philippines, Inc.
-  </h1>
-</div>
+<div class="pt-6 bg-[#F6F8FF] min-h-screen">
+  <Header name="" />
 
   <div class="bg-[#474C58] h-10"></div>
   <div class="relative container mx-auto px-4 lg:w-lg md:w-md sm:w-sm">
