@@ -2,12 +2,13 @@
 <script>
     import { onMount } from 'svelte';
     import { enhance } from '$app/forms';
+    import { goto } from '$app/navigation';
     
     export let data;
     
     let show = false;
     let displayText = '';
-    /** @type {{ title?: string, createdAt?: string, description?: string }[]} */
+    /** @type {{ title?: string, createdAt?: string, description?: string, version?: string }[]} */
     let selectedForms = [];
     let showFormsList = false;
     let selectedYear = new Date().getFullYear(); // Default to current year
@@ -114,6 +115,24 @@
             }
             return false;
         });
+    }
+
+    /**
+     * Handle form click navigation
+     * @param {{ title?: string, version?: string }} form - The form object
+     */
+    function handleFormClick(form) {
+        if (form.title && form.version) {
+            // Create the URL path: /admin/forms/[form name]-[version]
+            const formName = encodeURIComponent(form.title);
+            const version = encodeURIComponent(form.version);
+            const url = `/admin/forms/${formName}-${version}`;
+            
+            console.log('Navigating to:', url);
+            goto(url);
+        } else {
+            console.warn('Form missing title or version:', form);
+        }
     }
 </script>
 
@@ -317,11 +336,17 @@
         border-radius: 10px;
         border-left: 4px solid #2196F3;
         transition: all 0.3s ease;
+        cursor: pointer;
     }
 
     .form-item:hover {
         background: #e9ecef;
         transform: translateX(5px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-item:active {
+        transform: translateX(3px);
     }
 
     .form-title {
@@ -333,6 +358,24 @@
     .form-date {
         color: #666;
         font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .form-version {
+        color: #28a745;
+        font-size: 12px;
+        font-weight: 600;
+        background: #d4edda;
+        padding: 3px 8px;
+        border-radius: 12px;
+        display: inline-block;
+        margin-bottom: 5px;
+    }
+
+    .form-description {
+        color: #666;
+        font-size: 14px;
+        margin-top: 5px;
     }
 
     .no-forms {
@@ -340,6 +383,13 @@
         color: #666;
         font-style: italic;
         padding: 40px;
+    }
+
+    .clickable-hint {
+        color: #2196F3;
+        font-size: 11px;
+        margin-top: 5px;
+        font-style: italic;
     }
 </style>
 
@@ -397,7 +447,7 @@
             
             {#if selectedForms.length > 0}
                 {#each selectedForms as form}
-                    <div class="form-item">
+                    <div class="form-item" on:click={() => handleFormClick(form)} role="button" tabindex="0" on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleFormClick(form)}>
                         <div class="form-title">{form.title}</div>
                         <div class="form-date">
                             Created: {form.createdAt ? (() => {
@@ -409,9 +459,13 @@
                                 }
                             })() : 'No date'}
                         </div>
+                        {#if form.version}
+                            <div class="form-version">Version {form.version}</div>
+                        {/if}
                         {#if form.description}
                             <div class="form-description">{form.description}</div>
                         {/if}
+                        <div class="clickable-hint">Click to view form</div>
                     </div>
                 {/each}
             {:else}
