@@ -143,9 +143,10 @@
                 return form.title && form.title.trim().toLowerCase() === 'family progress report'.toLowerCase();
             } else if (displayText === 'FIS') {
                 return form.title && form.title.trim().toLowerCase() === 'family introduction sheet'.toLowerCase();
-            } else if (displayText == 'ALL') {
-                return true; // WE SHOW ALL FORMS FOR TESTING PURPOSES
-            }
+            } 
+            // else if (displayText == 'ALL') {
+            //     return true; // WE SHOW ALL FORMS FOR TESTING PURPOSES
+            // }
             return false;
         });
         selectedForms = formsToFilter.filter(form => {
@@ -442,9 +443,9 @@
             Family Introduction Sheet
         </button>
         <!-- FOR TESTING PURPOSES -->
-        <button class="btn btn-all" on:click={handleAllForms}>
+        <!-- <button class="btn btn-all" on:click={handleAllForms}>
             Show All Forms
-        </button>
+        </button> -->
     </div>
 </div>
 
@@ -469,8 +470,7 @@
             <div class="forms-header">
                 <div class="header-left">
                     <h2 class="forms-title">
-                        {   displayText === 'FPR' ? 'Family Progress Reports' : 
-                            displayText === 'FIS' ? 'Family Introduction Sheets' : 'All Forms'}
+                        {displayText === 'FPR' ? 'Family Progress Reports' : 'Family Introduction Sheets'}
                     </h2>
                     {#if availableYears.length > 0}
                         <div class="year-filter">

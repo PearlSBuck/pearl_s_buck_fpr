@@ -371,6 +371,7 @@ export const actions = {
         // NOTE: This delete functionality requires:
         // - RLS (Row Level Security) to be disabled on the forms table
         // - Cascading deletes to be properly set up for form_fields and form_section tables
+        
         const data = await request.formData();
         const formId = data.get('formId');
         const confirmationText = data.get('confirmationText');
