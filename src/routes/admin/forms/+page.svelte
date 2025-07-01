@@ -90,6 +90,43 @@
         }, 2000);
     }
 
+        // FOR TESTING PURPOSESSSS
+    function handleAllForms() {
+        displayText = 'ALL';
+        console.log('All forms:', data.forms);
+        selectedForms = data.forms; // Show all forms without filtering by title
+        
+        // Populate availableYears based on all forms
+        availableYears = Array.from(
+            new Set(selectedForms.map(form => {
+                if (form.createdAt) {
+                    return new Date(form.createdAt).getFullYear();
+                }
+                return null;
+            }))
+        )
+        .filter(year => typeof year === 'number')
+        .sort((a, b) => b - a);
+        
+        if (availableYears.length > 0) {
+            selectedYear = availableYears[0];
+        }
+        
+        selectedForms = selectedForms.filter(form => {
+            if (form.createdAt) {
+                return new Date(form.createdAt).getFullYear() === selectedYear;
+            }
+            return false;
+        });
+        
+        console.log('All filtered forms:', selectedForms);
+        show = true;
+        setTimeout(() => {
+            show = false;
+            showFormsList = true;
+        }, 2000);
+    }
+
     function closeFormsList() {
         showFormsList = false;
         selectedForms = [];
@@ -106,6 +143,8 @@
                 return form.title && form.title.trim().toLowerCase() === 'family progress report'.toLowerCase();
             } else if (displayText === 'FIS') {
                 return form.title && form.title.trim().toLowerCase() === 'family introduction sheet'.toLowerCase();
+            } else if (displayText == 'ALL') {
+                return true; // WE SHOW ALL FORMS FOR TESTING PURPOSES
             }
             return false;
         });
@@ -402,6 +441,10 @@
         <button class="btn btn-intro" on:click={handleIntroSheet}>
             Family Introduction Sheet
         </button>
+        <!-- FOR TESTING PURPOSES -->
+        <button class="btn btn-all" on:click={handleAllForms}>
+            Show All Forms
+        </button>
     </div>
 </div>
 
@@ -426,7 +469,8 @@
             <div class="forms-header">
                 <div class="header-left">
                     <h2 class="forms-title">
-                        {displayText === 'FPR' ? 'Family Progress Reports' : 'Family Introduction Sheets'}
+                        {   displayText === 'FPR' ? 'Family Progress Reports' : 
+                            displayText === 'FIS' ? 'Family Introduction Sheets' : 'All Forms'}
                     </h2>
                     {#if availableYears.length > 0}
                         <div class="year-filter">

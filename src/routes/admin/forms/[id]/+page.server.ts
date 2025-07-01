@@ -365,5 +365,52 @@ export const actions = {
             console.error('Action error:', err);
             return fail(500, { message: 'Internal server error' });
         }
+    },
+
+    deleteForm: async ({ request }) => {
+        // NOTE: This delete functionality requires:
+        // - RLS (Row Level Security) to be disabled on the forms table
+        // - Cascading deletes to be properly set up for form_fields and form_section tables
+        const data = await request.formData();
+        const formId = data.get('formId');
+        const confirmationText = data.get('confirmationText');
+
+        console.log('=== DELETE FORM ACTION STARTED ===');
+        console.log('Form ID:', formId);
+        console.log('Confirmation text:', confirmationText);
+
+        if (!formId) {
+            console.log('ERROR: No form ID provided');
+            return fail(400, { message: 'Form ID is required' });
+        }
+
+        if (confirmationText !== 'Pearl S. Buck International') {
+            console.log('ERROR: Incorrect confirmation text');
+            return fail(400, { message: 'Incorrect confirmation text. Please type "Pearl S. Buck International" exactly.' });
+        }
+
+        try {
+            // we only need to delete the form itself
+            // sections and fields related to the form will be automatically deleted by the database
+            const { error: formError } = await supabase
+                .from('forms')
+                .delete()
+                .eq('id', formId);
+
+            if (formError) {
+                console.error('Error deleting form:', formError);
+                return fail(500, { message: 'Failed to delete form: ' + formError.message });
+            }
+
+            console.log('=== DELETE FORM ACTION COMPLETED SUCCESSFULLY ===');
+            return { 
+                success: true, 
+                deleted: true,
+                message: 'Form deleted successfully'
+            };
+        } catch (err) {
+            console.error('Delete form error:', err);
+            return fail(500, { message: 'Internal server error' });
+        }
     }
 };

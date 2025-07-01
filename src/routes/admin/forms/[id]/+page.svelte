@@ -303,6 +303,31 @@
         }
         return 'No value';
     }
+
+    // Delete DYNAMIC Form Button Script
+    let showDeleteConfirmation = false;
+    let deleteConfirmationText = '';
+    let isDeleting = false;
+
+    function showDeleteModal() {
+        showDeleteConfirmation = true;
+        deleteConfirmationText = '';
+    }
+
+    function cancelDelete() {
+        showDeleteConfirmation = false;
+        deleteConfirmationText = '';
+    }
+
+    function handleDeleteSubmit() {
+        if (deleteConfirmationText.trim() === 'Pearl S. Buck International') {
+            // The form will handle the submission
+            return true;
+        } else {
+            error = 'Please type "Pearl S. Buck International" exactly to confirm deletion.';
+            return false;
+        }
+    }
 </script>
 
 <head>
@@ -325,18 +350,18 @@
         {#if data.form}
             <!-- Form Title Header -->
             <div class="font-[Coda Caption] text-white font-bold lg:text-3xl md:text-2xl sm:text-xl bg-[#1A5A9E] flex justify-center items-end rounded-lg h-20 mt-16 relative z-10">
-    {#if editMode}
-        <input 
-            type="text" 
-            bind:value={formTitle}
-            placeholder="Form Title"
-            class="bg-white text-[#1A5A9E] px-4 py-2 mb-2 rounded-md font-bold lg:text-3xl md:text-2xl sm:text-xl text-center w-full max-w-lg mx-4"
-            on:focus={clearMessages}
-        />
-    {:else}
-        <div class="mb-2">{data.form.title}</div>
-    {/if}
-</div>
+                {#if editMode}
+                    <input 
+                        type="text" 
+                        bind:value={formTitle}
+                        placeholder="Form Title"
+                        class="bg-white text-[#1A5A9E] px-4 py-2 mb-2 rounded-md font-bold lg:text-3xl md:text-2xl sm:text-xl text-center w-full max-w-lg mx-4"
+                        on:focus={clearMessages}
+                    />
+                {:else}
+                    <div class="mb-2">{data.form.title}</div>
+                {/if}
+            </div>
 
 
             <!-- Main Form Container -->
@@ -427,12 +452,22 @@
                                     </button>
                                 </form>
 
+                                <!-- Delete Form Button -->
+                                <button 
+                                type="button" 
+                                class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700"
+                                on:click={showDeleteModal}
+                                >
+                                    Delete Form
+                                </button>
+
+
                                 <button type="button" class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700" on:click={toggleEditMode}>
                                     Cancel
                                 </button>
                             {:else}
                                 <button type="button" class="bg-[#1A5A9E] text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-blue-700" on:click={toggleEditMode}>
-                                     Edit Form
+                                    Edit Form
                                 </button>
                             {/if}
                         </div>
@@ -500,20 +535,6 @@
                                                     </label>
                                                 
                                                     <!-- -------------------------------------------------------------------------------------------------------------------------------
-                                                     
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
                                                     
                                                     
                                                     -->
@@ -685,6 +706,97 @@
             </div>
         {/if}
     </div>
+    
+    <!-- DELETE FORM HANDLER -->
+    {#if showDeleteConfirmation}
+        <div class="fixed inset-0 backdrop-blur-sm bg-opacity-30 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="text-red-600 text-2xl">⚠️</div>
+                    <h3 class="text-lg font-bold text-gray-900">Delete Form</h3>
+                </div>
+                
+                <div class="mb-6">
+                    <p class="text-gray-700 mb-4">
+                        Are you sure you want to delete this form? This action cannot be undone.
+                    </p>
+                    <p class="text-sm text-gray-600 mb-4">
+                        <strong>Form:</strong> {data.form.title}<br>
+                        <strong>Version:</strong> {data.form.version}<br>
+                        <strong>Sections:</strong> {data.form.sections.length}<br>
+                        <strong>Total Fields:</strong> {getTotalFieldsCount()}
+                    </p>
+                    <p class="text-sm font-medium text-red-700 mb-3">
+                        To confirm deletion, please type: <br>
+                        <code class="bg-gray-100 px-2 py-1 rounded text-sm">"Pearl S. Buck International"</code>
+                    </p>
+                    
+                    <form method="POST" action="?/deleteForm" use:enhance={() => {
+                        if (!handleDeleteSubmit()) {
+                            return async ({ update }) => {
+                                // Don't proceed if validation failed
+                                await update({ reset: false });
+                            };
+                        }
+                        
+                        isDeleting = true;
+                        return async ({ result, update }) => {
+                            isDeleting = false;
+                            if (result.type === 'success' && result.data?.deleted) {
+                                // Redirect to forms list after successful deletion
+                                window.alert('Form deleted successfully!');
+                                window.location.href = '/admin/forms';
+                            } else if (result.type === 'failure') {
+                                error = typeof result.data?.message === 'string' 
+                                    ? result.data.message 
+                                    : 'Failed to delete form';
+                                await update({ reset: false });
+                            } else {
+                                await update();
+                            }
+                        };
+                    }}>
+                        <input type="hidden" name="formId" value={data.form.id} />
+                        <input type="hidden" name="confirmationText" value={deleteConfirmationText} />
+                        
+                        <input
+                            type="text"
+                            bind:value={deleteConfirmationText}
+                            placeholder="Type the confirmation text here..."
+                            class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                            on:input={() => { error = null; }}
+                        />
+                        
+                        <div class="flex gap-3 mt-6">
+                            <button
+                                type="button"
+                                on:click={cancelDelete}
+                                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                                disabled={isDeleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                disabled={isDeleting || deleteConfirmationText.trim() !== 'Pearl S. Buck International'}
+                            >
+                                {#if isDeleting}
+                                    <span class="inline-flex items-center gap-2">
+                                        <span class="spinner inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        Deleting...
+                                    </span>
+                                {:else}
+                                    Delete Form
+                                {/if}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {/if}
+
 </div>
 <EditPopUp 
     bind:field={selectedField} 
