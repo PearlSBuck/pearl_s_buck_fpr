@@ -47,9 +47,17 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { supabase } from '$lib/db';
+    import { onMount } from 'svelte';
 
     export let data: { user: any };
     let user = data.user;
+
+    onMount(() => {
+        if (!user) {
+            alert('User not found');
+            goto('/users/edit');
+        }
+    });
 
     async function deleteUser() {
         if (confirm(`Are you sure you want to delete ${user.username}? This action cannot be undone.`)) {

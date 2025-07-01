@@ -148,6 +148,12 @@
             alert('Password is required.');
             return;
         }
+
+        if (password.length < 8) {
+            alert('Password must be at least 8 characters long.');
+            return;
+        }
+
         if (!role.trim()) {
             alert('Role is required.');
             return;
