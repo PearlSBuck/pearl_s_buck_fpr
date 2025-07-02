@@ -1,7 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from "$env/static/public"
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = PUBLIC_SUPABASE_URL;
-const supabaseKey = PUBLIC_SUPABASE_ANON_KEY;
+// Get URL from environment variables with fallback to hardcoded value
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 
+                    (typeof process !== 'undefined' ? process.env.SUPABASE_URL : '') || 
+                    'https://euwhpolzjpfuqncfjczc.supabase.co'
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Get key from environment variables
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY || 
+                        (typeof process !== 'undefined' ? process.env.SUPABASE_KEY : '') || 
+                        ''
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
