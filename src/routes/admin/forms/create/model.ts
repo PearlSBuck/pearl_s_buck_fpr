@@ -2,6 +2,7 @@ export interface IForms {
   id: string;
   title: string;
   dateCreated: Date | string;
+  version: string;
 }
 
 export interface IFormSections {

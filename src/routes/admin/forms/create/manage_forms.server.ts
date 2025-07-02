@@ -8,8 +8,8 @@ const pgDb = new Pool({
 
 export async function createForm(data: IForms): Promise<string> {
   const values = await pgDb.query(
-    "INSERT INTO public.forms(title, createdAt) VALUES($1,$2,$3) RETURNING id",
-    [data.title, data.dateCreated]
+    "INSERT INTO public.forms(title, createdat, version) VALUES($1,$2,$3) RETURNING id",
+    [data.title, data.dateCreated, data.version]
   );
   console.log(values);
   return values.rows[0].id ?? "";

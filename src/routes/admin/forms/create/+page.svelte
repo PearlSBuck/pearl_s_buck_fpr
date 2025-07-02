@@ -39,6 +39,7 @@
                 id: "", // placeholder
                 title: titleInput,
                 dateCreated: currentDate,
+                version: "",
             };
             showTitleInput = false;
             showForm = true;
@@ -67,6 +68,7 @@
 
     async function saveFormHandler() {
         if (!form) return alert("No form to save!");
+        if (form.version === "") return alert("Version cannot be empty!");
 
         const response = await fetch('/admin/forms/create', {
             method: 'POST',
@@ -101,16 +103,18 @@
             {/if} 
         </div>
     {:else}
-        <div>
-            <p>Form Title: {form?.title}</p>
-            <p>Date Created: {form?.dateCreated}</p>
-            <label>
-                Version: 
-                <input type="text" id="version" name="version" bind:value={versionInput} placeholder="Enter form version..." />
-            </label>
-            <button onclick={AddSectionHandler} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Add Section</button>
-            <button onclick={saveFormHandler} class="bg-green-600 text-white rounded-lg px-5 ml-2 cursor-pointer">Save Form</button>            
-        </div>
+        {#if form}
+            <div>
+                <p>Form Title: {form.title}</p>
+                <p>Date Created: {form.dateCreated}</p>
+                <label>
+                    Version: 
+                    <input type="text" id="version" name="version" bind:value={form.version} placeholder="Enter form version..." />
+                </label>
+                <button onclick={AddSectionHandler} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Add Section</button>
+                <button onclick={saveFormHandler} class="bg-green-600 text-white rounded-lg px-5 ml-2 cursor-pointer">Save Form</button>            
+            </div>
+        {/if}
         <div>
             {#each formSections as section, index}
                 <div class="flex justify-center py-3">
