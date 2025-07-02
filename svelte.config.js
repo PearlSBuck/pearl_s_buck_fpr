@@ -1,5 +1,6 @@
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import adapter from '@sveltejs/adapter-node'; // CHANGED FROM adapter-auto
+import { getConfigFileParsingDiagnostics } from 'typescript';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -14,6 +15,5 @@ const config = {
         adapter: adapter()
     }
 };
-
 export default config;
 
