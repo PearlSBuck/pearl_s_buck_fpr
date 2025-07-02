@@ -16,6 +16,7 @@
     let showTitleInput: boolean = $state(false);
     // the title of the form
     let titleInput: string = $state("");
+    let versionInput: string = $state("");
     // shows the current form
     let showForm: boolean = $state(false);
 
@@ -26,6 +27,7 @@
     // initializing the form
     function CreateFormHandler() {
         titleInput = "";
+        versionInput = "";
         showTitleInput = true;
     }
 
@@ -102,6 +104,10 @@
         <div>
             <p>Form Title: {form?.title}</p>
             <p>Date Created: {form?.dateCreated}</p>
+            <label>
+                Version: 
+                <input type="text" id="version" name="version" bind:value={versionInput} placeholder="Enter form version..." />
+            </label>
             <button onclick={AddSectionHandler} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Add Section</button>
             <button onclick={saveFormHandler} class="bg-green-600 text-white rounded-lg px-5 ml-2 cursor-pointer">Save Form</button>            
         </div>
