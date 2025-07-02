@@ -4,8 +4,18 @@
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
     import Header from './Header.svelte'; // Import the Header component
-
+	import EditPopUp from '../editPopUp.svelte';
     export let data;
+
+// 
+    let showPopup = false;
+    let selectedField:any;
+  function togglePopup(field:any) {
+    showPopup = !showPopup;
+    selectedField = field;
+  }
+
+// 
 
     let editMode = false;
     let isLoading = false;
@@ -258,6 +268,31 @@
         return 'No value';
     }
 
+    // Delete DYNAMIC Form Button Script
+    let showDeleteConfirmation = false;
+    let deleteConfirmationText = '';
+    let isDeleting = false;
+
+    function showDeleteModal() {
+        showDeleteConfirmation = true;
+        deleteConfirmationText = '';
+    }
+
+    function cancelDelete() {
+        showDeleteConfirmation = false;
+        deleteConfirmationText = '';
+    }
+
+    function handleDeleteSubmit() {
+        if (deleteConfirmationText.trim() === 'Pearl S. Buck International') {
+            // The form will handle the submission
+            return true;
+        } else {
+            error = 'Please type "Pearl S. Buck International" exactly to confirm deletion.';
+            return false;
+        }
+    }
+
     // Check if section is a household member type (simplified check)
     function isHouseholdSection(section: any): boolean {
         return section.title.toLowerCase().includes('household') ||
@@ -283,6 +318,7 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
+   
 
 <div class="bg-[#F6F8FF] min-h-screen">
     <!-- Header Section -->
@@ -291,7 +327,8 @@
         search={false} 
         backButton={true} 
     />
-
+   
+<!-------------- ---------------------------->
     <!-- Main Content Container -->
     <div class="pt-4">
         {#if data.form}
@@ -309,6 +346,7 @@
                     <div class="mb-2">{data.form.title}</div>
                 {/if}
             </div>
+
 
             <!-- Main Form Container -->
             <div class="bg-white flex flex-col rounded-lg -mt-4 relative z-0 shadow-2xl">
@@ -392,12 +430,22 @@
                                     </button>
                                 </form>
 
+                                <!-- Delete Form Button -->
+                                <button 
+                                type="button" 
+                                class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700"
+                                on:click={showDeleteModal}
+                                >
+                                    Delete Form
+                                </button>
+
+
                                 <button type="button" class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700" on:click={toggleEditMode}>
                                     Cancel
                                 </button>
                             {:else}
                                 <button type="button" class="bg-[#1A5A9E] text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-blue-700" on:click={toggleEditMode}>
-                                     Edit Form
+                                    Edit Form
                                 </button>
                             {/if}
                         </div>
@@ -425,8 +473,19 @@
                         {#each formSections as section, sectionIndex}
                             <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
-                                <div class="bg-[#474C58] text-white px-6 py-4 flex justify-between items-center">
+                                <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
                                     <h2 class="text-xl font-bold">{section.title}</h2>
+                                    {#if editMode}
+                                        <button class="h-8 w-8 ml-auto" aria-label="Delete section">
+                                            <svg fill="#dc2626" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve" stroke="#dc2626"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="23.552"></g><g id="SVGRepo_iconCarrier"> <g> <g> 
+                                                <path d="M465.423,48.241h-137.61V23.955C327.813,10.746,317.082,0,303.893,0h-95.785c-13.19,0-23.92,10.746-23.92,23.955V48.24 H46.577c-6.655,0-12.049,5.394-12.049,12.049c0,6.655,5.394,12.049,12.049,12.049h22.332l15.228,396.396 C85.069,492.995,104.818,512,129.099,512h253.804c24.281,0,44.03-19.006,44.96-43.267l15.228-396.396h22.332 c6.653,0,12.049-5.394,12.049-12.049C477.472,53.635,472.078,48.241,465.423,48.241z M208.285,24.097h95.43v24.143h-95.43V24.097z M403.784,467.809c-0.433,11.268-9.605,20.094-20.882,20.094H129.099c-11.276,0-20.448-8.827-20.882-20.095L93.025,72.338h325.952 L403.784,467.809z"></path> </g> </g> <g> <g> 
+                                                <path d="M182.63,181.571c-0.127-6.575-5.494-11.817-12.042-11.817c-0.078,0-0.158,0-0.236,0.002 c-6.652,0.128-11.943,5.626-11.815,12.278l3.781,196.634c0.126,6.575,5.495,11.817,12.042,11.817c0.078,0,0.158,0,0.236-0.002 c6.653-0.128,11.943-5.624,11.815-12.278L182.63,181.571z"></path> </g> </g> <g> <g> 
+                                                <path d="M255.998,169.753c-6.654,0-12.049,5.394-12.049,12.049v196.634c0,6.654,5.394,12.049,12.049,12.049 c6.655,0,12.049-5.394,12.049-12.049V181.802C268.047,175.148,262.653,169.753,255.998,169.753z"></path> </g> </g> <g> <g> 
+                                                <path d="M341.645,169.756c-6.628-0.147-12.151,5.162-12.278,11.815l-3.781,196.634c-0.129,6.653,5.162,12.15,11.815,12.278 c0.078,0.001,0.158,0.002,0.236,0.002c6.546,0,11.916-5.244,12.042-11.817l3.781-196.634 C353.588,175.38,348.299,169.883,341.645,169.756z"></path> </g> </g> </g></svg>                                        
+                                        </button>
+                                        
+                                    {/if}
+
                                     
                                     <div class="flex items-center gap-3">
                                         <!-- Simplified household member buttons (disabled for now) -->
@@ -457,8 +516,24 @@
                                                         {#if field.required}
                                                             <span class="text-red-600">*</span>
                                                         {/if}
+                                                        {#if editMode}
+                                                        <button
+                                                            class="p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                                                            on:click={() => togglePopup(field)}
+                                                        >
+                                                            Edit
+                                                        </button>
+
+                                                        
+                                                        {/if}
+
                                                     </label>
+                                                
+                                                    <!-- -------------------------------------------------------------------------------------------------------------------------------
                                                     
+                                                    
+                                                    -->
+                                                    <!-- edit mode of each text field -->
                                                     {#if editMode || isAlwaysEditableField(field.type)}
                                                         {#if field.type === 'textarea'}
                                                             <textarea
@@ -626,8 +701,107 @@
             </div>
         {/if}
     </div>
-</div>
+    
+    <!-- DELETE FORM HANDLER -->
+    {#if showDeleteConfirmation}
+        <div class="fixed inset-0 backdrop-blur-sm bg-opacity-30 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="text-red-600 text-2xl">⚠️</div>
+                    <h3 class="text-lg font-bold text-gray-900">Delete Form</h3>
+                </div>
+                
+                <div class="mb-6">
+                    <p class="text-gray-700 mb-4">
+                        Are you sure you want to delete this form? This action cannot be undone.
+                    </p>
+                    <p class="text-sm text-gray-600 mb-4">
+                        <strong>Form:</strong> {data.form.title}<br>
+                        <strong>Version:</strong> {data.form.version}<br>
+                        <strong>Sections:</strong> {data.form.sections.length}<br>
+                        <strong>Total Fields:</strong> {getTotalFieldsCount()}
+                    </p>
+                    <p class="text-sm font-medium text-red-700 mb-3">
+                        To confirm deletion, please type: <br>
+                        <code class="bg-gray-100 px-2 py-1 rounded text-sm">"Pearl S. Buck International"</code>
+                    </p>
+                    
+                    <form method="POST" action="?/deleteForm" use:enhance={() => {
+                        if (!handleDeleteSubmit()) {
+                            return async ({ update }) => {
+                                // Don't proceed if validation failed
+                                await update({ reset: false });
+                            };
+                        }
+                        
+                        isDeleting = true;
+                        return async ({ result, update }) => {
+                            isDeleting = false;
+                            if (result.type === 'success' && result.data?.deleted) {
+                                // Redirect to forms list after successful deletion
+                                window.alert('Form deleted successfully!');
+                                window.location.href = '/admin/forms';
+                            } else if (result.type === 'failure') {
+                                error = typeof result.data?.message === 'string' 
+                                    ? result.data.message 
+                                    : 'Failed to delete form';
+                                await update({ reset: false });
+                            } else {
+                                await update();
+                            }
+                        };
+                    }}>
+                        <input type="hidden" name="formId" value={data.form.id} />
+                        <input type="hidden" name="confirmationText" value={deleteConfirmationText} />
+                        
+                        <input
+                            type="text"
+                            bind:value={deleteConfirmationText}
+                            placeholder="Type the confirmation text here..."
+                            class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                            on:input={() => { error = null; }}
+                        />
+                        
+                        <div class="flex gap-3 mt-6">
+                            <button
+                                type="button"
+                                on:click={cancelDelete}
+                                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                                disabled={isDeleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                disabled={isDeleting || deleteConfirmationText.trim() !== 'Pearl S. Buck International'}
+                            >
+                                {#if isDeleting}
+                                    <span class="inline-flex items-center gap-2">
+                                        <span class="spinner inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                        Deleting...
+                                    </span>
+                                {:else}
+                                    Delete Form
+                                {/if}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {/if}
 
+</div>
+<EditPopUp 
+    bind:field={selectedField} 
+    bind:open={showPopup}
+/>
+{#if editMode}
+    <div class='flex justify-end'>
+        <button class="m-5 p-2 text-xl bg-blue-600 text-white rounded hover:bg-blue-700 transition">Add Section</button>
+    </div>
+{/if}
 <style>
     @keyframes spin {
         0% { transform: rotate(0deg); }
