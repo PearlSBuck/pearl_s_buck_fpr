@@ -1,7 +1,13 @@
-// src/lib/db.ts
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js'
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL ?? "",
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? ""
-);
+// Get URL from environment variables with fallback to hardcoded value
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 
+                    (typeof process !== 'undefined' ? process.env.SUPABASE_URL : '') || 
+                    'https://euwhpolzjpfuqncfjczc.supabase.co'
+
+// Get key from environment variables
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY || 
+                        (typeof process !== 'undefined' ? process.env.SUPABASE_KEY : '') || 
+                        ''
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
