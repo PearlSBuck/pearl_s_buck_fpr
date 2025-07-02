@@ -1,5 +1,5 @@
 <script lang="ts">
-    // +page.svelte - Enhanced form display component with household member management
+    // +page.svelte - Updated to match simplified server structure
     import { enhance } from '$app/forms';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
@@ -22,56 +22,35 @@
     let formTitle = data.form?.title || '';
     let formVersion = data.form?.version || 1.0;
 
-    // Household member management - now tracking sections instead of instances
+    // Simplified form sections (no more instances)
     let formSections: any[] = [];
-    let householdMemberCount = 0;
 
     onMount(() => {
         if (data.form) {
             console.log('Initializing form with', data.form.sections.length, 'sections');
             console.log('Form version:', data.form.version);
             
-            // Initialize form sections
+            // Initialize form sections - simplified structure
             formSections = [...data.form.sections];
-            
-            // Count existing household member sections
-            householdMemberCount = formSections.filter(section => isHouseholdSection(section)).length;
             
             // Initialize field values for all sections
             formSections.forEach((section: any) => {
-                console.log(`Section "${section.title}" has ${section.fields.length} fields, repeatable: ${section.repeatable}`);
+                console.log(`Section "${section.title}" has ${section.fields.length} fields`);
                 
-                if (section.repeatable && section.instances) {
-                    // Initialize repeatable section with instances
-                    section.instances.forEach((instance: any) => {
-                        instance.fields.forEach((field: any) => {
-                            const initialValue = getInitialFieldValue(field);
-                            fieldValues[field.name] = initialValue; // Use field.name which includes instance ID
-                            originalFieldValues[field.name] = initialValue;
-                            
-                            if (field.type === 'radio_with_other') {
-                                otherTextValues[field.name] = field.otherValue || '';
-                                originalOtherTextValues[field.name] = field.otherValue || '';
-                            }
-                        });
-                    });
-                } else {
-                    // Initialize regular section fields
-                    section.fields.forEach((field: any) => {
-                        const initialValue = getInitialFieldValue(field);
-                        fieldValues[field.id] = initialValue;
-                        originalFieldValues[field.id] = initialValue;
-                        
-                        if (field.type === 'radio_with_other') {
-                            otherTextValues[field.id] = field.otherValue || '';
-                            originalOtherTextValues[field.id] = field.otherValue || '';
-                        }
-                    });
-                }
+                // Initialize section fields directly (no instances)
+                section.fields.forEach((field: any) => {
+                    const initialValue = getInitialFieldValue(field);
+                    fieldValues[field.id] = initialValue;
+                    originalFieldValues[field.id] = initialValue;
+                    
+                    if (field.type === 'radio_with_other') {
+                        otherTextValues[field.id] = field.otherValue || '';
+                        originalOtherTextValues[field.id] = field.otherValue || '';
+                    }
+                });
             });
             
             console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
-            console.log('Initialized household member sections:', householdMemberCount);
         }
     });
 
@@ -97,7 +76,6 @@
             otherTextValues = { ...originalOtherTextValues };
             // Reset sections to original state
             formSections = [...data.form.sections];
-            householdMemberCount = formSections.filter(section => isHouseholdSection(section)).length;
         }
         clearMessages();
     }
@@ -205,9 +183,6 @@
     function getTotalFieldsCount(): number {
         if (!formSections) return 0;
         return formSections.reduce((acc: number, section: any) => {
-            if (section.repeatable && section.instances) {
-                return acc + section.instances.reduce((instAcc: number, inst: any) => instAcc + (inst.fields?.length || 0), 0);
-            }
             return acc + (section.fields?.length || 0);
         }, 0);
     }
@@ -283,167 +258,25 @@
         return 'No value';
     }
 
-    // Add new household member section - MODIFIED TO INSERT AFTER ORIGINAL HOUSEHOLD SECTION
-    function addHouseholdMember() {
-        const maxMembers = 20; // Maximum household members allowed
-        
-        if (householdMemberCount >= maxMembers) {
-            error = `Maximum ${maxMembers} household members allowed`;
-            return;
-        }
-
-        // Find the original household section template
-        const originalHouseholdSection = data.form.sections.find((section: any) => isHouseholdSection(section));
-        
-        if (!originalHouseholdSection) {
-            error = 'No household section template found';
-            return;
-        }
-
-        // Find the index of the original household section in formSections
-        const originalHouseholdIndex = formSections.findIndex((section: any) => isOriginalHouseholdSection(section));
-        
-        if (originalHouseholdIndex === -1) {
-            error = 'Original household section not found in form sections';
-            return;
-        }
-
-        householdMemberCount++;
-        
-        // Create new section based on the original household section
-        const newSection = {
-            ...originalHouseholdSection,
-            id: `household_member_${householdMemberCount}`,
-            title: `Household Data Member ${householdMemberCount}`,
-            fields: originalHouseholdSection.fields.map((field: any) => ({
-                ...field,
-                id: `${field.id}_member_${householdMemberCount}`,
-                name: `${field.name || field.id}_member_${householdMemberCount}`,
-                value: getInitialFieldValue(field)
-            }))
-        };
-
-        // Find the insertion point: after the last household section (original + any added ones)
-        let insertIndex = originalHouseholdIndex + 1;
-        
-        // Move insertion point to after all existing household sections
-        while (insertIndex < formSections.length && isHouseholdSection(formSections[insertIndex])) {
-            insertIndex++;
-        }
-
-        // Insert new section at the calculated position
-        const newFormSections = [...formSections];
-        newFormSections.splice(insertIndex, 0, newSection);
-        formSections = newFormSections;
-
-        // Initialize field values for new section
-        newSection.fields.forEach((field: any) => {
-            const initialValue = getInitialFieldValue(field);
-            fieldValues[field.id] = initialValue;
-            originalFieldValues[field.id] = initialValue;
-            
-            if (field.type === 'radio_with_other') {
-                otherTextValues[field.id] = '';
-                originalOtherTextValues[field.id] = '';
-            }
-        });
-
-        // Call server action to sync with database
-        const formData = new FormData();
-        formData.append('memberNumber', householdMemberCount.toString());
-        formData.append('sectionData', JSON.stringify(newSection));
-
-        fetch('?/addHouseholdMemberSection', {
-            method: 'POST',
-            body: formData
-        }).then(response => response.json()).then(result => {
-            if (result.type === 'success') {
-                successMessage = `Added Household Data Member ${householdMemberCount}`;
-                setTimeout(() => {
-                    successMessage = null;
-                }, 3000);
-            } else {
-                error = result.data?.message || 'Failed to add household member';
-                // Rollback on error
-                householdMemberCount--;
-                formSections = formSections.filter(section => section.id !== newSection.id);
-            }
-        }).catch(err => {
-            console.error('Error adding household member:', err);
-            error = 'Failed to add household member';
-            // Rollback on error
-            householdMemberCount--;
-            formSections = formSections.filter(section => section.id !== newSection.id);
-        });
-
-        clearMessages();
-    }
-
-    // Remove household member section
-    function removeHouseholdMember(sectionId: string) {
-        const sectionIndex = formSections.findIndex(section => section.id === sectionId);
-        
-        if (sectionIndex === -1) {
-            error = 'Section not found';
-            return;
-        }
-
-        const sectionToRemove = formSections[sectionIndex];
-        
-        // Don't allow removal if it's the only household section
-        if (householdMemberCount <= 1) {
-            error = 'At least one household member is required';
-            return;
-        }
-
-        // Remove field values for this section
-        sectionToRemove.fields.forEach((field: any) => {
-            delete fieldValues[field.id];
-            delete originalFieldValues[field.id];
-            delete otherTextValues[field.id];
-            delete originalOtherTextValues[field.id];
-        });
-
-        // Remove section from formSections
-        formSections = formSections.filter((_, index) => index !== sectionIndex);
-        householdMemberCount--;
-
-        // Call server action to sync with database
-        const formData = new FormData();
-        formData.append('sectionId', sectionId);
-
-        fetch('?/removeHouseholdMemberSection', {
-            method: 'POST',
-            body: formData
-        }).then(response => response.json()).then(result => {
-            if (result.type === 'success') {
-                successMessage = `Removed household member section`;
-                setTimeout(() => {
-                    successMessage = null;
-                }, 3000);
-            } else {
-                error = result.data?.message || 'Failed to remove household member';
-            }
-        }).catch(err => {
-            console.error('Error removing household member:', err);
-            error = 'Failed to remove household member';
-        });
-
-        clearMessages();
-    }
-
-    // Check if section is a household member type
+    // Check if section is a household member type (simplified check)
     function isHouseholdSection(section: any): boolean {
-        return section.repeatable && (
-            section.sectionType === 'household_member' || 
-            section.title.toLowerCase().includes('household') ||
-            section.title.toLowerCase().includes('member')
-        );
+        return section.title.toLowerCase().includes('household') ||
+               section.title.toLowerCase().includes('member');
     }
 
-    // Check if this is the original household section (not a dynamically added one)
-    function isOriginalHouseholdSection(section: any): boolean {
-        return isHouseholdSection(section) && !section.id.includes('household_member_');
+    // Simplified household member functionality (placeholder since schema doesn't support it yet)
+    function addHouseholdMember() {
+        error = 'Dynamic household member addition is not yet supported in the current database schema.';
+        setTimeout(() => {
+            error = null;
+        }, 5000);
+    }
+
+    function removeHouseholdMember(sectionId: string) {
+        error = 'Dynamic household member removal is not yet supported in the current database schema.';
+        setTimeout(() => {
+            error = null;
+        }, 5000);
     }
 </script>
 
@@ -486,9 +319,10 @@
                         <div class="text-sm text-gray-600 grid grid-cols-2 gap-4">
                             <div><strong>Form ID:</strong> {data.form.id}</div>
                             <div><strong>Created:</strong> {formatDate(data.form.createdAt)}</div>
+                            <div><strong>Version:</strong> {data.form.version}</div>
                             <div><strong>Sections:</strong> {formSections.length}</div>
                             <div><strong>Fields:</strong> {getTotalFieldsCount()}</div>
-                            <div><strong>Household Members:</strong> {householdMemberCount}</div>
+                            <div><strong>Slug:</strong> {data.form.slug || 'N/A'}</div>
                         </div>
 
                         <!-- Action Buttons -->
@@ -543,23 +377,12 @@
                                     <input type="hidden" name="formId" value={data.form.id} />
                                     <!-- Include all field values in the form -->
                                     {#each formSections as section}
-                                        {#if section.repeatable && section.instances}
-                                            {#each section.instances as instance}
-                                                {#each instance.fields as field}
-                                                    <input type="hidden" name={field.name} value={Array.isArray(fieldValues[field.name]) ? fieldValues[field.name].join(',') : (fieldValues[field.name] || '')} />
-                                                    {#if field.type === 'radio_with_other'}
-                                                        <input type="hidden" name="{field.name}_other" value={otherTextValues[field.name] || ''} />
-                                                    {/if}
-                                                {/each}
-                                            {/each}
-                                        {:else}
-                                            {#each section.fields as field}
-                                                <input type="hidden" name="field_{field.id}" value={Array.isArray(fieldValues[field.id]) ? fieldValues[field.id].join(',') : (fieldValues[field.id] || '')} />
-                                                {#if field.type === 'radio_with_other'}
-                                                    <input type="hidden" name="field_{field.id}_other" value={otherTextValues[field.id] || ''} />
-                                                {/if}
-                                            {/each}
-                                        {/if}
+                                        {#each section.fields as field}
+                                            <input type="hidden" name="field_{field.id}" value={Array.isArray(fieldValues[field.id]) ? fieldValues[field.id].join(',') : (fieldValues[field.id] || '')} />
+                                            {#if field.type === 'radio_with_other'}
+                                                <input type="hidden" name="field_{field.id}_other" value={otherTextValues[field.id] || ''} />
+                                            {/if}
+                                        {/each}
                                     {/each}
                                     <button type="submit" class="bg-green-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || !hasChanges()}>
                                         {#if isLoading}
@@ -606,30 +429,18 @@
                                     <h2 class="text-xl font-bold">{section.title}</h2>
                                     
                                     <div class="flex items-center gap-3">
-                                        <!-- Add Household Member Button (only for household sections) -->
-                                        {#if isHouseholdSection(section) && isOriginalHouseholdSection(section)}
+                                        <!-- Simplified household member buttons (disabled for now) -->
+                                        {#if isHouseholdSection(section)}
                                             <button 
                                                 type="button" 
-                                                class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-md shadow-lg transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+                                                class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-md shadow-lg transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 on:click={addHouseholdMember}
-                                                disabled={isLoading || householdMemberCount >= 20}
+                                                disabled={true}
+                                                title="Dynamic member addition not yet supported"
                                             >
                                                 <span class="text-lg">+</span>
                                                 Add Member
-                                                <span class="text-sm opacity-75">({householdMemberCount}/20)</span>
-                                            </button>
-                                        {/if}
-                                        
-                                        <!-- Remove Household Member Button (only for dynamically added sections) -->
-                                        {#if isHouseholdSection(section) && !isOriginalHouseholdSection(section) && (editMode || isAlwaysEditableField('text'))}
-                                            <button 
-                                                type="button" 
-                                                class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded-md text-sm transition-colors duration-200 flex items-center gap-1"
-                                                on:click={() => removeHouseholdMember(section.id)}
-                                                disabled={isLoading}
-                                            >
-                                                <span class="text-lg">×</span>
-                                                Remove
+                                                <span class="text-sm opacity-75">(Soon)</span>
                                             </button>
                                         {/if}
                                     </div>

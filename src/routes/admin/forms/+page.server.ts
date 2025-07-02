@@ -21,7 +21,7 @@ export async function load() {
 
     console.log('Server: Fetched forms count:', data?.length || 0);
     console.log('Server: First form structure:', data?.[0] || 'No forms');
-        
+
     // Map database columns to camelCase for frontend
     const mappedForms = data?.map(form => ({
         ...form,
