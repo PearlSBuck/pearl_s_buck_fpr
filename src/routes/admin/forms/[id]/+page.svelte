@@ -1,5 +1,5 @@
 <script lang="ts">
-    // +page.svelte - Enhanced form display component with version support and fixed slug handling
+    // +page.svelte - Updated to match simplified server structure
     import { enhance } from '$app/forms';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
@@ -32,25 +32,34 @@
     let formTitle = data.form?.title || '';
     let formVersion = data.form?.version || 1.0;
 
+    // Simplified form sections (no more instances)
+    let formSections: any[] = [];
+
     onMount(() => {
         if (data.form) {
             console.log('Initializing form with', data.form.sections.length, 'sections');
             console.log('Form version:', data.form.version);
-            // Initialize field values
-            data.form.sections.forEach((section: any) => {
+            
+            // Initialize form sections - simplified structure
+            formSections = [...data.form.sections];
+            
+            // Initialize field values for all sections
+            formSections.forEach((section: any) => {
                 console.log(`Section "${section.title}" has ${section.fields.length} fields`);
+                
+                // Initialize section fields directly (no instances)
                 section.fields.forEach((field: any) => {
                     const initialValue = getInitialFieldValue(field);
                     fieldValues[field.id] = initialValue;
                     originalFieldValues[field.id] = initialValue;
                     
-                    // Initialize "Others" text values for radio_with_other fields
                     if (field.type === 'radio_with_other') {
                         otherTextValues[field.id] = field.otherValue || '';
                         originalOtherTextValues[field.id] = field.otherValue || '';
                     }
                 });
             });
+            
             console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
         }
     });
@@ -75,6 +84,8 @@
             formVersion = data.form?.version || 1.0;
             fieldValues = { ...originalFieldValues };
             otherTextValues = { ...originalOtherTextValues };
+            // Reset sections to original state
+            formSections = [...data.form.sections];
         }
         clearMessages();
     }
@@ -82,6 +93,9 @@
     function hasChanges(): boolean {
         if (formTitle !== data.form?.title) return true;
         if (formVersion !== data.form?.version) return true;
+        
+        // Check if sections have been added/removed
+        if (formSections.length !== data.form.sections.length) return true;
         
         // Check regular field changes
         const fieldChanges = Object.keys(fieldValues).some(fieldId => {
@@ -177,8 +191,10 @@
     }
 
     function getTotalFieldsCount(): number {
-        if (!data.form?.sections) return 0;
-        return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
+        if (!formSections) return 0;
+        return formSections.reduce((acc: number, section: any) => {
+            return acc + (section.fields?.length || 0);
+        }, 0);
     }
 
     // Check if field type should always be editable (text inputs, textareas, etc.)
@@ -191,62 +207,10 @@
         return ['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'textarea', 'select', 'dropdown', 'radio', 'checkbox', 'radio_with_other'].includes(fieldType);
     }
 
-    // Generate the form slug for URL (matches server-side createSlug function)
-    function generateFormSlug(title: string, version: number): string {
-        const cleanTitle = title
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
-            .replace(/^-+|-+$/g, '');     // Remove leading/trailing hyphens
-        return `${cleanTitle}-${version}`;
-    }
-
-    // Parse form name and version from slug (matches server-side parseFormSlug)
-    function parseFormSlug(slug: string): { name: string, version: number } {
-        // Handle URL-encoded spaces and normalize
-        const normalizedSlug = decodeURIComponent(slug).trim();
-        
-        // Try multiple version patterns
-        const patterns = [
-            /^(.+?)-v(\d+(?:\.\d+)?)$/,     // name-v1.0
-            /^(.+?)-(\d+(?:\.\d+)?)$/,      // name-1.0
-            /^(.+?)\+v?(\d+(?:\.\d+)?)$/    // name+1.0 or name+v1.0
-        ];
-        
-        for (const pattern of patterns) {
-            const match = normalizedSlug.match(pattern);
-            if (match) {
-                const [, nameSlug, version] = match;
-                return { 
-                    name: nameSlug, 
-                    version: parseFloat(version) 
-                };
-            }
-        }
-        
-        // If no version pattern found, assume it's a title and version 1.0
-        return { 
-            name: normalizedSlug, 
-            version: 1.0 
-        };
-    }
-
-    // Get the current form slug from URL params
-    $: currentFormSlug = $page.params.id || '';
-    
-    // Parse form name and version from current slug
-    $: parsedSlug = parseFormSlug(currentFormSlug);
-
-    // Helper function to create a proper slug from title (matches server-side)
-    function createSlug(name: string): string {
-        return name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
-    }
-
     // Returns a display value for a field (for read-only mode)
-    function getFieldDisplayValue(field: any): string {
-        const value = fieldValues[field.id];
+    function getFieldDisplayValue(field: any, fieldKey: string = ''): string {
+        const key = fieldKey || field.id;
+        const value = fieldValues[key];
         
         if (field.type === 'checkbox') {
             if (Array.isArray(value) && value.length > 0) {
@@ -287,8 +251,8 @@
                     );
                     
                     // If this is the "Others" option and there's text input
-                    if (typeof opt === 'object' && opt.showTextField && otherTextValues[field.id]) {
-                        return `${opt.label}: ${otherTextValues[field.id]}`;
+                    if (typeof opt === 'object' && opt.showTextField && otherTextValues[key]) {
+                        return `${opt.label}: ${otherTextValues[key]}`;
                     }
                     
                     return typeof opt === 'object' ? opt.label : opt || value;
@@ -328,6 +292,27 @@
             return false;
         }
     }
+
+    // Check if section is a household member type (simplified check)
+    function isHouseholdSection(section: any): boolean {
+        return section.title.toLowerCase().includes('household') ||
+               section.title.toLowerCase().includes('member');
+    }
+
+    // Simplified household member functionality (placeholder since schema doesn't support it yet)
+    function addHouseholdMember() {
+        error = 'Dynamic household member addition is not yet supported in the current database schema.';
+        setTimeout(() => {
+            error = null;
+        }, 5000);
+    }
+
+    function removeHouseholdMember(sectionId: string) {
+        error = 'Dynamic household member removal is not yet supported in the current database schema.';
+        setTimeout(() => {
+            error = null;
+        }, 5000);
+    }
 </script>
 
 <head>
@@ -337,7 +322,6 @@
 
 <div class="bg-[#F6F8FF] min-h-screen">
     <!-- Header Section -->
-
     <Header 
         name={data.form?.title || 'Form View'} 
         search={false} 
@@ -373,8 +357,10 @@
                         <div class="text-sm text-gray-600 grid grid-cols-2 gap-4">
                             <div><strong>Form ID:</strong> {data.form.id}</div>
                             <div><strong>Created:</strong> {formatDate(data.form.createdAt)}</div>
-                            <div><strong>Sections:</strong> {data.form.sections.length}</div>
+                            <div><strong>Version:</strong> {data.form.version}</div>
+                            <div><strong>Sections:</strong> {formSections.length}</div>
                             <div><strong>Fields:</strong> {getTotalFieldsCount()}</div>
+                            <div><strong>Slug:</strong> {data.form.slug || 'N/A'}</div>
                         </div>
 
                         <!-- Action Buttons -->
@@ -419,15 +405,6 @@
                                             // Update original values
                                             originalFieldValues = { ...fieldValues };
                                             originalOtherTextValues = { ...otherTextValues };
-                                            // Update form data
-                                            data.form.sections.forEach((section: any) => {
-                                                section.fields.forEach((field: any) => {
-                                                    field.value = fieldValues[field.id] || '';
-                                                    if (field.type === 'radio_with_other') {
-                                                        field.otherValue = otherTextValues[field.id] || '';
-                                                    }
-                                                });
-                                            });
                                         } else if (result.type === 'failure') {
                                             error = typeof result.data?.message === 'string'
                                                 ? result.data.message
@@ -436,7 +413,8 @@
                                     };
                                 }}>
                                     <input type="hidden" name="formId" value={data.form.id} />
-                                    {#each data.form.sections as section}
+                                    <!-- Include all field values in the form -->
+                                    {#each formSections as section}
                                         {#each section.fields as field}
                                             <input type="hidden" name="field_{field.id}" value={Array.isArray(fieldValues[field.id]) ? fieldValues[field.id].join(',') : (fieldValues[field.id] || '')} />
                                             {#if field.type === 'radio_with_other'}
@@ -490,9 +468,9 @@
                 {/if}
 
                 <!-- Form Sections -->
-                {#if data.form.sections && data.form.sections.length > 0}
+                {#if formSections && formSections.length > 0}
                     <div class="p-6 space-y-8">
-                        {#each data.form.sections as section, sectionIndex}
+                        {#each formSections as section, sectionIndex}
                             <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
                                 <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
@@ -508,6 +486,23 @@
                                         
                                     {/if}
 
+                                    
+                                    <div class="flex items-center gap-3">
+                                        <!-- Simplified household member buttons (disabled for now) -->
+                                        {#if isHouseholdSection(section)}
+                                            <button 
+                                                type="button" 
+                                                class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-md shadow-lg transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                on:click={addHouseholdMember}
+                                                disabled={true}
+                                                title="Dynamic member addition not yet supported"
+                                            >
+                                                <span class="text-lg">+</span>
+                                                Add Member
+                                                <span class="text-sm opacity-75">(Soon)</span>
+                                            </button>
+                                        {/if}
+                                    </div>
                                 </div>
                                 
                                 <!-- Section Content -->
@@ -817,6 +812,3 @@
             animation: spin 1s linear infinite;
         }
 </style>
-
-
-                                                    
