@@ -113,7 +113,7 @@ export async function load({ params, url }) {
 
         // Fetch sections for this form
         const { data: sectionsData, error: sectionsError } = await supabase
-            .from('form_section')
+            .from('form_sections')
             .select('id, title, orderindex, formid')
             .eq('formid', formBasic.id)
             .order('orderindex', { ascending: true });
