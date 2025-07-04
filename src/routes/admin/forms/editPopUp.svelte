@@ -1,7 +1,12 @@
 <script lang='ts'>
 export let open: boolean;
-export let field: any
+export let field: any;
+let editorField:any;
 import DataInput from "./DataInput.svelte";
+import { formDelta } from '$lib/stores/formEditor';
+import { createEventDispatcher } from 'svelte';
+
+const dispatch = createEventDispatcher();
 
 let popupRef: HTMLDivElement;
 let newOption = '';
@@ -13,19 +18,39 @@ function setHidden(el: HTMLElement, shouldHide: boolean) {
 // let editorLabel = field.label;
 // let editorName = field.name;
 
-let editorOptions:any;
 // let editorPlaceholder = field.placeholder;
 // let editorRequired = field.required;
 function handleEnter(addedOption:string){
     let option = {label: addedOption, value:addedOption}
-    editorOptions = [...editorOptions, option]
+    editorField.options = [...editorField.options, option]
     console.log('Successfully Added new option')
 }
 
 function removeOption(index:number) {
-    editorOptions.splice(index, 1);
-    editorOptions = [...editorOptions];
+    editorField.options.splice(index, 1);
+    editorField.options = [...editorField.options];
     console.log('Successfully removed');
+}
+// handles changes to the formfield
+function handleFieldChanges(updatedField: any, changeType:string) {
+    formDelta.update(delta => {
+        delta.fields.push({
+        type: changeType,
+        id:updatedField.id,
+        field: {
+            label: updatedField.label,
+            name: updatedField.name,
+            placeholder: updatedField.placeholder,
+            required: updatedField.required,
+            type: updatedField.type,
+            orderindex: updatedField.orderindex,
+            options: updatedField.options,
+        }
+        });
+        return delta;
+    });
+
+    open=false;
 }
 
 function handleKeydown(event: KeyboardEvent) {
@@ -38,9 +63,13 @@ function handleKeydown(event: KeyboardEvent) {
 
   }
 
+// makes sure field being updatd is correct
 $: if(open && field){
-    editorOptions=field.options;
+  editorField = structuredClone(field);
 }
+
+
+
 </script>
 
 {#if open}
@@ -72,47 +101,47 @@ $: if(open && field){
             <br><br>
 
             <DataInput
-                type = 'select'
+                type='select'
                 label='Field Type'
                 name='fieldType'
                 required={true}
-                value={field.type}
+                bind:value={editorField.type}
                 options={[
-                { label: 'Text', value: 'text' },
-                { label: 'Number', value: 'number' },
-                { label: 'Radio', value: 'radio' },
-                { label: 'Radio With Other', value: 'radio_with_other' },
-                { label: 'Checkbox', value: 'checkbox' },
-                { label: 'Select', value: 'select' }
+                    { label: 'Text', value: 'text' },
+                    { label: 'Number', value: 'number' },
+                    { label: 'Radio', value: 'radio' },
+                    { label: 'Radio With Other', value: 'radio_with_other' },
+                    { label: 'Checkbox', value: 'checkbox' },
+                    { label: 'Select', value: 'select' }
                 ]}
-                on:change={(e) => field.type = e.detail}
             />
+
             <!-- Field Name -->
             <DataInput
                 type = 'text'
                 label='Field Name'
                 name='fieldName'
                 required={true}
-                value=''
+                bind:value={editorField.label}
             />
 
             <!-- Conditional Inputs -->
             <!-- Text Areas -->
-            {#if (field.type==='text') || (field.type==='number')} 
+            {#if (editorField.type==='text') || (editorField.type==='number')} 
                 <DataInput
                     type = 'text'
                     label='Placeholder'
                     name='fieldPlaceholder'
                     required={true}
-                    value=''
+                    bind:value={editorField.placeholder}
                     placeholder='Enter new placeholder'
                 />
             <!-- With options (Radio, Radio with other, Checkbox) -->
-            {:else if (field.type==='radio') || (field.type==='radio_with_other') || (field.type==='checkbox')} 
+            {:else if (editorField.type==='radio') || (editorField.type==='radio_with_other') || (editorField.type==='checkbox')} 
                 <p>Options:</p>
-                {#each editorOptions as option, index}
+                {#each editorField.options as option, index}
                     <input
-                        type={field.type}
+                        type={editorField.type}
                         value={option.label}
                         disabled={true}
                     />
@@ -122,7 +151,7 @@ $: if(open && field){
                 {/each}
                 <!-- option for adding more options -->
                     <input
-                        type={field.type}
+                        type={editorField.type}
                         value=''
                         disabled={true}
                     />
@@ -133,9 +162,9 @@ $: if(open && field){
                         class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-30"
                         on:keydown={handleKeydown}
                     />
-            {:else if field.type === "select"}
+            {:else if editorField.type === "select"}
                 <p>Options:</p>
-                {#each editorOptions as option, index}
+                {#each editorField.options as option, index}
                     <li>{option.label}<button class="float-right text-gray-500" on:click={() => removeOption(index)}>×</button></li>
                 {/each}
                 <li><input
@@ -152,7 +181,7 @@ $: if(open && field){
             <!-- Save Button For Pop Up -->
             <div class='flex justify-end'>
                 <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Cancel</button>
-                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Confirm</button>
+                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => handleFieldChanges(editorField, 'update')}>Confirm</button>
             </div>
         </div>
     </div>

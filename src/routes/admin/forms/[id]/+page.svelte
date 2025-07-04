@@ -3,18 +3,85 @@
     import { enhance } from '$app/forms';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
+    import { formDelta } from '$lib/stores/formEditor';
     import Header from './Header.svelte'; // Import the Header component
 	import EditPopUp from '../editPopUp.svelte';
+    import { supabase } from '$lib/db'; 
+    import { get } from 'svelte/store';
+
     export let data;
 
 // 
     let showPopup = false;
     let selectedField:any;
-  function togglePopup(field:any) {
-    showPopup = !showPopup;
-    selectedField = field;
-  }
+    function togglePopup(field:any) {
+        showPopup = !showPopup;
+        selectedField = field;
+    }
 
+    async function handleConfirmEdits(formId: string) {
+    const delta = get(formDelta); // get current delta
+
+    console.log('Changes to apply:', delta);
+
+    try {
+        // Apply field updates
+        for (const fieldChange of delta.fields) {
+            const { type, id, field } = fieldChange;
+
+            if (type === 'update') {
+                await supabase
+                    .from('form_fields')
+                    .update({
+                        label: field.label,
+                        name: field.name,
+                        placeholder: field.placeholder,
+                        required: field.required,
+                        type: field.type,
+                        orderindex: field.orderindex,
+                        options: field.options
+                    })
+                    .eq('id', id);
+            } else if (type === 'add') {
+                await supabase
+                    .from('form_fields')
+                    .insert({
+                        form_id: formId,
+                        ...field
+                    });
+            } else if (type === 'delete') {
+                await supabase
+                    .from('form_fields')
+                    .delete()
+                    .eq('id', id);
+            }
+        }
+
+        // Do the same for sections if needed
+        for (const sectionChange of delta.sections) {
+            const { type, id, section } = sectionChange;
+
+            if (type === 'update') {
+                await supabase.from('sections').update(section).eq('id', id);
+            } else if (type === 'add') {
+                await supabase.from('sections').insert({
+                    form_id: formId,
+                    ...section
+                });
+            } else if (type === 'delete') {
+                await supabase.from('sections').delete().eq('id', id);
+            }
+        }
+
+        // After all updates are done, clear the store
+        formDelta.set({ fields: [], sections: [] });
+        location.reload;
+        editMode = false;
+        console.log('All changes applied successfully.');
+    } catch (error) {
+        console.error('Error applying changes:', error);
+    }
+}
 // 
 
     let editMode = false;
@@ -52,6 +119,8 @@
                 });
             });
             console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
+            formDelta.set({ fields: [], sections: [] });
+
         }
     });
 
@@ -429,6 +498,9 @@
 
                                 <button type="button" class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700" on:click={toggleEditMode}>
                                     Cancel
+                                </button>
+                                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => handleConfirmEdits(data.form.id)}>
+                                    Confirm All Changes
                                 </button>
                             {:else}
                                 <button type="button" class="bg-[#1A5A9E] text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-blue-700" on:click={toggleEditMode}>
