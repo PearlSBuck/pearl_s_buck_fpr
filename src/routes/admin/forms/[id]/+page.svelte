@@ -154,6 +154,25 @@ function getInitialFieldValue(field: any) {
         }
     }
 
+    function getDisplayTitle(form: any) {
+    if (!form) return 'Form View';
+    
+    const title = form.title?.toLowerCase() || '';
+    
+    // Check if it's a Family Introduction Sheet (FIS)
+    if (title.includes('fis') || title.includes('family introduction sheet')) {
+        return 'Family Introduction Sheet';
+    }
+    
+    // Check if it's a Family Progress Report (FPR)
+    if (title.includes('fpr') || title.includes('family progress report')) {
+        return 'Family Progress Report';
+    }
+    
+    // Default to the original title
+    return form.title || 'Form View';
+}
+
     function clearMessages() {
         error = null;
         successMessage = null;
@@ -477,7 +496,7 @@ function getInitialFieldValue(field: any) {
 <div class="bg-[#F6F8FF] min-h-screen">
     <!-- Header Section -->
     <Header 
-        name={data.form?.title || 'Form View'} 
+         name={getDisplayTitle(data.form)} 
         search={false} 
         backButton={true} 
     />
@@ -488,16 +507,16 @@ function getInitialFieldValue(field: any) {
             <!-- Form Title Header -->
             <div class="font-[Coda Caption] text-white font-bold lg:text-3xl md:text-2xl sm:text-xl bg-[#1A5A9E] flex justify-center items-end rounded-lg h-20 mt-16 relative z-10">
                 {#if editMode}
-                    <input 
-                        type="text" 
-                        bind:value={formTitle}
-                        placeholder="Form Title"
-                        class="bg-white text-[#1A5A9E] px-4 py-2 mb-2 rounded-md font-bold lg:text-3xl md:text-2xl sm:text-xl text-center w-full max-w-lg mx-4"
-                        on:focus={clearMessages}
-                    />
-                {:else}
-                    <div class="mb-2">{data.form.title}</div>
-                {/if}
+        <input 
+            type="text" 
+            bind:value={formTitle}
+            placeholder="Form Title"
+            class="bg-white text-[#1A5A9E] px-4 py-2 mb-2 rounded-md font-bold lg:text-3xl md:text-2xl sm:text-xl text-center w-full max-w-lg mx-4"
+            on:focus={clearMessages}
+        />
+    {:else}
+        <div class="mb-2">{getDisplayTitle(data.form)}</div>
+    {/if}
             </div>
 
             <!-- Main Form Container -->
