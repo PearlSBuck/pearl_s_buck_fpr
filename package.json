@@ -47,6 +47,7 @@
     "@supabase/auth-helpers-sveltekit": "^0.13.0",
     "@supabase/supabase-js": "^2.50.0",
     "@sveltejs/adapter-auto": "^6.0.1",
+    "bcryptjs": "^3.0.2",
     "pg": "^8.16.0"
   }
 }

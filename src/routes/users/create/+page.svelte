@@ -1,42 +1,4 @@
 <style>
-    .page-header {
-        background-color: white;
-        padding: 1rem 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        width: 100%;
-        display: flex;            
-        justify-content: center;  
-        align-items: center;      
-    }
-    
-    .sub-header {
-        background-color: #474c58; /* Dark gray/blue color */
-        color: white;
-        padding: 0.05rem 2rem;
-        width: 100%;
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-    }
-
-    .back-button {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        background-color: #1f5bb6; /* Blue button */
-        padding: 0.10rem .75rem;
-        margin: 0.30rem 0 0.30rem 1rem; /* small top/bottom margin */
-        border-radius: 2rem;
-        margin-left: 1.5rem; /* spacing between label and button */
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);       /* subtle shadow */
-        transition: background-color 0.2s, box-shadow 0.2s;
-    }
-
-    .back-button:hover {
-        background-color: #1d4ed8;                       /* slightly darker on hover */
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);         /* stronger shadow on hover */
-    }
-
     .focus-gradient-input {
         background: transparent;
         transition: all 0.3s ease;
@@ -92,13 +54,15 @@
     .content-area {
         flex: 1;
         background-color: #EFF6FF; /* bg-blue-50 equivalent */
+        margin-top: 0px;
+        padding-top: 140px;
     }
 </style>
 
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { supabase } from '$lib/db'
-    import bcrypt from 'bcryptjs'; 
+    import Header from '../../../components/Header.svelte'; // Adjust path if needed
 
     let showPassword = false;
 
@@ -180,7 +144,7 @@
         const { data: existingUser } = await supabase
             .from('users')
             .select('id')
-            .or(`username.eq.${username},email.eq.${email}`)
+            .or('username.eq.' + username + ',email.eq.' + email)
             .limit(1)
             .single();
 
@@ -208,40 +172,53 @@
             }
         }
 
-        // Hash password before saving
-        const hashedPassword = bcrypt.hashSync(password, 10);
-        
-        const { data, error } = await supabase.from('users').insert([
-            { username, email, password: hashedPassword, role, fullname, age, birthdate, residence}
-        ])
-
-        if (error) {
-            console.error('Full error object:', error);
-            console.error('Error message: ', error.message);
-            console.error('Error details:', error.details);
-            console.error('Error hint:', error.hint);
-            alert(`Error: ${error.message}\nDetails: ${error.details || 'No details'}\nHint: ${error.hint || 'No hint'}`);
-        } else {
-            console.log('User created successfully:', data);
+        try {
+            // Step 1: Register the user with Supabase Auth
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        username,  // Store username in user metadata
+                        role,      // Store role in user metadata
+                    }
+                }
+            });
+            
+            if (authError) throw authError;
+            if (!authData.user) throw new Error('User registration failed');
+            
+            // Step 2: Insert additional user data into public.users table
+            const { error: userError } = await supabase.from('users').insert([{
+                id: authData.user.id,  // Use the UUID from auth.users
+                username,
+                email,
+                role,
+                fullname,
+                age: parseInt(age),
+                birthdate,
+                residence
+            }]);
+            
+            if (userError) {
+                // log and report the error
+                console.error('Failed to insert user data:', userError);
+                throw userError;
+            }
+            
             alert('User created successfully!');
             clearForm();
-            goto('/users/edit'); // Redirect to users/edit page
+            goto('/users/edit');
+            
+        } catch (error: any) {
+            console.error('Error creating user:', error);
+            alert(`Error: ${error.message || 'Unknown error'}`);
         }
     }
 </script>
 
 <div class="app-container">
-    <header>
-        <div class="page-header">
-            <h1 class="text-3xl font-bold">Pearl S. Buck Foundation Philippines, Inc.</h1>
-        </div>
-        <div class="sub-header">
-            <h2 class="text-base font-semibold">Create User</h2>
-            <button onclick={() => goto('/users/edit')} class="back-button">
-                Back
-            </button>
-        </div>
-    </header>
+    <Header name="Create User" search={false} backButton={true} />
 
     <div class="content-area flex flex-col items-center bg-blue-50 pt-8 px-8 pb-8">
         <div class="w-full max-w-4xl bg-white shadow-md rounded-lg p-10 mt-8">
