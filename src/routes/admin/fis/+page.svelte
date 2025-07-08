@@ -1,8 +1,8 @@
 <!--+page.svelte-->
 <script>
     import { goto } from '$app/navigation';
+    import { page } from '$app/stores';
     import Header from '../forms/[id]/Header.svelte';
- // Import the Header component
     
     export let data;
     
@@ -11,6 +11,7 @@
     let selectedYear = new Date().getFullYear(); // Default to current year
     /** @type {number[]} */
     let availableYears = [];
+    let isInitialized = false; // Add flag to track initialization
 
     // Initialize available years from forms data
     $: {
@@ -27,9 +28,18 @@
             )
         ).sort((a, b) => b - a); // Sort descending (newest first)
 
-        // Set default year to most recent if available
-        if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
-            selectedYear = availableYears[0];
+        // Only set selectedYear from URL parameter on initial load
+        if (!isInitialized) {
+            const yearParam = $page.url.searchParams.get('year');
+            if (yearParam) {
+                const paramYear = parseInt(yearParam);
+                if (availableYears.includes(paramYear)) {
+                    selectedYear = paramYear;
+                }
+            } else if (availableYears.length > 0 && !availableYears.includes(selectedYear)) {
+                selectedYear = availableYears[0];
+            }
+            isInitialized = true;
         }
 
         // Filter forms by selected year
@@ -47,6 +57,11 @@
      */
     function onYearChange(event) {
         selectedYear = +/** @type {HTMLSelectElement} */(event.target).value;
+        
+        // Update URL with selected year
+        const url = new URL($page.url);
+        url.searchParams.set('year', selectedYear.toString());
+        goto(url.toString(), { replaceState: true });
     }
 
     /**
@@ -54,16 +69,16 @@
      * @param {{ title: string, version: string }} form - The form object
      */
     function handleFormClick(form) {
-        if (form.title && form.version) {
+        if (form.title) {
             // Create the URL path: /admin/forms/[form name]-[version]
             const formName = encodeURIComponent(form.title);
-            const version = encodeURIComponent(form.version);
+            const version = form.version ? encodeURIComponent(form.version) : 'null';
             const url = `/admin/forms/${formName}-${version}`;
             
             console.log('Navigating to:', url);
             goto(url);
         } else {
-            console.warn('Form missing title or version:', form);
+            console.warn('Form missing title:', form);
         }
     }
 
