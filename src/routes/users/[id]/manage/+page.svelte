@@ -1,38 +1,4 @@
 <style>
-    .page-header {
-        background-color: white;
-        padding: 1rem 2rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        width: 100%;
-        display: flex;            
-        justify-content: center;  
-        align-items: center;      
-    }
-    .sub-header {
-        background-color: #474c58;
-        color: white;
-        padding: 0.05rem 2rem;
-        width: 100%;
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-    }
-    .back-button {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        background-color: #1f5bb6;
-        padding: 0.10rem .75rem;
-        margin: 0.30rem 0 0.30rem 1rem;
-        border-radius: 2rem;
-        margin-left: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        transition: background-color 0.2s, box-shadow 0.2s;
-    }
-    .back-button:hover {
-        background-color: #1d4ed8;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-    }
     .app-container {
         display: flex;
         flex-direction: column;
@@ -41,13 +7,15 @@
     .content-area {
         flex: 1;
         background-color: #EFF6FF;
+        margin-top: 0px;
+        padding-top: 140px;
     }
 </style>
 
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { supabase } from '$lib/db';
     import { onMount } from 'svelte';
+    import Header from '../../../../components/Header.svelte';
 
     export let data: { user: any };
     let user = data.user;
@@ -61,17 +29,24 @@
 
     async function deleteUser() {
         if (confirm(`Are you sure you want to delete ${user.username}? This action cannot be undone.`)) {
-            const { error } = await supabase
-                .from('users')
-                .delete()
-                .eq('id', user.id);
+            try {
+                const response = await fetch ('/api/delete-user', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({userID: user.id}),
+                })
 
-            if (error) {
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('User deleted sucessfully!');
+                    goto('/users/edit');
+                } else {
+                    throw new Error(result.error || 'Unknown error');
+                }
+            } catch (error) {
                 console.error('Error deleting user:', error);
-                alert('Error deleting user: ' + error.message);
-            } else {
-                alert('User deleted successfully!');
-                goto('/users/edit');
+            alert('Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'));
             }
         }
     }
@@ -79,17 +54,7 @@
 
 <div class="app-container">
     <!-- Header -->
-    <header>
-        <div class="page-header">
-            <h1 class="text-3xl font-bold">Pearl S. Buck Foundation Philippines, Inc.</h1>
-        </div>
-        <div class="sub-header">
-            <h2 class="text-base font-semibold">Manage User</h2>
-            <button onclick={() => goto('/users/edit')} class="back-button">
-                Back
-            </button>
-        </div>
-    </header>
+    <Header name="Manage User" search={false} backButton={true} />
 
     <div class="content-area flex flex-col items-center bg-blue-50 pt-8 px-6 pb-8">
         <!-- User Card -->
