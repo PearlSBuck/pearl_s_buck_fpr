@@ -7,6 +7,7 @@ export type FieldDelta =
       label: string;
       name: string;
       placeholder: string;
+      sectionid:string;
       required: boolean;
       type: string;
       orderindex: number;
@@ -15,13 +16,14 @@ export type FieldDelta =
 
 export type Field = 
   | {
-        label: string;
-        name: string;
-        placeholder: string;
-        required: boolean;
-        type: string;
-        orderindex: number;
-        options: { label: string; value: string }[];
+      label: string;
+      name: string;
+      placeholder: string;
+      sectionid:string;
+      required: boolean;
+      type: string;
+      orderindex: number;
+      options: { label: string; value: string }[];
     }
 export type SectionDelta =
   | { type: string; id: string;section: Partial<{ 

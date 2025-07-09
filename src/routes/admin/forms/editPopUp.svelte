@@ -4,10 +4,11 @@ export let openDeletePopup: boolean;
 export let openAddPopup: boolean;
 export let openAddSectionPopup: boolean;
 
+
 export let field: any;
-export let section: any;
+export let fieldId: string;
+export let sectionId: any;
 export let formId: string;
-let editorField:any;
 import DataInput from "./DataInput.svelte";
 import { formDelta } from '$lib/stores/formEditor';
 import { handleSectionChanges } from '$lib/stores/formEditor'
@@ -25,15 +26,19 @@ function setHidden(el: HTMLElement, shouldHide: boolean) {
   el.classList.toggle('hidden', shouldHide);
 }
 // for add field
-let addNewField: Field = {
+
+let editorField: Field = {
     label: '',
     name: '',
     placeholder: '',
     required: false,
+    sectionid: '',
     type: '',
     orderindex: 0,
     options: []
 };
+
+
 // form add section
 let addNewSection: Section = {
     title: '', 
@@ -54,24 +59,45 @@ function removeOption(index:number) {
     console.log('Successfully removed');
 }
 // handles changes to the formfield
-function handleFieldChanges(updatedField: any, changeType:string) {
-    formDelta.update(delta => {
-        delta.fields.push({
-        type: changeType,
-        id:updatedField.id,
-        field: {
-            label: updatedField.label,
-            name: updatedField.name,
-            placeholder: updatedField.placeholder,
-            required: updatedField.required,
-            type: updatedField.type,
-            orderindex: updatedField.orderindex,
-            options: updatedField.options,
-        }
+function handleFieldChanges(updatedField: any, changeType:string, sectionid?: string) {
+    if(changeType == 'add'){
+        formDelta.update(delta => {
+            delta.fields.push({
+            type: changeType,
+            id:'',
+            field: {
+                sectionid: sectionid,
+                label: updatedField.label,
+                name: updatedField.name,
+                placeholder: updatedField.placeholder,
+                required: updatedField.required,
+                type: updatedField.type,
+                orderindex: updatedField.orderindex,
+                options: updatedField.options,
+                
+            }
+            });
+            return delta;
         });
-        return delta;
-    });
-
+    }
+    else{
+        formDelta.update(delta => {
+            delta.fields.push({
+            type: changeType,
+            id:fieldId,
+            field: {
+                label: updatedField.label,
+                name: updatedField.name,
+                placeholder: updatedField.placeholder,
+                required: updatedField.required,
+                type: updatedField.type,
+                orderindex: updatedField.orderindex,
+                options: updatedField.options,
+            }
+            });
+            return delta;
+        });
+    }
     openEditPopup=false;
 }
 
@@ -87,7 +113,7 @@ function handleKeydown(event: KeyboardEvent) {
 
 // makes sure field being updatd is correct
 $: if(openEditPopup && field){
-  editorField = structuredClone(field);
+  editorField = field;
 }
 
 
@@ -203,7 +229,10 @@ $: if(openEditPopup && field){
             <!-- Save Button For Pop Up -->
             <div class='flex justify-end'>
                 <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => openEditPopup=false}>Cancel</button>
-                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => handleFieldChanges(editorField, 'update')}>Confirm</button>
+                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => {
+                    handleFieldChanges(editorField, 'update');
+                    newOption=''}
+                    }>Confirm</button>
             </div>
         </div>
     </div>
@@ -223,7 +252,10 @@ $: if(openEditPopup && field){
             <p>Are you sure you would like to delete this field?</p>
             <br><br><br>
             <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openDeletePopup=false}>Cancel</button>
-            <button class="m-1 p-1 bg-red-600 text-white rounded hover:bg-red-700 transition" on:click={() => handleFieldChanges(editorField, 'delete')}>Delete</button>
+            <button class="m-1 p-1 bg-red-600 text-white rounded hover:bg-red-700 transition" on:click={() => {
+                handleFieldChanges(editorField, 'delete', fieldId)
+                openDeletePopup = false
+            }}>Delete</button>
 
         </div>
     </div>
@@ -246,7 +278,7 @@ $: if(openEditPopup && field){
                 label='Field Type'
                 name='fieldType'
                 required={true}
-                bind:value={addNewField.type}
+                bind:value={editorField.type}
                 options={[
                     { label: 'Text', value: 'text' },
                     { label: 'Number', value: 'number' },
@@ -263,26 +295,26 @@ $: if(openEditPopup && field){
                 label='Field Name'
                 name='fieldName'
                 required={true}
-                bind:value={addNewField.label}
+                bind:value={editorField.label}
             />
 
             <!-- Conditional Inputs -->
             <!-- Text Areas -->
-            {#if (addNewField.type==='text') || (addNewField.type==='number')} 
+            {#if (editorField.type==='text') || (editorField.type==='number')} 
                 <DataInput
                     type = 'text'
                     label='Placeholder'
                     name='fieldPlaceholder'
                     required={true}
-                    bind:value={addNewField.placeholder}
+                    bind:value={editorField.placeholder}
                     placeholder='Enter new placeholder'
                 />
             <!-- With options (Radio, Radio with other, Checkbox) -->
-            {:else if (addNewField.type==='radio') || (addNewField.type==='radio_with_other') || (addNewField.type==='checkbox')} 
+            {:else if (editorField.type==='radio') || (editorField.type==='radio_with_other') || (editorField.type==='checkbox')} 
                 <p>Options:</p>
-                {#each addNewField.options as option, index}
+                {#each editorField.options as option, index}
                     <input
-                        type={addNewField.type}
+                        type={editorField.type}
                         value={option.label}
                         disabled={true}
                     />
@@ -292,7 +324,7 @@ $: if(openEditPopup && field){
                 {/each}
                 <!-- option for adding more options -->
                     <input
-                        type={addNewField.type}
+                        type={editorField.type}
                         value=''
                         disabled={true}
                     />
@@ -303,9 +335,9 @@ $: if(openEditPopup && field){
                         class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-30"
                         on:keydown={handleKeydown}
                     />
-            {:else if addNewField.type === "select"}
+            {:else if editorField.type === "select"}
                 <p>Options:</p>
-                {#each addNewField.options as option, index}
+                {#each editorField.options as option, index}
                     <li>{option.label}<button class="float-right text-gray-500" on:click={() => removeOption(index)}>×</button></li>
                 {/each}
                 <li><input
@@ -320,7 +352,9 @@ $: if(openEditPopup && field){
 
             <br><br>
             <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openAddPopup=false}>Cancel</button>
-            <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" on:click={() => handleFieldChanges(addNewField, 'add')}>Add</button>
+            <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" on:click={() => {
+                handleFieldChanges(editorField, 'add', sectionId)
+                openAddPopup=false}}>Add</button>
 
         </div>
     </div>
@@ -350,7 +384,9 @@ $: if(openEditPopup && field){
             <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openAddSectionPopup=false}>Cancel</button>
             <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" on:click={() => 
             {handleSectionChanges(addNewSection, 'add', formId);
-            openAddSectionPopup=false}}>Add</button>
+            openAddSectionPopup=false;
+            newOption='';}
+            }>Add</button>
 
         </div>
     </div>

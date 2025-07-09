@@ -19,10 +19,11 @@
     let showAddSectionPopup = false;
 
     let selectedField:any;
-    let selectedSection: any;
+    let selectedFieldId:any;
+    let selectedSectionId: any;
     let selectedForm: string;
     // handles popup visibility
-    function togglePopup(field:any, type:string) {
+    function togglePopup(type:string, id?:string, field?: any) {
         switch(type){
             case 'editField':
                 showEditPopUp = !showEditPopUp;
@@ -30,15 +31,15 @@
                 break;
             case 'deleteField':
                 showDeletePopup = !showDeletePopup;
+                selectedFieldId = id;
                 selectedField = field;
                 break;
             case 'addField':
                 showAddPopup = !showAddPopup;
-                selectedField = null;
+                selectedSectionId = id;
                 break;
             case 'addSection':
                 showAddSectionPopup = !showAddSectionPopup;
-                selectedSection = null;
                 selectedForm = data.form.id;
                 break;
         }
@@ -73,8 +74,15 @@
                     await supabase
                         .from('form_fields')
                         .insert({
-                            form_id: formId,
-                            ...field
+                            label: field.label,
+                            name: field.name,
+                            placeholder: field.placeholder,
+                            required: false,
+                            formid: formId,
+                            sectionid: field.sectionid,
+                            type: field.type,
+                            orderindex: 0,
+                            options: field.options
                         });
                 } else if (type === 'delete') {
                     await supabase
@@ -568,7 +576,7 @@
                                         <button class="m-1 p-1 bg-red-600 text-white rounded hover:bg-red-700 transition" aria-label="Delete section" on:click={() => handleSectionChanges(section, 'delete', data.form.id)}>
                                             Delete Section
                                         </button>
-                                        <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" aria-label="Add Field" on:click={() => showAddPopup = true}>
+                                        <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" aria-label="Add Field" on:click={() => togglePopup('addField', section.id)}>
                                             Add New Field
                                         </button>
                                     </div>    
@@ -591,13 +599,13 @@
                                                         {#if editMode}
                                                         <button
                                                             class="p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                                                            on:click={() => togglePopup(field, 'editField')}
+                                                            on:click={() => togglePopup('editField', field.id, field)}
                                                         >
                                                             Edit
                                                         </button>
                                                         <button
                                                             class="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition"
-                                                            on:click={() => togglePopup(field, 'deleteField')}
+                                                            on:click={() => togglePopup('deleteField', field.id, field)}
                                                         >
                                                             Delete Field
                                                         </button>
@@ -795,7 +803,8 @@
 </div>
 <EditPopUp 
     bind:field={selectedField} 
-    bind:section={selectedSection}
+    bind:fieldId={selectedFieldId}
+    bind:sectionId={selectedSectionId}
     bind:formId = {selectedForm}
     bind:openEditPopup={showEditPopUp}
     bind:openDeletePopup={showDeletePopup}   
@@ -805,7 +814,7 @@
 />
 {#if editMode}
     <div class='flex justify-end'>
-        <button class="m-5 p-2 text-xl bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => togglePopup(null, 'addSection')}>Add Section</button>
+        <button class="m-5 p-2 text-xl bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => togglePopup('addSection')}>Add Section</button>
     </div>
 {/if}
 <style>
