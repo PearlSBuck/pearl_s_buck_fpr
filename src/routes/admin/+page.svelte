@@ -12,7 +12,7 @@
 </script>
 <Header name={pageName} search backButton />;
 <div class="mt-100 mx-10">
-  <Year innerText={innerText} activated={false} />
+  <Year innerText={innerText} activated={true} />
 </div>
 
 
