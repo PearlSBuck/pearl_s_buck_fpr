@@ -11,6 +11,8 @@
     import { supabase } from '$lib/db'; 
     import { get } from 'svelte/store';
     import cloneDeep from 'lodash/cloneDeep';
+    import { displayedData } from '$lib/stores/formEditor';
+
 
     export let data;
     let editModeData: any;
@@ -24,7 +26,7 @@
     let selectedField:any;
     let selectedFieldId:any;
     let selectedSectionId: any;
-    let selectedForm: string;
+    let selectedForm: any;
     // handles popup visibility
 
     onMount(() => {
@@ -70,7 +72,7 @@
                 break;
             case 'addSection':
                 showAddSectionPopup = !showAddSectionPopup;
-                selectedForm = data.form.id;
+                selectedForm = id;
                 break;
         }
         
@@ -185,8 +187,9 @@
 
     // changes the referenced fields and sections so that UI is reactive
     // [NOTE to developer]: must implement a type for form data when everything is set in stone
-    $: displayedData = editMode ? editModeData : data;
-
+    $: {
+    displayedData.set(editMode ? editModeData : data);
+    }
     // setter function for making displayedData reactive to temporary changes
     export function setEditMode(value: boolean) {
         editMode = value;
@@ -202,7 +205,7 @@
         editMode = !editMode;
         editModeData = cloneDeep(data); 
         if(displayedData){
-            console.log('displayedData loaded successfully', displayedData.form);
+            console.log('displayedData loaded successfully', $displayedData.form);
         }
         else{
             console.log('displayedData failed to load');
@@ -550,8 +553,8 @@
                                     };
                                 }}>
                                     <input type="hidden" name="formId" value={data.form.id} />
-                                    
-                                    {#each displayedData.form.sections as section}
+                                    {#if $displayedData?.form}
+                                    {#each $displayedData.form.sections as section}
                                         {#each section.fields as field}
                                             <input type="hidden" name="field_{field.id}" value={Array.isArray(fieldValues[field.id]) ? fieldValues[field.id].join(',') : (fieldValues[field.id] || '')} />
                                             {#if field.type === 'radio_with_other'}
@@ -559,6 +562,7 @@
                                             {/if}
                                         {/each}
                                     {/each}
+                                    {/if}
                                     <button type="submit" class="bg-green-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || !hasChanges()}>
                                         {#if isLoading}
                                             <span class="spinner inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
@@ -600,7 +604,8 @@
                 <!-- Form Sections -->
                 {#if data.form.sections && data.form.sections.length > 0}
                     <div class="p-6 space-y-8">
-                        {#each displayedData.form.sections as section, sectionIndex}
+                        {#if $displayedData?.form}
+                        {#each $displayedData.form.sections as section, sectionIndex}
                             <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
                                 <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
@@ -816,6 +821,7 @@
                                 </div>
                             </div>
                         {/each}
+                        {/if}
                     </div>
                 {:else}
                     <div class="p-6 text-center py-12 text-gray-500 italic">
@@ -844,11 +850,11 @@
     bind:openDeletePopup={showDeletePopup}   
     bind:openAddPopup={showAddPopup}
     bind:openAddSectionPopup = {showAddSectionPopup}
-    bind:displayedFormData = {displayedData.form}
+    bind:displayedFormData = {$displayedData.form}
 />
 {#if editMode}
     <div class='flex justify-end'>
-        <button class="m-5 p-2 text-xl bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => togglePopup('addSection')}>Add Section</button>
+        <button class="m-5 p-2 text-xl bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => togglePopup('addSection', $displayedData.form.id)}>Add Section</button>
     </div>
 {/if}
 <style>

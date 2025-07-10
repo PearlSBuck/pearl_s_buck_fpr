@@ -2,6 +2,38 @@
 import { writable } from 'svelte/store';
 import { supabase } from '$lib/db'; 
 
+export const displayedData = writable<any>({
+  form: {
+    id: '',
+    title: '',
+    createdAt: '',
+    version: 0,
+    slug: '',
+    sections: [
+      {
+        id: '',
+        title: '',
+        orderIndex: 0,
+        formId: '',
+        fields: [
+          {
+            id: '',
+            label: '',
+            name: '',
+            placeholder: '',
+            required: false,
+            value: '',
+            options: [],
+            type: '',
+            orderIndex: 0,
+            sectionId: '',
+          },
+        ],
+      },
+    ],
+  },
+});
+
 export type FieldDelta =
   | { type: string; id: string; field: Partial<{
       label: string;
@@ -85,7 +117,7 @@ async function getNextOrderIndex(formId: string) {
 }
 
 // for updating form sections
-export async function handleSectionChanges(updatedSection: any, changeType: string, formId:any) {
+export async function handleSectionChanges(updatedSection: any, changeType: string, formId:string) {
   console.log(formId)
     if (!updatedSection.orderindex){
       updatedSection.orderindex = await getNextOrderIndex(formId);
@@ -102,6 +134,26 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
                   orderindex: updatedSection.orderindex,
               }
           });
+
+          displayedData.update(data => {
+            if (data?.form) {
+              try{
+                data.form.sections.push({
+                  id: '',
+                  title: updatedSection.title,
+                  orderIndex: updatedSection.orderindex,
+                  formId: formId,
+                  fields: []
+                });
+                console.log('Successfully added section:', updatedSection);
+              } catch(error){
+                console.error('Failed to add new section', error);
+              }
+
+            }
+            return data;
+          });
+
           return delta;
       });
     }
