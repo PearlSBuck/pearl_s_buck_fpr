@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { selectedRecords } from '../routes/admin/data/selectRecord'; 
+  import { selectedRecords } from '../routes/admin/data/selectRecord'; 
+  import { goto } from '$app/navigation';
 
   export let id_number: number;
   export let name: string;
@@ -16,9 +17,13 @@
       return updated;
     });
   }
+
+  function goToRecord(id: number) {
+  goto(`/admin/data/${id}`);
+  }
 </script>
 
-<div class="flex justify-between rounded-md text-white bg-[#474C58] h-16 p-3 w-60 m-1 lg:w-275 md:w-150 sm:w-125 relative">
+<button class="flex justify-between rounded-md text-white bg-[#474C58] h-16 p-3 w-60 m-1 lg:w-275 md:w-150 sm:w-125 relative" on:click={() => goToRecord(id_number)}>
     <div class="flex items-start flex-col justify-center">
         <div class="flex flex-col justify-center items-start gap-1">
             <span class="text-sm md:text-md lg:text-lg">SC Name: {name}</span>
@@ -32,4 +37,4 @@
           on:change={toggleSelection}>
         {/if}
     </div>
-</div>
+</button>
