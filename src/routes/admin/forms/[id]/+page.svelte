@@ -4,13 +4,16 @@
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
     import { formDelta } from '$lib/stores/formEditor';
+    import { originalData } from "$lib/stores/formEditor";
     import { handleSectionChanges } from '$lib/stores/formEditor'
     import Header from './Header.svelte'; // Import the Header component
 	import EditPopUp from '../editPopUp.svelte';
     import { supabase } from '$lib/db'; 
     import { get } from 'svelte/store';
+    import cloneDeep from 'lodash/cloneDeep';
 
     export let data;
+    let editModeData: any;
 
 // setups the update
     let showEditPopUp = false;
@@ -23,11 +26,38 @@
     let selectedSectionId: any;
     let selectedForm: string;
     // handles popup visibility
+
+    onMount(() => {
+            if (data.form) {
+                console.log('Initializing form with', data.form.sections.length, 'sections');
+                console.log('Form version:', data.form.version);
+                // Initialize field values
+                data.form.sections.forEach((section: any) => {
+                    console.log(`Section "${section.title}" has ${section.fields.length} fields`);
+                    section.fields.forEach((field: any) => {
+                        const initialValue = getInitialFieldValue(field);
+                        fieldValues[field.id] = initialValue;
+                        originalFieldValues[field.id] = initialValue;
+                        
+                        // Initialize "Others" text values for radio_with_other fields
+                        if (field.type === 'radio_with_other') {
+                            otherTextValues[field.id] = field.otherValue || '';
+                            originalOtherTextValues[field.id] = field.otherValue || '';
+                        }
+                    });
+                });
+                console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
+                formDelta.set({ fields: [], sections: [] });
+
+            }
+        });
+
     function togglePopup(type:string, id?:string, field?: any) {
         switch(type){
             case 'editField':
                 showEditPopUp = !showEditPopUp;
                 selectedField = field;
+                selectedFieldId = id;
                 break;
             case 'deleteField':
                 showDeletePopup = !showDeletePopup;
@@ -126,6 +156,9 @@
     let fieldValues: { [key: string]: any } = {};
     let originalFieldValues: { [key: string]: any } = {};
     
+    
+
+
     // Track "Others" text field values for radio_with_other fields
     let otherTextValues: { [key: string]: string } = {};
     let originalOtherTextValues: { [key: string]: string } = {};
@@ -134,30 +167,7 @@
     let formTitle = data.form?.title || '';
     let formVersion = data.form?.version || 1.0;
 
-    onMount(() => {
-        if (data.form) {
-            console.log('Initializing form with', data.form.sections.length, 'sections');
-            console.log('Form version:', data.form.version);
-            // Initialize field values
-            data.form.sections.forEach((section: any) => {
-                console.log(`Section "${section.title}" has ${section.fields.length} fields`);
-                section.fields.forEach((field: any) => {
-                    const initialValue = getInitialFieldValue(field);
-                    fieldValues[field.id] = initialValue;
-                    originalFieldValues[field.id] = initialValue;
-                    
-                    // Initialize "Others" text values for radio_with_other fields
-                    if (field.type === 'radio_with_other') {
-                        otherTextValues[field.id] = field.otherValue || '';
-                        originalOtherTextValues[field.id] = field.otherValue || '';
-                    }
-                });
-            });
-            console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
-            formDelta.set({ fields: [], sections: [] });
-
-        }
-    });
+    
 
 
 
@@ -173,8 +183,30 @@
         return field.value || '';
     }
 
+    // changes the referenced fields and sections so that UI is reactive
+    // [NOTE to developer]: must implement a type for form data when everything is set in stone
+    $: displayedData = editMode ? editModeData : data;
+
+    // setter function for making displayedData reactive to temporary changes
+    export function setEditMode(value: boolean) {
+        editMode = value;
+
+        if (editMode) {
+        editModeData = cloneDeep(data);
+        } else {
+        editModeData = null;
+        }
+    }
+
     function toggleEditMode() {
         editMode = !editMode;
+        editModeData = cloneDeep(data); 
+        if(displayedData){
+            console.log('displayedData loaded successfully', displayedData.form);
+        }
+        else{
+            console.log('displayedData failed to load');
+        }
         if (!editMode) {
             // Reset values when canceling edit
             formTitle = data.form?.title || '';
@@ -182,6 +214,7 @@
             fieldValues = { ...originalFieldValues };
             otherTextValues = { ...originalOtherTextValues };
         }
+        
         clearMessages();
     }
 
@@ -517,7 +550,8 @@
                                     };
                                 }}>
                                     <input type="hidden" name="formId" value={data.form.id} />
-                                    {#each data.form.sections as section}
+                                    
+                                    {#each displayedData.form.sections as section}
                                         {#each section.fields as field}
                                             <input type="hidden" name="field_{field.id}" value={Array.isArray(fieldValues[field.id]) ? fieldValues[field.id].join(',') : (fieldValues[field.id] || '')} />
                                             {#if field.type === 'radio_with_other'}
@@ -566,7 +600,7 @@
                 <!-- Form Sections -->
                 {#if data.form.sections && data.form.sections.length > 0}
                     <div class="p-6 space-y-8">
-                        {#each data.form.sections as section, sectionIndex}
+                        {#each displayedData.form.sections as section, sectionIndex}
                             <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
                                 <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
@@ -810,7 +844,7 @@
     bind:openDeletePopup={showDeletePopup}   
     bind:openAddPopup={showAddPopup}
     bind:openAddSectionPopup = {showAddSectionPopup}
-
+    bind:displayedFormData = {displayedData.form}
 />
 {#if editMode}
     <div class='flex justify-end'>

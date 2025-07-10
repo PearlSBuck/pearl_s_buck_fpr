@@ -45,9 +45,19 @@ export type Section =
 export type Delta = {
   fields: FieldDelta[];
   sections: SectionDelta[];
-};
+}
+
+export type Original = {
+  fields: FieldDelta[];
+  sections: SectionDelta[];
+}
 
 export const formDelta = writable<Delta>({
+  fields: [],
+  sections: [],
+});
+
+export const originalData = writable<Original>({
   fields: [],
   sections: [],
 });

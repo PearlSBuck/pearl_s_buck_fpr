@@ -3,7 +3,7 @@ export let openEditPopup: boolean;
 export let openDeletePopup: boolean;
 export let openAddPopup: boolean;
 export let openAddSectionPopup: boolean;
-
+export let displayedFormData: any;
 
 export let field: any;
 export let fieldId: string;
@@ -15,7 +15,7 @@ import { handleSectionChanges } from '$lib/stores/formEditor'
 import { createEventDispatcher } from 'svelte';
 import type { Field } from '$lib/stores/formEditor';
 import type { Section } from '$lib/stores/formEditor';
-
+	import { updated } from "$app/state";
 
 
 const dispatch = createEventDispatcher();
@@ -60,6 +60,7 @@ function removeOption(index:number) {
 }
 // handles changes to the formfield
 function handleFieldChanges(updatedField: any, changeType:string, sectionid?: string) {
+    // adds a new field
     if(changeType == 'add'){
         formDelta.update(delta => {
             delta.fields.push({
@@ -77,6 +78,7 @@ function handleFieldChanges(updatedField: any, changeType:string, sectionid?: st
                 
             }
             });
+            handleReactiveUI(updatedField, changeType, sectionid);
             return delta;
         });
     }
@@ -95,10 +97,82 @@ function handleFieldChanges(updatedField: any, changeType:string, sectionid?: st
                 options: updatedField.options,
             }
             });
+
+            handleReactiveUI(updatedField, changeType);
             return delta;
         });
     }
     openEditPopup=false;
+}
+
+function handleReactiveUI(updatedField: any, changeType: string, sectionid?:string){
+    if(changeType == 'update'){
+        let sectionIndex = -1;
+        let fieldIndex = -1;
+        for (let sIdx = 0; sIdx < displayedFormData.sections.length; sIdx++) {
+            const section = displayedFormData.sections[sIdx];
+            const fIdx = section.fields.findIndex((field: any) => field.id === fieldId);
+
+            if (fIdx !== -1) {
+                console.log('successfully found field index');
+
+                sectionIndex = sIdx;
+                fieldIndex = fIdx;
+
+                displayedFormData.sections[sectionIndex].fields[fieldIndex] = {
+                    ...displayedFormData.sections[sectionIndex].fields[fieldIndex],
+                    label: updatedField.label,
+                    name: updatedField.name,
+                    placeholder: updatedField.placeholder,
+                    required: updatedField.required,
+                    type: updatedField.type,
+                    orderIndex: updatedField.orderindex,
+                    options: updatedField.options,
+                };
+
+                break; // exit loop once match is found
+            } else {
+                console.log('Failed to find field index in section', sIdx);
+            }
+        }
+    }
+    else if(changeType == 'add'){
+        let sectionIndex = displayedFormData.sections.findIndex((section:any) => section.id === sectionid);
+        try {
+            console.log(displayedFormData.sections[sectionIndex].fields);
+            displayedFormData.sections[sectionIndex].fields.push({
+                id: 'placeholderId',
+                label: updatedField.label,
+                name: updatedField.name,
+                placeholder: updatedField.placeholder,
+                required: updatedField.required,
+                sectionId: sectionid,
+                type: updatedField.type,
+                orderIndex: updatedField.orderindex,
+                options: updatedField.options,
+            });
+            console.log('Successfully added: ', updatedField);
+            console.log(displayedFormData.sections[sectionIndex].fields);
+            displayedFormData = {...displayedFormData};
+        } catch(error){
+            console.error('Failed to push updated field:', error);
+        }
+
+    }
+    else if(changeType == 'delete'){
+        for (let sIdx = 0; sIdx < displayedFormData.sections.length; sIdx++) {
+            const section = displayedFormData.sections[sIdx];
+            const fIdx = section.fields.findIndex((field: any) => field.id === fieldId);
+            if(fIdx !== -1){
+                displayedFormData.sections[sIdx].fields = displayedFormData.sections[sIdx].fields.filter((field:any) => field.id !== fieldId);           
+                displayedFormData = {...displayedFormData};
+                console.log('Successfully deleted field');
+                break;
+            } else{
+            console.log('Failed to push deleted field');
+            }
+        }
+    }   
 }
 
 function handleKeydown(event: KeyboardEvent) {
