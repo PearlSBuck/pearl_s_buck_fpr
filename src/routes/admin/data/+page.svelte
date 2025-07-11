@@ -211,7 +211,7 @@
           </button>
           <Confirm
             bind:show={showModal}
-            recordIds={Array.from(get(selectedRecords))}
+            recordIds={Array.from($selectedRecords)}
             onConfirm={onDeleteConfirmed}
           />
           <!-- Select Records -->
