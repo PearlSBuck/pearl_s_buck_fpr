@@ -3,9 +3,11 @@ export let openEditPopup: boolean;
 export let openDeletePopup: boolean;
 export let openAddPopup: boolean;
 export let openAddSectionPopup: boolean;
+export let openDeleteSectionPopup: boolean;
 export let displayedFormData: any;
 
 export let field: any;
+export let section:any;
 export let fieldId: string;
 export let sectionId: any;
 export let formId: string;
@@ -15,12 +17,9 @@ import { handleSectionChanges } from '$lib/stores/formEditor'
 import { createEventDispatcher } from 'svelte';
 import type { Field } from '$lib/stores/formEditor';
 import type { Section } from '$lib/stores/formEditor';
-	import { updated } from "$app/state";
 
 
-const dispatch = createEventDispatcher();
 
-let popupRef: HTMLDivElement;
 let newOption = '';
 function setHidden(el: HTMLElement, shouldHide: boolean) {
   el.classList.toggle('hidden', shouldHide);
@@ -232,7 +231,6 @@ $: if(openEditPopup && field){
                     { label: 'Text', value: 'text' },
                     { label: 'Number', value: 'number' },
                     { label: 'Radio', value: 'radio' },
-                    { label: 'Radio With Other', value: 'radio_with_other' },
                     { label: 'Checkbox', value: 'checkbox' },
                     { label: 'Select', value: 'select' }
                 ]}
@@ -258,12 +256,13 @@ $: if(openEditPopup && field){
                     bind:value={editorField.placeholder}
                     placeholder='Enter new placeholder'
                 />
-            <!-- With options (Radio, Radio with other, Checkbox) -->
-            {:else if (editorField.type==='radio') || (editorField.type==='radio_with_other') || (editorField.type==='checkbox')} 
+            <!-- With options (Radio, Checkbox) -->
+             <!-- type: multiple_choice is temporarily added to conform to the database -->
+            {:else if (editorField.type==='radio')  || (editorField.type==='checkbox') || editorField.type === 'multiple_choice'} 
                 <p>Options:</p>
                 {#each editorField.options as option, index}
                     <input
-                        type={editorField.type}
+                        type={editorField.type == 'multiple_choice' ? 'checkbox' : editorField.type}
                         value={option.label}
                         disabled={true}
                     />
@@ -273,7 +272,7 @@ $: if(openEditPopup && field){
                 {/each}
                 <!-- option for adding more options -->
                     <input
-                        type={editorField.type}
+                        type={editorField.type == 'multiple_choice' ? 'checkbox' : editorField.type}
                         value=''
                         disabled={true}
                     />
@@ -357,7 +356,6 @@ $: if(openEditPopup && field){
                     { label: 'Text', value: 'text' },
                     { label: 'Number', value: 'number' },
                     { label: 'Radio', value: 'radio' },
-                    { label: 'Radio With Other', value: 'radio_with_other' },
                     { label: 'Checkbox', value: 'checkbox' },
                     { label: 'Select', value: 'select' }
                 ]}
@@ -465,6 +463,30 @@ $: if(openEditPopup && field){
         </div>
     </div>
 </div>
+
+<!-- Opens the delete confirmation section -->
+{:else if openDeleteSectionPopup}
+<div class="fixed inset-0 bg-gray-950/70 z-60 flex items-start justify-center overflow-y-auto p-6">
+    <div class="rounded shadow-lg w-full max-w-md mt-20 mb-20">
+        <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
+            <div class='w-20 h-20 justify-self-center'>
+                <svg fill="#e01f1f" viewBox="0 -8 72 72" id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" stroke="#e01f1f"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><title>warning</title>
+                    <path d="M15.8,49.7H56.22a3.78,3.78,0,0,0,3.36-5.5L39.38,8.39a3.8,3.8,0,0,0-6.78,0L12.4,44.2A3.81,3.81,0,0,0,15.8,49.7Zm23.38-8.33a3.29,3.29,0,1,1-6.58,0V41.3a3.29,3.29,0,0,1,6.58,0ZM34.11,17.18h3.8a1.63,1.63,0,0,1,1.54,2L37.79,33.75a1.78,1.78,0,0,1-3.56,0L32.56,19.19A1.64,1.64,0,0,1,34.11,17.18Z"></path>
+                </g></svg>
+            </div>
+            <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">"{section.title}" Section</h1>
+            <p>Are you sure you would like to delete this section?</p>
+            <br><br><br>
+            <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openDeleteSectionPopup=false}>Cancel</button>
+            <button class="m-1 p-1 bg-red-600 text-white rounded hover:bg-red-700 transition" on:click={() => {
+                handleSectionChanges(section, 'delete', formId)
+                openDeleteSectionPopup = false
+            }}>Delete</button>
+
+        </div>
+    </div>
+</div>
+
 
 {/if}
 

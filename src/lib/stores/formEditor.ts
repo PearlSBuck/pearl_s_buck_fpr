@@ -118,12 +118,13 @@ async function getNextOrderIndex(formId: string) {
 
 // for updating form sections
 export async function handleSectionChanges(updatedSection: any, changeType: string, formId:string) {
-  console.log(formId)
-    if (!updatedSection.orderindex){
+  console.log('formid: ', formId);
+  console.log('section to be updated: ', updatedSection);
+    if (changeType == 'add'){
       updatedSection.orderindex = await getNextOrderIndex(formId);
     }
 
-    if (changeType = 'add'){
+    if (changeType == 'add'){
         formDelta.update(delta => {
           delta.sections.push({
               type: changeType,
@@ -135,6 +136,7 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
               }
           });
 
+          // for making UI reactive
           displayedData.update(data => {
             if (data?.form) {
               try{
@@ -157,22 +159,34 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
           return delta;
       });
     }
-    // else{
-    //   formDelta.update(delta => {
-    //       delta.sections.push({
-    //           type: changeType,
-    //           id: updatedSection.id,
-    //           section: {
-    //               id: updatedSection.id,
-    //               title: updatedSection.title,
-    //               formid: updatedSection.formid,
-    //               orderindex: updatedSection.orderindex,
-    //               created_at: updatedSection.created_at
-    //           }
-    //       });
-    //       return delta;
-    //   });
-    // }
+    else{
+      formDelta.update(delta => {
+          delta.sections.push({
+              type: changeType,
+              id: updatedSection.id,
+              section: {
+                  title: updatedSection.title,
+                  formid: formId,
+                  orderindex: updatedSection.orderindex,
+              }
+          });
+
+          // for making UI reactive
+          displayedData.update(data => {
+            if (data?.form) {
+              try{
+                data.form.sections = data.form.sections.filter((section:any) => section.id !== updatedSection.id);
+                console.log('Successfully deleted section:', updatedSection);
+              } catch(error){
+                console.error('Failed to delete', error);
+              }
+
+            }
+            return data;
+          });
+          return delta;
+      });
+    }
 
 }
 

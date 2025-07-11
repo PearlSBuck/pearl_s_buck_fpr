@@ -22,9 +22,11 @@
     let showDeletePopup = false;
     let showAddPopup = false;
     let showAddSectionPopup = false;
+    let showDeleteSectionPopup = false;
 
     let selectedField:any;
     let selectedFieldId:any;
+    let selectedSection:any;
     let selectedSectionId: any;
     let selectedForm: any;
     // handles popup visibility
@@ -54,17 +56,17 @@
             }
         });
 
-    function togglePopup(type:string, id?:string, field?: any) {
+    function togglePopup(type:string, id?:string, component?: any) {
         switch(type){
             case 'editField':
                 showEditPopUp = !showEditPopUp;
-                selectedField = field;
+                selectedField = component;
                 selectedFieldId = id;
                 break;
             case 'deleteField':
                 showDeletePopup = !showDeletePopup;
                 selectedFieldId = id;
-                selectedField = field;
+                selectedField = component;
                 break;
             case 'addField':
                 showAddPopup = !showAddPopup;
@@ -73,6 +75,11 @@
             case 'addSection':
                 showAddSectionPopup = !showAddSectionPopup;
                 selectedForm = id;
+                break;
+            case 'deleteSection':
+                showDeleteSectionPopup = !showDeleteSectionPopup;
+                selectedSectionId = id;
+                selectedSection = component;
                 break;
         }
         
@@ -145,6 +152,8 @@
             formDelta.set({ fields: [], sections: [] });
             editMode = false;
             console.log('All changes applied successfully.');
+            data = editModeData;
+            displayedData.set(data);
         } catch (error) {
             console.error('Error applying changes:', error);
         }
@@ -174,7 +183,7 @@
 
 
     function getInitialFieldValue(field: any) {
-        if (field.type === 'checkbox') {
+        if (field.type === 'checkbox' || field.type === 'multiple_choice') {
             // Handle checkbox arrays
             if (field.value && typeof field.value === 'string') {
                 return field.value.split(',').map((v: string) => v.trim()).filter(Boolean);
@@ -330,7 +339,7 @@
 
     // Check if field type should always be editable (including select, dropdown, radio, and checkbox)
     function isAlwaysEditableField(fieldType: string): boolean {
-        return ['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'textarea', 'select', 'dropdown', 'radio', 'checkbox', 'radio_with_other'].includes(fieldType);
+        return ['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'textarea', 'select', 'dropdown', 'radio', 'checkbox', 'radio_with_other', 'multiple_choice'].includes(fieldType);
     }
 
     // Generate the form slug for URL (matches server-side createSlug function)
@@ -390,7 +399,8 @@
     function getFieldDisplayValue(field: any): string {
         const value = fieldValues[field.id];
         
-        if (field.type === 'checkbox') {
+        // multiple_choice temporarily added to comform to the type 
+        if (field.type === 'checkbox' || field.type === 'multiple_choice') {
             if (Array.isArray(value) && value.length > 0) {
                 // Map option values to labels if possible
                 if (field.options && Array.isArray(field.options)) {
@@ -421,7 +431,7 @@
             return 'No value';
         }
         
-        if (field.type === 'radio_with_other') {
+        if (field.type === 'radio_with_other' || field.type === 'multiple_choice') {
             if (value) {
                 if (field.options && Array.isArray(field.options)) {
                     const opt = field.options.find((o: any) =>
@@ -612,7 +622,7 @@
                                     <h2 class="text-xl font-bold">{section.title}</h2>
                                     {#if editMode}
                                     <div class="relative z-50">
-                                        <button class="m-1 p-1 bg-red-600 text-white rounded hover:bg-red-700 transition" aria-label="Delete section" on:click={() => handleSectionChanges(section, 'delete', data.form.id)}>
+                                        <button class="m-1 p-1 bg-red-600 text-white rounded hover:bg-red-700 transition" aria-label="Delete section" on:click={() => togglePopup('deleteSection', section.id, section)}>
                                             Delete Section
                                         </button>
                                         <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" aria-label="Add Field" on:click={() => togglePopup('addField', section.id)}>
@@ -756,7 +766,7 @@
                                                                     {/each}
                                                                 {/if}
                                                             </div>
-                                                        {:else if field.type === 'checkbox' && (editMode || isAlwaysEditableField(field.type))}
+                                                        {:else if (field.type === 'checkbox' || field.type === 'multiple_choice') && (editMode || isAlwaysEditableField(field.type))}
                                                             <div class="space-y-3">
                                                                 {#if field.options && Array.isArray(field.options)}
                                                                     {#each field.options as option, i}
@@ -843,6 +853,7 @@
 </div>
 <EditPopUp 
     bind:field={selectedField} 
+    bind:section={selectedSection}
     bind:fieldId={selectedFieldId}
     bind:sectionId={selectedSectionId}
     bind:formId = {selectedForm}
@@ -850,6 +861,7 @@
     bind:openDeletePopup={showDeletePopup}   
     bind:openAddPopup={showAddPopup}
     bind:openAddSectionPopup = {showAddSectionPopup}
+    bind:openDeleteSectionPopup = {showDeleteSectionPopup}
     bind:displayedFormData = {$displayedData.form}
 />
 {#if editMode}
