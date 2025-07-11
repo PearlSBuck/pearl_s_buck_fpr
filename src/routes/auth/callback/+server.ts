@@ -1,20 +1,14 @@
-import { redirect } from "@sveltejs/kit";
+import { supabaseAdmin } from '$lib/db';
 
-export const GET = async (event) => {
-  const {
-    url,
-    locals: { supabase },
-  } = event;
-  const code = url.searchParams.get("code") as string;
-  const next = url.searchParams.get("next") ?? "/";
+export async function POST({ request }) {
+  const authHeader = request.headers.get('Authorization');
+  const token = authHeader?.replace('Bearer ', '');
 
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      throw redirect(303, `/${next.slice(1)}`);
-    }
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+
+  if (error || !data) {
+    return new Response('Unauthorized', { status: 401 });
   }
 
-  // return the user to an error page with instructions
-  throw redirect(303, "/auth/auth-code-error");
-};
+  return new Response(JSON.stringify({ user: data.user }));
+}
