@@ -25,3 +25,12 @@ export async function getPaginatedSCRecords(page: number, query: string = "") {
     currentPage: page,
   };
 }
+
+export async function deleteSCRecords(ids: number[]) {
+  const { error } = await supabaseAdmin
+    .from("fis_answers")
+    .delete()
+    .in("sc_id", ids); // use .in() for multiple values
+
+  if (error) throw new Error(error.message);
+}
