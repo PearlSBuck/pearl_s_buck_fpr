@@ -1,3 +1,4 @@
+<!--+page.svelte-->
 <script lang="ts">
   import Header from '../../../components/Header.svelte'; // adjust the paths as needed
   import Record from '../../../components/Record.svelte'; 
