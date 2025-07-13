@@ -16,7 +16,6 @@ export let formId: string;
 import DataInput from "./DataInput.svelte";
 import { formDelta } from '$lib/stores/formEditor';
 import { handleSectionChanges } from '$lib/stores/formEditor'
-import { createEventDispatcher } from 'svelte';
 import type { Field } from '$lib/stores/formEditor';
 import type { Section } from '$lib/stores/formEditor';
 
@@ -513,7 +512,7 @@ $: if(openEditSectionPopup && section){
                 bind:value={addNewSection.title}
             />
             <br><br><br>
-            <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openDeleteSectionPopup=false}>Cancel</button>
+            <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openEditSectionPopup=false}>Cancel</button>
             <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => {
                 handleSectionChanges(addNewSection, 'update', formId)
                 openEditSectionPopup = false

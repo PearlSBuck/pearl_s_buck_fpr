@@ -5,11 +5,9 @@
     import { onMount } from 'svelte';
     import { formDelta } from '$lib/stores/formEditor';
     import { originalData } from "$lib/stores/formEditor";
-    import { handleSectionChanges } from '$lib/stores/formEditor'
+    import { handleConfirmEdits } from "$lib/stores/formEditor";
     import Header from './Header.svelte'; // Import the Header component
 	import EditPopUp from '../editPopUp.svelte';
-    import { supabase } from '$lib/db'; 
-    import { get } from 'svelte/store';
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
 
@@ -56,6 +54,13 @@
             }
         });
 
+    function call_confirm_edits(formId:string){
+        handleConfirmEdits(formId);
+        editMode = false;
+        data = editModeData;
+        displayedData.set(data);
+    }
+
     function togglePopup(type:string, id?:string, component?: any) {
         switch(type){
             case 'editField':
@@ -90,80 +95,7 @@
         
     }
 
-    // Implements edits to the supabase database
-    async function handleConfirmEdits(formId: string) {
-        const delta = get(formDelta); // get current delta
 
-        console.log('Changes to apply:', delta);
-
-        try {
-            // Apply field updates
-            for (const fieldChange of delta.fields) {
-                const { type, id, field } = fieldChange;
-
-                if (type === 'update') {
-                    await supabase
-                        .from('form_fields')
-                        .update({
-                            label: field.label,
-                            name: field.name,
-                            placeholder: field.placeholder,
-                            required: field.required,
-                            type: field.type,
-                            orderindex: field.orderindex,
-                            options: field.options
-                        })
-                        .eq('id', id);
-                } else if (type === 'add') {
-                    await supabase
-                        .from('form_fields')
-                        .insert({
-                            label: field.label,
-                            name: field.name,
-                            placeholder: field.placeholder,
-                            required: false,
-                            formid: formId,
-                            sectionid: field.sectionid,
-                            type: field.type,
-                            orderindex: 0,
-                            options: field.options
-                        });
-                } else if (type === 'delete') {
-                    await supabase
-                        .from('form_fields')
-                        .delete()
-                        .eq('id', id);
-                }
-            }
-
-            // Do the same for sections if needed
-            for (const sectionChange of delta.sections) {
-                const { type, id, section } = sectionChange;
-
-                if (type === 'update') {
-                    await supabase.from('form_sections').update(section).eq('id', id);
-                } else if (type === 'add') {
-                    await supabase.from('form_sections').insert({
-                        formid: formId,
-                        title: section.title, 
-                        orderindex: section.orderindex
-                    });
-                } else if (type === 'delete') {
-                    await supabase.from('form_sections').delete().eq('id', id);
-                }
-            }
-
-            // After all updates are done, clear the store
-            formDelta.set({ fields: [], sections: [] });
-            editMode = false;
-            console.log('All changes applied successfully.');
-            data = editModeData;
-            displayedData.set(data);
-        } catch (error) {
-            console.error('Error applying changes:', error);
-        }
-}
-// 
 
     let editMode = false;
     let isLoading = false;
@@ -525,7 +457,7 @@
                                 <button type="button" class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700" on:click={toggleEditMode}>
                                     Cancel
                                 </button>
-                                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => handleConfirmEdits(data.form.id)}>
+                                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => call_confirm_edits(data.form.id)}>
                                     Confirm All Changes
                                 </button>
                             {:else}

@@ -1,6 +1,8 @@
 // src/lib/stores/formDelta.ts
 import { writable } from 'svelte/store';
-import { supabase } from '$lib/db'; 
+import { supabaseAdmin } from '$lib/db'; 
+import { get } from 'svelte/store';
+
 
 export const displayedData = writable<any>({
   form: {
@@ -95,7 +97,7 @@ export const originalData = writable<Original>({
 });
 
 async function getNextOrderIndex(formId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('form_sections')
     .select('orderindex')
     .eq('formid', formId)
@@ -212,3 +214,75 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
 
 }
 
+    // Implements edits to the supabaseAdmin database
+    export async function handleConfirmEdits(formId: string) {
+        const { fields, sections } = get(formDelta); // get current delta
+
+        console.log('Changes to apply:', fields, sections);
+
+        try {
+            // Apply field updates
+            for (const fieldChange of fields) {
+                const { type, id, field } = fieldChange;
+
+                if (type === 'update') {
+                    await supabaseAdmin
+                        .from('form_fields')
+                        .update({
+                            label: field.label,
+                            name: field.name,
+                            placeholder: field.placeholder,
+                            required: field.required,
+                            type: field.type,
+                            orderindex: field.orderindex,
+                            options: field.options
+                        })
+                        .eq('id', id);
+                } else if (type === 'add') {
+                    await supabaseAdmin
+                        .from('form_fields')
+                        .insert({
+                            label: field.label,
+                            name: field.name,
+                            placeholder: field.placeholder,
+                            required: false,
+                            formid: formId,
+                            sectionid: field.sectionid,
+                            type: field.type,
+                            orderindex: 0,
+                            options: field.options
+                        });
+                } else if (type === 'delete') {
+                    await supabaseAdmin
+                        .from('form_fields')
+                        .delete()
+                        .eq('id', id);
+                }
+            }
+
+            // Do the same for sections if needed
+            for (const sectionChange of sections) {
+                const { type, id, section } = sectionChange;
+
+                if (type === 'update') {
+                    await supabaseAdmin.from('form_sections').update(section).eq('id', id);
+                } else if (type === 'add') {
+                    await supabaseAdmin.from('form_sections').insert({
+                        formid: formId,
+                        title: section.title, 
+                        orderindex: section.orderindex
+                    });
+                } else if (type === 'delete') {
+                    await supabaseAdmin.from('form_sections').delete().eq('id', id);
+                }
+            }
+
+            // After all updates are done, clear the store
+            formDelta.set({ fields: [], sections: [] });
+            console.log('All changes applied successfully.');
+            
+        } catch (error) {
+            console.error('Error applying changes:', error);
+        }
+}
+// 
