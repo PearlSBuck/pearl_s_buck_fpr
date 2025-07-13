@@ -6,7 +6,9 @@ const supabaseServiceRoleKey = import.meta.env
   .VITE_SUPABASE_SERVICE_ROLE_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
+
   throw new Error("Missing Supabase environment variables");
+
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
