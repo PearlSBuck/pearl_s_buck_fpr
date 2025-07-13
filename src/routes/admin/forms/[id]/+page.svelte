@@ -621,12 +621,17 @@
                                 <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
                                     <h2 class="text-xl font-bold">{section.title}</h2>
                                     {#if editMode}
-                                    <div class="relative z-50">
-                                        <button class="m-1 p-1 bg-red-600 text-white rounded hover:bg-red-700 transition" aria-label="Delete section" on:click={() => togglePopup('deleteSection', section.id, section)}>
-                                            Delete Section
+                                    <div class="relative z-50 flex items-end">
+                                        <button class="m-1 p-2 bg-red-600 text-white rounded hover:bg-red-700 transition items-center justify-center w-9 h-9" aria-label="Delete section" on:click={() => togglePopup('deleteSection', section.id, section)}>
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> 
+                                                <path d="M10 11V17" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M14 11V17" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> 
+                                                <path d="M4 7H20" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M6 7H12H18V18C18 19.6569 16.6569 21 15 21H9C7.34315 21 6 19.6569 6 18V7Z" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> 
+                                                <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
                                         </button>
-                                        <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" aria-label="Add Field" on:click={() => togglePopup('addField', section.id)}>
-                                            Add New Field
+                                        <button class="m-1 p-2 bg-green-600 text-white rounded hover:bg-green-700 transition items-center justify-center w-9 h-9" aria-label="Add Field" on:click={() => togglePopup('addField', section.id)}>
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                                <g id="SVGRepo_iconCarrier"> <title></title> <g id="Complete"> <g data-name="add" id="add-2"> <g> <line fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="12" x2="12" y1="19" y2="5"></line> 
+                                                <line fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" x1="5" x2="19" y1="12" y2="12"></line> </g> </g> </g> </g></svg>
                                         </button>
                                     </div>    
                                     {/if}
@@ -647,16 +652,20 @@
                                                         <!-- buttons for editing and deleting a field -->
                                                         {#if editMode}
                                                         <button
-                                                            class="p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                                                            class="m-1 p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition items-center justify-center w-9 h-9" aria-label="Edit Field"
                                                             on:click={() => togglePopup('editField', field.id, field)}
                                                         >
-                                                            Edit
+                                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> 
+                                                                <path d="M21.2799 6.40005L11.7399 15.94C10.7899 16.89 7.96987 17.33 7.33987 16.7C6.70987 16.07 7.13987 13.25 8.08987 12.3L17.6399 2.75002C17.8754 2.49308 18.1605 2.28654 18.4781 2.14284C18.7956 1.99914 19.139 1.92124 19.4875 1.9139C19.8359 1.90657 20.1823 1.96991 20.5056 2.10012C20.8289 2.23033 21.1225 2.42473 21.3686 2.67153C21.6147 2.91833 21.8083 3.21243 21.9376 3.53609C22.0669 3.85976 22.1294 4.20626 22.1211 4.55471C22.1128 4.90316 22.0339 5.24635 21.8894 5.5635C21.7448 5.88065 21.5375 6.16524 21.2799 6.40005V6.40005Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> 
+                                                                <path d="M11 4H6C4.93913 4 3.92178 4.42142 3.17163 5.17157C2.42149 5.92172 2 6.93913 2 8V18C2 19.0609 2.42149 20.0783 3.17163 20.8284C3.92178 21.5786 4.93913 22 6 22H17C19.21 22 20 20.2 20 18V13" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
                                                         </button>
                                                         <button
-                                                            class="p-1 bg-red-600 text-white rounded hover:bg-red-700 transition"
-                                                            on:click={() => togglePopup('deleteField', field.id, field)}
+                                                            class="m-1 p-2 bg-red-600 text-white rounded hover:bg-red-700 transition items-center justify-center w-9 h-9" aria-label="Delete Field"  on:click={() => togglePopup('deleteField', field.id, field)}
                                                         >
-                                                            Delete Field
+                                                             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> 
+                                                                <path d="M10 11V17" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M14 11V17" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> 
+                                                                <path d="M4 7H20" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M6 7H12H18V18C18 19.6569 16.6569 21 15 21H9C7.34315 21 6 19.6569 6 18V7Z" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> 
+                                                                <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
                                                         </button>
                                                         
                                                         {/if}
