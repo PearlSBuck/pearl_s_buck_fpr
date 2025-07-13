@@ -159,6 +159,8 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
           return delta;
       });
     }
+    
+    
     else{
       formDelta.update(delta => {
           delta.sections.push({
@@ -172,18 +174,38 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
           });
 
           // for making UI reactive
-          displayedData.update(data => {
-            if (data?.form) {
-              try{
-                data.form.sections = data.form.sections.filter((section:any) => section.id !== updatedSection.id);
-                console.log('Successfully deleted section:', updatedSection);
-              } catch(error){
-                console.error('Failed to delete', error);
-              }
+          if(changeType=='delete')
+            displayedData.update(data => {
+              if (data?.form) {
+                try{
+                  data.form.sections = data.form.sections.filter((section:any) => section.id !== updatedSection.id);
+                  console.log('Successfully deleted section:', updatedSection);
+                } catch(error){
+                  console.error('Failed to delete', error);
+                }
 
-            }
-            return data;
-          });
+              }
+              return data;
+            });
+
+          else if(changeType == 'update'){
+            console.log(updatedSection);
+            displayedData.update(data => {
+              if(data?.form){
+                try{
+                  for (let sIdx = 0; sIdx < data.form.sections.length; sIdx++){
+                    if(data.form.sections[sIdx].id == updatedSection.id){
+                      data.form.sections[sIdx].title = updatedSection.title;
+                      break;
+                    }
+                  }
+                }catch(error){
+                  console.error('Failed to edit section', error);
+                }
+              }
+              return data;
+            });
+          }
           return delta;
       });
     }

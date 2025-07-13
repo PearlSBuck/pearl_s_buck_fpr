@@ -4,6 +4,8 @@ export let openDeletePopup: boolean;
 export let openAddPopup: boolean;
 export let openAddSectionPopup: boolean;
 export let openDeleteSectionPopup: boolean;
+export let openEditSectionPopup: boolean;
+
 export let displayedFormData: any;
 
 export let field: any;
@@ -187,6 +189,10 @@ function handleKeydown(event: KeyboardEvent) {
 // makes sure field being updatd is correct
 $: if(openEditPopup && field){
   editorField = field;
+}
+
+$: if(openEditSectionPopup && section){
+  addNewSection = section;
 }
 
 
@@ -449,7 +455,7 @@ $: if(openEditPopup && field){
             <DataInput
                 type = 'text'
                 label='Section Title'
-                name='fieldName'
+                name='sectionTitle'
                 required={true}
                 bind:value={addNewSection.title}
             />
@@ -489,6 +495,33 @@ $: if(openEditPopup && field){
     </div>
 </div>
 
+<!-- Opens the edit section popup -->
+{:else if openEditSectionPopup}
+<div class="fixed inset-0 bg-gray-950/70 z-60 flex items-start justify-center overflow-y-auto p-6">
+    <div class="rounded shadow-lg w-full max-w-md mt-20 mb-20">
+        <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
+            <div class='w-20 h-20 justify-self-center'>
+                <svg viewBox="-2.4 -2.4 28.80 28.80" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"><rect x="-2.4" y="-2.4" width="28.80" height="28.80" rx="14.4" fill="#1E88E5" ></rect></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> 
+                    <path d="M18.9445 9.1875L14.9445 5.1875M18.9445 9.1875L13.946 14.1859C13.2873 14.8446 12.4878 15.3646 11.5699 15.5229C10.6431 15.6828 9.49294 15.736 8.94444 15.1875C8.39595 14.639 8.44915 13.4888 8.609 12.562C8.76731 11.6441 9.28735 10.8446 9.946 10.1859L14.9445 5.1875M18.9445 9.1875C18.9445 9.1875 21.9444 6.1875 19.9444 4.1875C17.9444 2.1875 14.9445 5.1875 14.9445 5.1875M20.5 12C20.5 18.5 18.5 20.5 12 20.5C5.5 20.5 3.5 18.5 3.5 12C3.5 5.5 5.5 3.5 12 3.5" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+            </div>
+            <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">"{section.title}" Section</h1>
+            <DataInput
+                type = 'text'
+                label='Enter new section title:'
+                name='sectionTitle'
+                required={true}
+                bind:value={addNewSection.title}
+            />
+            <br><br><br>
+            <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openDeleteSectionPopup=false}>Cancel</button>
+            <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => {
+                handleSectionChanges(addNewSection, 'update', formId)
+                openEditSectionPopup = false
+            }}>Edit</button>
+
+        </div>
+    </div>
+</div>
 
 {/if}
 
