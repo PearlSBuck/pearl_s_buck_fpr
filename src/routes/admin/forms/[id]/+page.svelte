@@ -518,74 +518,10 @@
                                     </div>
                                 {/if}
                                 
-                                <!-- Save Form Title -->
-                                <form method="POST" action="?/updateForm" use:enhance={() => {
-                                    isLoading = true;
-                                    return async ({ result }) => {
-                                        isLoading = false;
-                                        if (result.type === 'success') {
-                                            successMessage = 'Form title updated successfully!';
-                                            data.form.title = formTitle;
-                                        } else if (result.type === 'failure') {
-                                            error = typeof result.data?.message === 'string' ? result.data.message : 'Failed to update form';
-                                        }
-                                    };
-                                }}>
-                                    <input type="hidden" name="formId" value={data.form.id} />
-                                    <input type="hidden" name="title" value={formTitle} />
-                                    <button type="submit" class="bg-[#1A5A9E] text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || formTitle === data.form.title}>
-                                        {#if isLoading}
-                                            <span class="spinner inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                                        {/if}
-                                        Save Title
-                                    </button>
-                                </form>
+                                
 
-                                <!-- Save All Fields -->
-                                <form method="POST" action="?/saveAllFields" use:enhance={() => {
-                                    isLoading = true;
-                                    return async ({ result }) => {
-                                        isLoading = false;
-                                        if (result.type === 'success') {
-                                            successMessage = 'All fields saved successfully!';
-                                            // Update original values
-                                            originalFieldValues = { ...fieldValues };
-                                            originalOtherTextValues = { ...otherTextValues };
-                                            // Update form data
-                                            data.form.sections.forEach((section: any) => {
-                                                section.fields.forEach((field: any) => {
-                                                    field.value = fieldValues[field.id] || '';
-                                                    if (field.type === 'radio_with_other') {
-                                                        field.otherValue = otherTextValues[field.id] || '';
-                                                    }
-                                                });
-                                            });
-                                        } else if (result.type === 'failure') {
-                                            error = typeof result.data?.message === 'string'
-                                                ? result.data.message
-                                                : 'Failed to save fields';
-                                        }
-                                    };
-                                }}>
-                                    <input type="hidden" name="formId" value={data.form.id} />
-                                    {#if $displayedData?.form}
-                                    {#each $displayedData.form.sections as section}
-                                        {#each section.fields as field}
-                                            <input type="hidden" name="field_{field.id}" value={Array.isArray(fieldValues[field.id]) ? fieldValues[field.id].join(',') : (fieldValues[field.id] || '')} />
-                                            {#if field.type === 'radio_with_other'}
-                                                <input type="hidden" name="field_{field.id}_other" value={otherTextValues[field.id] || ''} />
-                                            {/if}
-                                        {/each}
-                                    {/each}
-                                    {/if}
-                                    <button type="submit" class="bg-green-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled={isLoading || !hasChanges()}>
-                                        {#if isLoading}
-                                            <span class="spinner inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                                        {/if}
-                                        Save All Fields
-                                    </button>
-                                </form>
-
+                                <!-- Edit Mode Buttons -->
+                                
                                 <button type="button" class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700" on:click={toggleEditMode}>
                                     Cancel
                                 </button>
