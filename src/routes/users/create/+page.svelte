@@ -70,6 +70,20 @@
         showPassword = !showPassword;
     }
 
+    function calculateAge(birthdate: string): number {
+        const today = new Date();
+        const birthDate = new Date(birthdate);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        // Adjust age if birthday hasn't occurred yet this year
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        return age;
+    }
+
     let username = ''
     let email = ''
     let password = ''
@@ -126,13 +140,13 @@
             alert('Full name is required.');
             return;
         }
-
-        if (!age || isNaN(Number(age)) || Number(age) < 1) {
-            alert('Valid age is required.');
-            return;
-        }
         if (!birthdate) {
             alert('Birthdate is required.');
+            return;
+        }
+        const calculatedAge = calculateAge(birthdate);
+        if (calculatedAge < 1) {
+            alert('Invalid birthdate. Age must be atleast 1 year')
             return;
         }
         if (!residence.trim()) {
@@ -195,7 +209,7 @@
                 email,
                 role,
                 fullname,
-                age: parseInt(age),
+                age: calculatedAge,
                 birthdate,
                 residence
             }]);
@@ -278,12 +292,17 @@
                         <input id="fullname" type="text" bind:value={fullname} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" placeholder="Enter full name" />
                     </div>
                     <div>
-                        <label for="age" class="block font-semibold">Age</label>
-                        <input id="age" type="number" bind:value={age} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" placeholder="Enter age" min="1" max="120" />
-                    </div>
-                    <div>
                         <label for="birthdate" class="block font-semibold">Birth Date</label>
-                        <input id="birthdate" type="date" bind:value={birthdate} class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" />
+                        <input 
+                            id="birthdate" 
+                            type="date" 
+                            bind:value={birthdate} 
+                            onchange={() => {
+                                        if (birthdate) {
+                                            age = calculateAge(birthdate).toString();
+                                        }
+                                    }}
+                            class="focus-gradient-input w-full border-0 border-b-2 border-gray-300 p-2 focus:outline-none focus:ring-0 focus:border-black" />
                     </div>
                     <div>
                         <label for="residence" class="block font-semibold">Residence</label>
