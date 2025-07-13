@@ -339,7 +339,7 @@
 
     // Check if field type should always be editable (including select, dropdown, radio, and checkbox)
     function isAlwaysEditableField(fieldType: string): boolean {
-        return ['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'textarea', 'select', 'dropdown', 'radio', 'checkbox', 'radio_with_other', 'multiple_choice'].includes(fieldType);
+        return ['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'textarea', 'select', 'dropdown', 'radio', 'checkbox', 'radio_with_other', 'multiple_choice', 'date'].includes(fieldType);
     }
 
     // Generate the form slug for URL (matches server-side createSlug function)

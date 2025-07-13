@@ -232,7 +232,8 @@ $: if(openEditPopup && field){
                     { label: 'Number', value: 'number' },
                     { label: 'Radio', value: 'radio' },
                     { label: 'Checkbox', value: 'checkbox' },
-                    { label: 'Select', value: 'select' }
+                    { label: 'Select', value: 'select' },
+                    { label: 'Date', value: 'date'}
                 ]}
             />
 
@@ -357,7 +358,8 @@ $: if(openEditPopup && field){
                     { label: 'Number', value: 'number' },
                     { label: 'Radio', value: 'radio' },
                     { label: 'Checkbox', value: 'checkbox' },
-                    { label: 'Select', value: 'select' }
+                    { label: 'Select', value: 'select' },
+                    { label: 'Date', value: 'date'}
                 ]}
             />
 

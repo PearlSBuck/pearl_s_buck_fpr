@@ -115,6 +115,15 @@
             <option value={option.value}>{option.label}</option>
             {/each}
         </select>
+    {:else if type == 'date'}
+        <input
+            id={name}
+            name={name}
+            class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-full"
+            type="date"
+            bind:value 
+            required={required}
+            />
 
     <!-- {:else if type === 'signature'}
         <SignaturePad bind:this={sigRef} penColor="blue" />
