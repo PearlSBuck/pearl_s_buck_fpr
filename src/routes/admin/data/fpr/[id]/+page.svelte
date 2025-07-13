@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Header from '../../../../components/Header.svelte'; // adjust the paths as needed
-  import Record from '../../../../components/Record.svelte'; 
-  import Year from '../../../../components/Year.svelte';   
+  import Header from '../../../../../components/Header.svelte'; // adjust the paths as needed
+  import Record from '../../../../../components/Record.svelte'; 
+  import Year from '../../../../../components/Year.svelte';   
   import { goto } from '$app/navigation';
-  import { selectedRecords } from '../selectRecord';
+  import { selectedRecords } from '../../selectRecord';
   import { get } from 'svelte/store';
   import { onDestroy } from 'svelte';
 
