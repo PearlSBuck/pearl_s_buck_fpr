@@ -1,6 +1,5 @@
 <script lang="ts">
     // +page.svelte - Enhanced form display component with version support and fixed slug handling
-    import { enhance } from '$app/forms';
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
     import { formDelta } from '$lib/stores/formEditor';
@@ -10,7 +9,7 @@
 	import EditPopUp from '../editPopUp.svelte';
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
-
+    import {notification} from '$lib/stores/formEditor';
 
     export let data;
     let editModeData: any;
@@ -54,12 +53,28 @@
             }
         });
 
-    function call_confirm_edits(formId:string){
-        handleConfirmEdits(formId);
+    // Popup Notificaiton for update
+    async function call_confirm_edits(formId: string) {
+        let status = await handleConfirmEdits(formId);
+
+        if (status) {
+            console.log('worked');
+            notification.set({ message: 'All changes applied successfully', type: 'success' });
+        } else {
+            notification.set({ message: 'Update unsuccessful', type: 'error' });
+        }
+
         editMode = false;
         data = editModeData;
         displayedData.set(data);
+
+        // Auto-clear after 3 seconds
+        setTimeout(() => {
+            notification.set({ message: '', type: null });
+        }, 3000);
     }
+    $: show = $notification.type !== null;
+
 
     function togglePopup(type:string, id?:string, component?: any) {
         switch(type){
@@ -410,22 +425,30 @@
    
 <!-------------- ---------------------------->
     <!-- Main Content Container -->
+     {#if show}
+    <div
+        class="fixed top-4 z-70 right-4 px-4 py-2 rounded shadow-lg text-white transition-opacity duration-300"
+        class:bg-green-600={$notification.type === 'success'}
+        class:bg-red-600={$notification.type === 'error'}>
+        {$notification.message}
+    </div>
+    {/if}
     <div class="pt-4">
         {#if data.form}
             <!-- Form Title Header -->
             <div class="font-[Coda Caption] text-white font-bold lg:text-3xl md:text-2xl sm:text-xl bg-[#1A5A9E] flex justify-center items-end rounded-lg h-20 mt-16 relative z-10">
-    {#if editMode}
-        <input 
-            type="text" 
-            bind:value={formTitle}
-            placeholder="Form Title"
-            class="bg-white text-[#1A5A9E] px-4 py-2 mb-2 rounded-md font-bold lg:text-3xl md:text-2xl sm:text-xl text-center w-full max-w-lg mx-4"
-            on:focus={clearMessages}
-        />
-    {:else}
-        <div class="mb-2">{data.form.title}</div>
-    {/if}
-</div>
+                {#if editMode}
+                    <input 
+                        type="text" 
+                        bind:value={formTitle}
+                        placeholder="Form Title"
+                        class="bg-white text-[#1A5A9E] px-4 py-2 mb-2 rounded-md font-bold lg:text-3xl md:text-2xl sm:text-xl text-center w-full max-w-lg mx-4"
+                        on:focus={clearMessages}
+                    />
+                {:else}
+                    <div class="mb-2">{data.form.title}</div>
+                {/if}
+            </div>
 
 
             <!-- Main Form Container -->

@@ -3,6 +3,10 @@ import { writable } from 'svelte/store';
 import { supabaseAdmin } from '$lib/db'; 
 import { get } from 'svelte/store';
 
+export const notification = writable<{ message: string; type: 'success' | 'error' | null }>({
+  message: '',
+  type: null
+});
 
 export const displayedData = writable<any>({
   form: {
@@ -280,9 +284,11 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
             // After all updates are done, clear the store
             formDelta.set({ fields: [], sections: [] });
             console.log('All changes applied successfully.');
+            return true;
             
         } catch (error) {
             console.error('Error applying changes:', error);
+            return false;
         }
 }
 // 
