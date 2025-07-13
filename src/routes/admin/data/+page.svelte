@@ -266,12 +266,12 @@
       <div class="flex flex-col items-center justify-center gap-4 mt-16">
         {#if selected === 'progress_report'}
             {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} />
+              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
             {/each}
             
         {:else if selected === 'intro_sheet'}
             {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} />
+              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
             {/each}
         {/if}
       </div>
