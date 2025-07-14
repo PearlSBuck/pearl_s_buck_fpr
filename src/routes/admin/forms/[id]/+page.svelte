@@ -28,30 +28,7 @@
     let selectedForm: any;
     // handles popup visibility
 
-    onMount(() => {
-            if (data.form) {
-                console.log('Initializing form with', data.form.sections.length, 'sections');
-                console.log('Form version:', data.form.version);
-                // Initialize field values
-                data.form.sections.forEach((section: any) => {
-                    console.log(`Section "${section.title}" has ${section.fields.length} fields`);
-                    section.fields.forEach((field: any) => {
-                        const initialValue = getInitialFieldValue(field);
-                        fieldValues[field.id] = initialValue;
-                        originalFieldValues[field.id] = initialValue;
-                        
-                        // Initialize "Others" text values for radio_with_other fields
-                        if (field.type === 'radio_with_other') {
-                            otherTextValues[field.id] = field.otherValue || '';
-                            originalOtherTextValues[field.id] = field.otherValue || '';
-                        }
-                    });
-                });
-                console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
-                formDelta.set({ fields: [], sections: [] });
-
-            }
-        });
+    
 
     // Popup Notificaiton for update
     async function call_confirm_edits(formId: string) {
@@ -116,8 +93,6 @@
     let isLoading = false;
     let error: string | null = null;
     let successMessage: string | null = null;
-    let fieldValues: { [key: string]: any } = {};
-    let originalFieldValues: { [key: string]: any } = {};
     
     
 
@@ -175,8 +150,6 @@
             // Reset values when canceling edit
             formTitle = data.form?.title || '';
             formVersion = data.form?.version || 1.0;
-            fieldValues = { ...originalFieldValues };
-            otherTextValues = { ...originalOtherTextValues };
         }
         
         clearMessages();
@@ -206,69 +179,11 @@
         successMessage = null;
     }
 
-    function handleCheckboxChange(fieldId: string, optionValue: string, checked: boolean) {
-        // Initialize as array if undefined
-        if (!fieldValues[fieldId]) {
-            fieldValues[fieldId] = [];
-        }
-
-        // Convert string to array if needed
-        if (typeof fieldValues[fieldId] === 'string') {
-            fieldValues[fieldId] = fieldValues[fieldId]
-                ? fieldValues[fieldId].split(',').map((v: string) => v.trim())
-                : [];
-        }
-
-        // Ensure it's an array before manipulating
-        if (!Array.isArray(fieldValues[fieldId])) {
-            fieldValues[fieldId] = [];
-        }
-
-        // Add or remove optionValue
-        if (checked) {
-            if (!fieldValues[fieldId].includes(optionValue)) {
-                fieldValues[fieldId] = [...fieldValues[fieldId], optionValue];
-            }
-        } else {
-            fieldValues[fieldId] = fieldValues[fieldId].filter((val: string) => val !== optionValue);
-        }
-    }
 
 
-    function isCheckboxChecked(fieldId: string, optionValue: string): boolean {
-        if (!fieldValues[fieldId]) return false;
-        if (typeof fieldValues[fieldId] === 'string') {
-            return fieldValues[fieldId].split(',').includes(optionValue);
-        }
-        return Array.isArray(fieldValues[fieldId]) && fieldValues[fieldId].includes(optionValue);
-    }
 
-    // Handle radio_with_other field changes
-    function handleRadioWithOtherChange(fieldId: string, value: string, field: any) {
-        fieldValues[fieldId] = value;
-        
-        // If "Others" is selected, clear the text field; if not, clear the text field
-        const otherOption = field.options?.find((opt: any) => 
-            typeof opt === 'object' && opt.showTextField === true
-        );
-        
-        if (otherOption && value === (typeof otherOption === 'object' ? otherOption.value : otherOption)) {
-            // "Others" selected - keep the text field value
-        } else {
-            // Non-"Others" selected - clear the text field
-            otherTextValues[fieldId] = '';
-        }
-    }
-
-    // Check if "Others" option is selected for radio_with_other
-    function isOthersSelected(fieldId: string, field: any): boolean {
-        const selectedValue = fieldValues[fieldId];
-        const otherOption = field.options?.find((opt: any) => 
-            typeof opt === 'object' && opt.showTextField === true
-        );
-        
-        return otherOption && selectedValue === (typeof otherOption === 'object' ? otherOption.value : otherOption);
-    }
+  
+    
 
     function getTotalFieldsCount(): number {
         if (!data.form?.sections) return 0;
@@ -339,65 +254,7 @@
     }
 
     // Returns a display value for a field (for read-only mode)
-    function getFieldDisplayValue(field: any): string {
-        const value = fieldValues[field.id];
-        
-        // multiple_choice temporarily added to comform to the type 
-        if (field.type === 'checkbox' || field.type === 'multiple_choice') {
-            if (Array.isArray(value) && value.length > 0) {
-                // Map option values to labels if possible
-                if (field.options && Array.isArray(field.options)) {
-                    return value
-                        .map((val: string) => {
-                            const opt = field.options.find((o: any) =>
-                                typeof o === 'object' ? o.value === val : o === val
-                            );
-                            return typeof opt === 'object' ? opt.label : opt || val;
-                        })
-                        .join(', ');
-                }
-                return value.join(', ');
-            }
-            return 'No value';
-        }
-        
-        if (field.type === 'radio' || field.type === 'select' || field.type === 'dropdown') {
-            if (value) {
-                if (field.options && Array.isArray(field.options)) {
-                    const opt = field.options.find((o: any) =>
-                        typeof o === 'object' ? o.value === value : o === value
-                    );
-                    return typeof opt === 'object' ? opt.label : opt || value;
-                }
-                return value;
-            }
-            return 'No value';
-        }
-        
-        if (field.type === 'radio_with_other' || field.type === 'multiple_choice') {
-            if (value) {
-                if (field.options && Array.isArray(field.options)) {
-                    const opt = field.options.find((o: any) =>
-                        typeof o === 'object' ? o.value === value : o === value
-                    );
-                    
-                    // If this is the "Others" option and there's text input
-                    if (typeof opt === 'object' && opt.showTextField && otherTextValues[field.id]) {
-                        return `${opt.label}: ${otherTextValues[field.id]}`;
-                    }
-                    
-                    return typeof opt === 'object' ? opt.label : opt || value;
-                }
-                return value;
-            }
-            return 'No value';
-        }
-        
-        if (typeof value === 'string' && value.trim() !== '') {
-            return value;
-        }
-        return 'No value';
-    }
+    
 </script>
 
 <head>
@@ -591,7 +448,6 @@
                                                             <textarea
                                                                 id={"field-" + field.id}
                                                                 class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
-                                                                bind:value={fieldValues[field.id]}
                                                                 placeholder={field.placeholder || 'Enter value...'}
                                                                 required={field.required}
                                                                 rows="4"
@@ -603,7 +459,6 @@
                                                             <select
                                                                 id={"field-" + field.id}
                                                                 class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
-                                                                bind:value={fieldValues[field.id]}
                                                                 required={field.required}
                                                                 on:focus={clearMessages}
                                                             >
@@ -626,7 +481,6 @@
                                                                                 id={"field-" + field.id + "-radio-" + i}
                                                                                 type="radio"
                                                                                 class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E]"
-                                                                                bind:group={fieldValues[field.id]}
                                                                                 value={typeof option === 'object' ? option.value : option}
                                                                                 required={field.required}
                                                                                 on:focus={clearMessages}
@@ -640,7 +494,6 @@
                                                                                     id={"field-" + field.id + "-radio-" + i}
                                                                                     type="radio"
                                                                                     class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E]"
-                                                                                    bind:group={fieldValues[field.id]}
                                                                                     value={typeof option === 'object' ? option.value : option}
                                                                                     required={field.required}
                                                                                     on:focus={clearMessages}
@@ -649,48 +502,13 @@
                                                                                     type="text"
                                                                                     class="w-full ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
                                                                                     placeholder={'Please specify...'}
-                                                                                    disabled={fieldValues[field.id] !== (typeof option === 'object' ? option.value : option)}
                                                                                 />
                                                                             </div>
                                                                         {/if}
                                                                     {/each}
                                                                 {/if}
                                                             </div>
-                                                        {:else if field.type === 'radio_with_other' && (editMode || isAlwaysEditableField(field.type))}
-                                                            <div class="space-y-3">
-                                                                {#if field.options && Array.isArray(field.options)}
-                                                                    {#each field.options as option, i}
-                                                                        <div class="space-y-2">
-                                                                            <label class="flex items-center gap-3 cursor-pointer" for={"field-" + field.id + "-radio-" + i}>
-                                                                                <input
-                                                                                    id={"field-" + field.id + "-radio-" + i}
-                                                                                    type="radio"
-                                                                                    class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E]"
-                                                                                    value={typeof option === 'object' ? option.value : option}
-                                                                                    checked={fieldValues[field.id] === (typeof option === 'object' ? option.value : option)}
-                                                                                    required={field.required}
-                                                                                    on:change={() => handleRadioWithOtherChange(field.id, typeof option === 'object' ? option.value : option, field)}
-                                                                                    on:focus={clearMessages}
-                                                                                />
-                                                                                <span class="text-gray-700">{typeof option === 'object' ? option.label : option}</span>
-                                                                            </label>
-                                                                            
-                                                                            <!-- Show text input if this option has showTextField = true and is selected -->
-                                                                            {#if typeof option === 'object' && option.showTextField && fieldValues[field.id] === option.value}
-                                                                                <div class="ml-7 mt-2">
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        class="w-full p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
-                                                                                        bind:value={otherTextValues[field.id]}
-                                                                                        placeholder={option.textFieldPlaceholder || 'Please specify...'}
-                                                                                        on:focus={clearMessages}
-                                                                                    />
-                                                                                </div>
-                                                                            {/if}
-                                                                        </div>
-                                                                    {/each}
-                                                                {/if}
-                                                            </div>
+                                                        
                                                         {:else if (field.type === 'checkbox' || field.type === 'multiple_choice') && (editMode || isAlwaysEditableField(field.type))}
                                                             <div class="space-y-3">
                                                                 {#if field.options && Array.isArray(field.options)}
@@ -701,12 +519,6 @@
                                                                                 id={"field-" + field.id + "-checkbox-" + i}
                                                                                 type="checkbox"
                                                                                 class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
-                                                                                checked={isCheckboxChecked(field.id, typeof option === 'object' ? option.value : option)}
-                                                                                on:change={(e) => handleCheckboxChange(
-                                                                                    field.id,
-                                                                                    typeof option === 'object' ? option.value : option,
-                                                                                    e.target ? (e.target as HTMLInputElement).checked : false
-                                                                                )}
                                                                             />
                                                                             <span class="text-gray-700">{typeof option === 'object' ? option.label : option}</span>
                                                                         </label>
@@ -716,7 +528,6 @@
                                                                                     id={"field-" + field.id + "-checkbox-" + i}
                                                                                     type="checkbox"
                                                                                     class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
-                                                                                    bind:group={fieldValues[field.id]}
                                                                                     value={typeof option === 'object' ? option.value : option}
                                                                                     required={field.required}
                                                                                     on:focus={clearMessages}
@@ -725,10 +536,7 @@
                                                                                     type="text"
                                                                                     class="w-full ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
                                                                                     placeholder={'Please specify...'}
-                                                                                    disabled={
-                                                                                        !Array.isArray(fieldValues[field.id]) ||
-                                                                                        !fieldValues[field.id].includes(typeof option === 'object' ? option.value : option)
-                                                                                        }                                                                                
+                                                                                    disabled={false}                                                                                
                                                                                 />
                                                                             </div>
                                                                         {/if}
@@ -741,7 +549,6 @@
                                                                 id={"field-" + field.id}
                                                                 class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
                                                                 type={field.type}
-                                                                bind:value={fieldValues[field.id]}
                                                                 placeholder={field.placeholder || 'Enter value...'}
                                                                 required={field.required}
                                                                 on:focus={clearMessages}
@@ -754,7 +561,6 @@
                                                                 id={"field-" + field.id}
                                                                 class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
                                                                 type={field.type}
-                                                                bind:value={fieldValues[field.id]}
                                                                 placeholder={field.placeholder || 'Enter value...'}
                                                                 required={field.required}
                                                                 on:focus={clearMessages}
@@ -763,10 +569,7 @@
                                                             />
                                                         {/if}
                                                     {:else}
-                                                    <!-- Read-only display for non-text fields -->
-                                                        <div class="w-full p-3 rounded-md bg-gray-100 border shadow-sm text-gray-700 min-h-[48px] flex items-center {getFieldDisplayValue(field) === 'No value' ? 'italic text-gray-500' : ''}">
-                                                            {getFieldDisplayValue(field)}
-                                                        </div>
+                                                    
                                                     {/if}
                                                 </div>
                                             {/each}
