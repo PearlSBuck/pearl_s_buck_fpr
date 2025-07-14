@@ -5,6 +5,7 @@
   export let id_number: number;
   export let name: string;
   export let selectRecord: boolean;
+  export let selected: string;
 
   function toggleSelection() {
     selectedRecords.update((current) => {
@@ -18,18 +19,35 @@
     });
   }
 
-  function goToRecord(id: number) {
-  goto(`/admin/data/${id}`);
+  function goToFPRRecord(id: number) {
+  goto(`/admin/data/fpr/${id}`);
+  }
+
+  function goToFISRecord(id: number) {
+    goto(`/admin/data/fis/${id}`);
   }
 </script>
 
-<button class="flex justify-between rounded-md text-white bg-[#474C58] h-16 p-3 w-60 m-1 lg:w-275 md:w-150 sm:w-125 relative" on:click={() => goToRecord(id_number)}>
+<div class="flex justify-between rounded-md text-white bg-[#474C58] h-16 p-3 w-60 m-1 lg:w-275 md:w-150 sm:w-125 relative">
+  {#if selected === 'progress_report'}
+  <button on:click={() => goToFPRRecord(id_number)} aria-label="Go to Record" class="flex items-left">
     <div class="flex items-start flex-col justify-center">
         <div class="flex flex-col justify-center items-start gap-1">
             <span class="text-sm md:text-md lg:text-lg">SC Name: {name}</span>
             <span class="text-sm md:text-md lg:text-lg">SC Number: {id_number}</span>
         </div>
     </div>
+  </button>
+  {:else}
+  <button on:click={() => goToFISRecord(id_number)} aria-label="Go to Record" class="flex items-left">
+    <div class="flex items-start flex-col justify-center">
+        <div class="flex flex-col justify-center items-start gap-1">
+            <span class="text-sm md:text-md lg:text-lg">SC Name: {name}</span>
+            <span class="text-sm md:text-md lg:text-lg">SC Number: {id_number}</span>
+        </div>
+    </div>
+  </button>  
+  {/if}
     <div class="top-1 right-2">
         {#if selectRecord}
           <input type="checkbox" class="form-checkbox text-gray-600 w-5 h-5 rounded border-gray-300 focus:ring-2 focus:ring-gray-500 mt-2" 
@@ -37,4 +55,4 @@
           on:change={toggleSelection}>
         {/if}
     </div>
-</button>
+</div >

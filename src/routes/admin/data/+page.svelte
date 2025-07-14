@@ -1,14 +1,16 @@
+<!--+page.svelte-->
 <script lang="ts">
-  import Header from '../../../components/Header.svelte'; // adjust the paths as needed
+  import Header from '../../../components/Header.svelte';
   import Record from '../../../components/Record.svelte'; 
+  import Confirm from '../../../components/Confirm.svelte';
+  import { get } from 'svelte/store';  
   import { goto } from '$app/navigation';
   import { selectedRecords } from './selectRecord';
-  import { get } from 'svelte/store';
-  import { onDestroy } from 'svelte';
-  
+  import { onDestroy } from 'svelte';  
 
   let pageName = "Individual Records Management";
   let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
+  let showModal = false;
   
   export let data: {
     records: { sc_id: number; sc_name: string }[];
@@ -22,6 +24,16 @@
   let selectAll = false;
   let searchQuery = data.query;
   let filterMode = !!searchQuery;
+
+  function onDeleteConfirmed() {
+    console.log("Deleted:", Array.from(get(selectedRecords)));
+    selectedRecords.set(new Set()); // clear selection
+    goToPage(1);
+    setTimeout(() => {
+      goto('/admin/data');
+    }, 1000);
+    selectRecord = false;
+  }
 
   function toggleFilter() {
     if (filterMode) {
@@ -191,7 +203,19 @@
           </button>
         </div>
         <!-- Mobile-->
-        <div class="absolute lg:top-8 lg:right-5 top-16 right-12.5 flex items-center gap-10 p-2 md:hidden">
+        <div class="absolute lg:top-8 lg:right-5 top-16 right-10 flex items-center gap-6 p-2 md:hidden">
+          <!-- Delete Records-->
+          <button aria-label="Delete" on:click={() => showModal = true}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#1A5A9E" class="size-5">
+              <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          <Confirm
+            bind:show={showModal}
+            recordIds={Array.from($selectedRecords)}
+            onConfirm={onDeleteConfirmed}
+          />
+          <!-- Select Records -->
             <button class="text-[#1A5A9E] font-bold text-lg cursor-pointer" on:click={() => selectRecord = !selectRecord}>Select</button>
               <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
@@ -204,13 +228,24 @@
         <div class="absolute lg:top-8 lg:right-5 sm:top-6 sm:right-5 top-4 right-5 flex items-center gap-2 p-2">
           <div class="flex items-center justify-start gap-8">
             <div class="hidden md:flex gap-10">
-            <button class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectRecord ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`} on:click={() => selectRecord = !selectRecord}>Select</button>
-            <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" on:click={handleExport} aria-label="Export Selected Records">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
-              </svg>
-              <span>Export</span>
-            </button>
+              <!-- Delete Records-->
+              <button aria-label="Delete" on:click={() => showModal = true}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#1A5A9E" class="size-5">
+                  <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <Confirm
+                bind:show={showModal}
+                recordIds={Array.from($selectedRecords)}
+                onConfirm={onDeleteConfirmed}
+              />
+              <button class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectRecord ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`} on:click={() => selectRecord = !selectRecord}>Select</button>
+              <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" on:click={handleExport} aria-label="Export Selected Records">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
+                </svg>
+                <span>Export</span>
+              </button>
             </div>
             <div class="flex justify-between items-center gap-2 lg:top-8 lg:right-4 top-4 right-2">
               <span class="text-xs lg:text-lg md:text-md sm:text-sm whitespace-nowrap">{data.currentPage} of {data.totalPages}</span>
@@ -231,12 +266,12 @@
       <div class="flex flex-col items-center justify-center gap-4 mt-16">
         {#if selected === 'progress_report'}
             {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} />
+              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
             {/each}
             
         {:else if selected === 'intro_sheet'}
             {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} />
+              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
             {/each}
         {/if}
       </div>
