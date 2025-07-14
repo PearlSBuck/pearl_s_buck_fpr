@@ -182,30 +182,8 @@
         clearMessages();
     }
 
-    function hasChanges(): boolean {
-        if (formTitle !== data.form?.title) return true;
-        if (formVersion !== data.form?.version) return true;
-        
-        // Check regular field changes
-        const fieldChanges = Object.keys(fieldValues).some(fieldId => {
-            const current = fieldValues[fieldId];
-            const original = originalFieldValues[fieldId];
-            
-            // Handle array comparison for checkboxes
-            if (Array.isArray(current) && Array.isArray(original)) {
-                return JSON.stringify(current.sort()) !== JSON.stringify(original.sort());
-            }
-            
-            return current !== original;
-        });
-        
-        // Check "Others" text field changes
-        const otherTextChanges = Object.keys(otherTextValues).some(fieldId => {
-            return otherTextValues[fieldId] !== originalOtherTextValues[fieldId];
-        });
-        
-        return fieldChanges || otherTextChanges;
-    }
+    $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
+    
 
     function formatDate(dateString: string) {
         if (!dateString) return 'No date';
@@ -467,7 +445,7 @@
                         <!-- Action Buttons -->
                         <div class="flex flex-wrap gap-3 items-center">
                             {#if editMode}
-                                {#if hasChanges()}
+                                {#if hasChanges}
                                     <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-md text-sm font-medium border border-yellow-300">
                                         ⚠️ Unsaved changes
                                     </div>
@@ -629,6 +607,7 @@
                                                             <div class="space-y-3">
                                                                 {#if field.options && Array.isArray(field.options)}
                                                                     {#each field.options as option, i}
+                                                                        {#if option.label != 'Others'}
                                                                         <label class="flex items-center gap-3 cursor-pointer" for={"field-" + field.id + "-radio-" + i}>
                                                                             <input
                                                                                 id={"field-" + field.id + "-radio-" + i}
@@ -641,6 +620,26 @@
                                                                             />
                                                                             <span class="text-gray-700">{typeof option === 'object' ? option.label : option}</span>
                                                                         </label>
+
+                                                                        {:else}
+                                                                            <div class="flex items-center">
+                                                                                <input
+                                                                                    id={"field-" + field.id + "-radio-" + i}
+                                                                                    type="radio"
+                                                                                    class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E]"
+                                                                                    bind:group={fieldValues[field.id]}
+                                                                                    value={typeof option === 'object' ? option.value : option}
+                                                                                    required={field.required}
+                                                                                    on:focus={clearMessages}
+                                                                                />
+                                                                                <input
+                                                                                    type="text"
+                                                                                    class="w-full ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
+                                                                                    placeholder={'Please specify...'}
+                                                                                    disabled={fieldValues[field.id] !== (typeof option === 'object' ? option.value : option)}
+                                                                                />
+                                                                            </div>
+                                                                        {/if}
                                                                     {/each}
                                                                 {/if}
                                                             </div>
@@ -683,6 +682,7 @@
                                                             <div class="space-y-3">
                                                                 {#if field.options && Array.isArray(field.options)}
                                                                     {#each field.options as option, i}
+                                                                        {#if option.label != 'Others'}
                                                                         <label class="flex items-center gap-3 cursor-pointer" for={"field-" + field.id + "-checkbox-" + i}>
                                                                             <input
                                                                                 id={"field-" + field.id + "-checkbox-" + i}
@@ -697,6 +697,28 @@
                                                                             />
                                                                             <span class="text-gray-700">{typeof option === 'object' ? option.label : option}</span>
                                                                         </label>
+                                                                        {:else}
+                                                                            <div class="flex items-center">
+                                                                                <input
+                                                                                    id={"field-" + field.id + "-checkbox-" + i}
+                                                                                    type="checkbox"
+                                                                                    class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
+                                                                                    bind:group={fieldValues[field.id]}
+                                                                                    value={typeof option === 'object' ? option.value : option}
+                                                                                    required={field.required}
+                                                                                    on:focus={clearMessages}
+                                                                                />
+                                                                                <input
+                                                                                    type="text"
+                                                                                    class="w-full ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
+                                                                                    placeholder={'Please specify...'}
+                                                                                    disabled={
+                                                                                        !Array.isArray(fieldValues[field.id]) ||
+                                                                                        !fieldValues[field.id].includes(typeof option === 'object' ? option.value : option)
+                                                                                        }                                                                                
+                                                                                />
+                                                                            </div>
+                                                                        {/if}
                                                                     {/each}
                                                                 {/if}
                                                             </div>

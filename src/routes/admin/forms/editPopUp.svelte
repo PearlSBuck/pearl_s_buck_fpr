@@ -20,7 +20,7 @@ import type { Field } from '$lib/stores/formEditor';
 import type { Section } from '$lib/stores/formEditor';
 
 
-
+let addOthersOption:boolean;
 let newOption = '';
 function setHidden(el: HTMLElement, shouldHide: boolean) {
   el.classList.toggle('hidden', shouldHide);
@@ -51,6 +51,15 @@ function handleEnter(addedOption:string){
     let option = {label: addedOption, value:addedOption}
     editorField.options = [...editorField.options, option]
     console.log('Successfully Added new option')
+}
+
+function checkOthersOption(){
+    if(addOthersOption && !field.options.find((option:any) => option.label === 'Others')){
+        editorField.options.push({label:'Others', value:''});
+    }
+    else{
+        editorField.options = editorField.options.filter(option => option.label !== 'Others');
+    }
 }
 
 function removeOption(index:number) {
@@ -194,6 +203,10 @@ $: if(openEditSectionPopup && section){
   addNewSection = section;
 }
 
+$: if((openEditPopup||openAddPopup) && field){
+  addOthersOption = field.options.find((option:any) => option.label === 'Others');
+}
+
 
 
 </script>
@@ -265,7 +278,7 @@ $: if(openEditSectionPopup && section){
             <!-- With options (Radio, Checkbox) -->
              <!-- type: multiple_choice is temporarily added to conform to the database -->
             {:else if (editorField.type==='radio')  || (editorField.type==='checkbox') || editorField.type === 'multiple_choice'} 
-                <p>Options:</p>
+                <p class="block text-sm font-medium mb-1">Options:</p>
                 {#each editorField.options as option, index}
                     <input
                         type={editorField.type == 'multiple_choice' ? 'checkbox' : editorField.type}
@@ -293,8 +306,21 @@ $: if(openEditSectionPopup && section){
                             class="flex-1 border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none py-1"
                             on:keydown={handleKeydown}
                         />
+                        
                     </div>
                     <p class="text-xs text-gray-400 mt-1">Press <kbd>Enter</kbd> to add</p>
+                </div>
+                <!-- others option -->
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Tick to add others option</p>
+                    <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-300">
+                        <input
+                            type='checkbox'
+                            bind:checked={addOthersOption}
+                            class="h-5 w-5 text-indigo-600"
+                        />
+                        <span>Add others option</span>
+                    </div>
                 </div>
 
             {:else if editorField.type === "select"}
@@ -325,8 +351,10 @@ $: if(openEditSectionPopup && section){
             <div class='flex justify-end'>
                 <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => openEditPopup=false}>Cancel</button>
                 <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => {
+                    checkOthersOption();
                     handleFieldChanges(editorField, 'update');
-                    newOption=''}
+                    newOption=''
+                }
                     }>Confirm</button>
             </div>
         </div>
@@ -435,6 +463,17 @@ $: if(openEditSectionPopup && section){
                         />
                     </div>
                     <p class="text-xs text-gray-400 mt-1">Press <kbd>Enter</kbd> to add</p>
+                    <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Tick to add others option</p>
+                    <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-300">
+                        <input
+                            type='checkbox'
+                            bind:checked={addOthersOption}
+                            class="h-5 w-5 text-indigo-600"
+                        />
+                        <span>Add others option</span>
+                    </div>
+                </div>
                 </div>
 
             {:else if editorField.type === "select"}
@@ -464,6 +503,7 @@ $: if(openEditSectionPopup && section){
             <br><br>
             <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openAddPopup=false}>Cancel</button>
             <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" on:click={() => {
+                checkOthersOption();
                 handleFieldChanges(editorField, 'add', sectionId)
                 openAddPopup=false}}>Add</button>
 
