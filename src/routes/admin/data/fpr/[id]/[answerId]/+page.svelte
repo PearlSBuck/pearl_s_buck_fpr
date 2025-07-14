@@ -28,9 +28,6 @@
         border-bottom: 1px solid #e5e7eb;
     }
     
-    @media (max-width: 640px) {
-    }
-    
     .info-label {
         color: #6b7280;
         font-size: 0.875rem;
@@ -44,16 +41,15 @@
 </style>
 
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import Header from '../../../../../components/Header.svelte';
-
+    import Header from '../../../../../../components/Header.svelte';
+    
     // Get data from the server load function
     export let data;
-
+    
     // Extract the main record and form data
     const { record, organizedData } = data;
-
-    // Helper function to format date strings if needed
+    
+    // Helper function to format date strings
     function formatDateString(dateStr: string) {
         if (!dateStr) return 'N/A';
         try {
@@ -66,7 +62,7 @@
             return dateStr;
         }
     }
-
+    
     // Helper function to render field values based on type
     function renderFieldValue(field: any) {
         if (!field.answer) return 'Not provided';
@@ -100,23 +96,24 @@
 
     <div class="content-area flex flex-col items-center pt-8 px-6 pb-8">
         <!-- Child Identification Card -->
-        <div class="w-full max-w-7xl bg-white rounded-xl shadow p-4 flex flex-col md:flex-row items-center justify-between mb-8">
+        <div class="w-full max-w-6xl bg-white rounded-xl shadow p-4 flex flex-col md:flex-row items-center justify-between mb-8">
             <div class="flex flex-col items-center md:items-start">
                 <p class="text-xl mb-2">
-                    SC Name: <span class="font-bold">{record.sc_name}</span>
+                    <span class="font-bold">SC Name:</span> {record.sc_name}
                 </p>
                 <p class="text-xl">
-                    SCN: <span class="font-bold">{record.sc_id}</span>
+                    <span class="font-bold">SCN:</span> {record.sc_id}
                 </p>
             </div>
             <div>
-                <p class="text-gray-500">Form submitted on {formatDateString(record.created_at)}</p>
+                <p class="text-gray-500">Report submitted on {formatDateString(record.created_at)}</p>
+                <p class="text-gray-500">Year: {new Date(record.created_at).getFullYear()}</p>
             </div>
         </div>
         
         <!-- Form data sections -->
         {#each organizedData as section}
-            <div class="w-full max-w-4xl">
+            <div class="w-full max-w-6xl">
                 <div class="section-card">
                     <h2 class="section-title">{section.title}</h2>
                     
