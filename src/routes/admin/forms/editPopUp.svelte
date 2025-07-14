@@ -54,7 +54,7 @@ function handleEnter(addedOption:string){
 }
 
 function checkOthersOption(){
-    if(addOthersOption && !field.options.find((option:any) => option.label === 'Others')){
+    if(addOthersOption && !editorField.options.find((option:any) => option.label === 'Others')){
         editorField.options.push({label:'Others', value:''});
     }
     else{

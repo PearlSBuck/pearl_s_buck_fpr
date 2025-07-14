@@ -207,12 +207,24 @@
     }
 
     function handleCheckboxChange(fieldId: string, optionValue: string, checked: boolean) {
+        // Initialize as array if undefined
         if (!fieldValues[fieldId]) {
             fieldValues[fieldId] = [];
-        } else if (typeof fieldValues[fieldId] === 'string') {
-            fieldValues[fieldId] = fieldValues[fieldId] ? fieldValues[fieldId].split(',').map((v: string) => v.trim()) : [];
         }
-        
+
+        // Convert string to array if needed
+        if (typeof fieldValues[fieldId] === 'string') {
+            fieldValues[fieldId] = fieldValues[fieldId]
+                ? fieldValues[fieldId].split(',').map((v: string) => v.trim())
+                : [];
+        }
+
+        // Ensure it's an array before manipulating
+        if (!Array.isArray(fieldValues[fieldId])) {
+            fieldValues[fieldId] = [];
+        }
+
+        // Add or remove optionValue
         if (checked) {
             if (!fieldValues[fieldId].includes(optionValue)) {
                 fieldValues[fieldId] = [...fieldValues[fieldId], optionValue];
@@ -221,6 +233,7 @@
             fieldValues[fieldId] = fieldValues[fieldId].filter((val: string) => val !== optionValue);
         }
     }
+
 
     function isCheckboxChecked(fieldId: string, optionValue: string): boolean {
         if (!fieldValues[fieldId]) return false;
