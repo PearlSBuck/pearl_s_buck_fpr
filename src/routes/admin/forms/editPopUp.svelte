@@ -277,30 +277,46 @@ $: if(openEditSectionPopup && section){
 
                 {/each}
                 <!-- option for adding more options -->
-                    <input
-                        type={editorField.type == 'multiple_choice' ? 'checkbox' : editorField.type}
-                        value=''
-                        disabled={true}
-                    />
-                    <input
-                        type="text"
-                        bind:value={newOption}
-                        disabled={false}
-                        class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-30"
-                        on:keydown={handleKeydown}
-                    />
+                
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Type a new option</p>
+                    <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-300">
+                        <input
+                            type={editorField.type == 'multiple_choice' ? 'checkbox' : editorField.type}
+                            disabled
+                            class="h-5 w-5 text-indigo-600"
+                        />
+                        <input
+                            type="text"
+                            bind:value={newOption}
+                            placeholder="Add option"
+                            class="flex-1 border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none py-1"
+                            on:keydown={handleKeydown}
+                        />
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Press <kbd>Enter</kbd> to add</p>
+                </div>
+
             {:else if editorField.type === "select"}
                 <p>Options:</p>
                 {#each editorField.options as option, index}
                     <li>{option.label}<button class="float-right text-gray-500" on:click={() => removeOption(index)}>×</button></li>
                 {/each}
-                <li><input
-                        type="text"
-                        bind:value={newOption}
-                        disabled={false}
-                        class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-30"
-                        on:keydown={handleKeydown}
-                    /></li>
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Type a new option</p>
+                    <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-300">
+                        <li>
+                        <input
+                            type="text"
+                            bind:value={newOption}
+                            placeholder="Add option"
+                            class="flex-1 border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none py-1"
+                            on:keydown={handleKeydown}
+                        />
+                        </li>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Press <kbd>Enter</kbd> to add</p>
+                </div>
             {/if}
             <!-- With Image (Signature and Image Attachments) -->
 
@@ -402,30 +418,46 @@ $: if(openEditSectionPopup && section){
 
                 {/each}
                 <!-- option for adding more options -->
-                    <input
-                        type={editorField.type}
-                        value=''
-                        disabled={true}
-                    />
-                    <input
-                        type="text"
-                        bind:value={newOption}
-                        disabled={false}
-                        class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-30"
-                        on:keydown={handleKeydown}
-                    />
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Type a new option</p>
+                    <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-300">
+                        <input
+                            type={editorField.type}
+                            disabled={false}
+                            class="h-5 w-5 text-indigo-600"
+                        />
+                        <input
+                            type="text"
+                            bind:value={newOption}
+                            placeholder="Add option"
+                            class="flex-1 border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none py-1"
+                            on:keydown={handleKeydown}
+                        />
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Press <kbd>Enter</kbd> to add</p>
+                </div>
+
             {:else if editorField.type === "select"}
                 <p>Options:</p>
                 {#each editorField.options as option, index}
                     <li>{option.label}<button class="float-right text-gray-500" on:click={() => removeOption(index)}>×</button></li>
                 {/each}
-                <li><input
-                        type="text"
-                        bind:value={newOption}
-                        disabled={false}
-                        class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-30"
-                        on:keydown={handleKeydown}
-                    /></li>
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 mb-1">Type a new option</p>
+                    <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-300">
+                        <li>
+                        <input
+                            type="text"
+                            bind:value={newOption}
+                            placeholder="Add option"
+                            class="flex-1 border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none py-1"
+                            on:keydown={handleKeydown}
+                        />
+                        </li>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Press <kbd>Enter</kbd> to add</p>
+                </div>
+
             {/if}
             <!-- With Image (Signature and Image Attachments) -->
 

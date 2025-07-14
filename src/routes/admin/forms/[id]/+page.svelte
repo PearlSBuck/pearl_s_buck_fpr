@@ -783,16 +783,6 @@
         <button class="m-5 p-2 text-xl bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => togglePopup('addSection', $displayedData.form.id)}>Add Section</button>
     </div>
 {/if}
-<style>
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-</style>
 
 
                                                     
