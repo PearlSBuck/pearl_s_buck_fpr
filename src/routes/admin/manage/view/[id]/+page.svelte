@@ -18,12 +18,14 @@
     import { page } from '$app/stores';
     import Header from '../../../../../components/Header.svelte';
     import Confirm from '../../../../../components/Confirm.svelte';
+    import PasswordEdit from '../../../../../components/PasswordEdit.svelte';
 
     export let data: { user: any };
     let user = data.user;
     let userID: string;
     let show = false;
     let editMode = false;
+    let passwordEditMode = false;
     let isAdmin = user?.role === 'Admin';
     let tempUser = { ...user };
 
@@ -56,6 +58,38 @@
         editMode = false;
     }
 
+    async function savePassword(userId: string, newPassword: string, repeatNewPassword: string) {
+        try {
+            const response = await fetch('/admin/manage/edit-password', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    userID: userId,
+                    newPassword,
+                    repeatNewPassword
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                passwordEditMode = false;
+                alert("Password updated successfully!");
+            } else {
+                alert("Failed to update password: " + result.error);
+            }
+        } catch (err) {
+            console.error("Password update error:", err);
+            alert("Something went wrong.");
+        }
+    }
+
+    function cancelPasswordEdit() {
+        passwordEditMode = false;
+    }
+
     async function toggleAdminPerms(){
         try {
             const response = await fetch('/admin/manage/toggle-admin', {
@@ -80,7 +114,7 @@
     onMount(() => {
         if (!user) {
             alert('User not found');
-            goto('/users/edit');
+            goto('/admin/manage');
         }
     });
 
@@ -90,6 +124,10 @@
 
     function toggleEditMode(){
         editMode = !editMode;
+    }
+
+    function togglePasswordEditMode(){
+        passwordEditMode = !passwordEditMode;
     }
 
     async function deleteUser(userId: string) {
@@ -126,6 +164,18 @@
                     <div class="text-2xl font-bold">{user?.username || 'Loading...'}</div>
                     <div class="text-gray-500 text-lg">{user?.role || 'Loading...'}</div>
             </div>
+            <button class="text-gray-500 hover:text-black p-1 rounded hover:bg-gray-100 transition-colors" aria-label="Edit Password" title="Edit Password" on:click={togglePasswordEditMode}>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+            </button>
+            <PasswordEdit
+                bind:show={passwordEditMode}
+                onConfirmAction={async (newPassword: string, repeatNewPassword: string) =>
+                    await savePassword(userID, newPassword, repeatNewPassword)
+                }
+                onCancel={cancelPasswordEdit}
+            />
         </div>
 
 
@@ -143,6 +193,15 @@
                 </div>
                 {#if editMode}
                 <div class="flex flex-col">
+                    <label class="mb-2">
+                    <strong>Username:</strong>
+                    <input
+                        type="text"
+                        class="border rounded-xl px-2 py-1 ml-4 w-64"
+                        bind:value={tempUser.username}
+                        placeholder="Username"
+                    />
+                    </label>
                     <label class="mb-2">
                     <strong>Full Name:</strong>
                     <input
@@ -199,6 +258,7 @@
                  </div>
 
                 {:else}
+                <div class="mb-2"><strong>Username:</strong> {user?.username || 'N/A'}</div>
                 <div class="mb-2"><strong>Full Name:</strong> {user?.fullname || 'N/A'}</div>
                 <div class="mb-2"><strong>Email:</strong> {user?.email || 'N/A'}</div>
                 <div class="mb-2"><strong>Age:</strong> {user?.age ?? 'N/A'}</div>

@@ -3,6 +3,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Header from '../../../components/Header.svelte'; // adjust the paths as needed
+  import PasswordEdit from '../../../components/PasswordEdit.svelte'
   import { getUserByID } from './auditLog'
 	import { goto } from '$app/navigation';
 

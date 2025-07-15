@@ -20,7 +20,8 @@ export const PUT: RequestHandler = async ({ request }) => {
         fullname: tempUser.fullname,
         email: tempUser.email,
         age: tempUser.age,
-        residence: tempUser.residence
+        residence: tempUser.residence,
+        username: tempUser.username,
     })
     .eq('id', userID);
 
