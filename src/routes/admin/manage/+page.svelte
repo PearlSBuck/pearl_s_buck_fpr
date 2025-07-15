@@ -21,6 +21,7 @@
   let isLoading = false;
   let tooltipPosition = { x: 0, y: 0 };
   let tooltipVisible = false;
+  let userSearchQuery = '';
   
   // Data
   let userList: any[] = [];
@@ -246,6 +247,9 @@
     isLoading = false;
   }
 
+  $: filteredUsers = userList.filter(user =>
+    user.username.toLowerCase().includes(userSearchQuery.toLowerCase())
+  );
   $: totalPages = Math.ceil(filteredLogs.length / logsPerPage);
   $: currentLogs = filteredLogs.slice((currentPage - 1) * logsPerPage, currentPage * logsPerPage);
   $: startIndex = (currentPage - 1) * logsPerPage + 1;
@@ -282,6 +286,7 @@
                 </svg>
                 <input
                   type="text"
+                  bind:value={userSearchQuery}
                   placeholder="Search by Name"
                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1A5A9E] focus:border-transparent"
                 />
@@ -295,7 +300,7 @@
             </div>
 
             <div class="space-y-3">
-              {#each userList as user , index}
+              {#each filteredUsers as user , index}
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                   <div class="flex items-center space-x-3">
                     <span class="text-gray-600 font-medium">{index + 1}.</span>
