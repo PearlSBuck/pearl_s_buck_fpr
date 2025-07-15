@@ -23,7 +23,7 @@ export async function load() {
     console.log('Server: First form structure:', data?.[0] || 'No forms');
         
     // Map database columns to camelCase for frontend
-    const mappedForms = data?.map(form => ({
+    const mappedForms = data?.map((form:any) => ({
         ...form,
         createdAt: form.createdat, // Map createdat to createdAt
         version: form.version, // Include version column
