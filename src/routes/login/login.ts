@@ -1,4 +1,4 @@
-import { supabase } from "../../lib/db.ts";
+import { supabase } from "../../lib/db";
 // import { redirect } from "@sveltejs/kit";
 import { goto } from "$app/navigation"; // Use $app/navigation for navigation in SvelteKit
 

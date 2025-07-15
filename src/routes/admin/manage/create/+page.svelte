@@ -62,7 +62,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { supabase } from '$lib/db'
-    import Header from '../../../components/Header.svelte'; // Adjust path if needed
+    import Header from '../../../../components/Header.svelte'; // Adjust path if needed
 
     let showPassword = false;
 
@@ -222,7 +222,7 @@
             
             alert('User created successfully!');
             clearForm();
-            goto('/users/edit');
+            goto('/admin/manage');
             
         } catch (error: any) {
             console.error('Error creating user:', error);

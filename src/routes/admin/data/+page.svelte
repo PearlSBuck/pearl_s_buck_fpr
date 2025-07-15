@@ -3,6 +3,7 @@
   import Header from '../../../components/Header.svelte';
   import Record from '../../../components/Record.svelte'; 
   import Confirm from '../../../components/Confirm.svelte';
+  import { deleteSCRecords } from './recordQuery';
   import { get } from 'svelte/store';  
   import { goto } from '$app/navigation';
   import { selectedRecords } from './selectRecord';
@@ -61,6 +62,16 @@
     selectRecord = true;
     selectedRecords.set(new Set(data.records.map(record => record.sc_id)));
   }
+
+  const confirmDeleteAction = async (ids: unknown[]) => {
+    return deleteAction(ids as number[]);
+  };
+
+  const deleteAction = async (ids: number[]) => {
+    await deleteSCRecords(ids);
+    // Refresh or re-fetch your data here
+    console.log('Deleted:', ids);
+  };
 
   onDestroy(() => {
       selectedRecords.set(new Set());
@@ -212,8 +223,9 @@
           </button>
           <Confirm
             bind:show={showModal}
-            recordIds={Array.from($selectedRecords)}
-            onConfirm={onDeleteConfirmed}
+            ids={Array.from($selectedRecords)}
+            onConfirmAction={confirmDeleteAction}
+            deleteMessage="Are you sure you want to delete the selected records?"
           />
           <!-- Select Records -->
             <button class="text-[#1A5A9E] font-bold text-lg cursor-pointer" on:click={() => selectRecord = !selectRecord}>Select</button>
@@ -236,8 +248,9 @@
               </button>
               <Confirm
                 bind:show={showModal}
-                recordIds={Array.from($selectedRecords)}
-                onConfirm={onDeleteConfirmed}
+                ids={Array.from($selectedRecords)}
+                onConfirmAction={confirmDeleteAction}
+                deleteMessage="Are you sure you want to delete the selected records?"
               />
               <button class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectRecord ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`} on:click={() => selectRecord = !selectRecord}>Select</button>
               <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" on:click={handleExport} aria-label="Export Selected Records">
