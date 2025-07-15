@@ -12,10 +12,6 @@
   let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
 </script>
 <Header name={pageName} search backButton />;
-<div class="mt-75 mx-10">
-  <Confirm show={true}/>
-</div>
-
 
 
     

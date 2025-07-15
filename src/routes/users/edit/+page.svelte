@@ -92,9 +92,14 @@
                 {/if}
             </div>
         </div>
-        <div class="text-center text-gray-500 mt-6">
-            <div class="flex items-center justify-center"> 
-                <h1 class="text-2xl font-bold mb-6">Audit Log</h1>
+        <div class="bg-white rounded-xl shadow p-6 m-2">
+            <h1 class="flex items-center justify-center text-2xl font-bold mb-6">Audit Log</h1>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg border">
+                    <div class="flex items-center gap-3">
+                        baller
+                    </div>
+                </div>
             </div>
         </div>
     </div>

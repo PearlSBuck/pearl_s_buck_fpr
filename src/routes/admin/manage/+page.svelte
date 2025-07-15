@@ -3,6 +3,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Header from '../../../components/Header.svelte'; // adjust the paths as needed
+  import { getUserByID } from './auditLog'
+	import { goto } from '$app/navigation';
 
   // Page name for header
   let pageName = "User Management Page";
@@ -21,150 +23,37 @@
   let tooltipVisible = false;
   
   // Data
+  let userList: any[] = [];
   let logs: any[] = [];
+
+  onMount(async () => {
+    try {
+      const res = await fetch('/admin/manage');
+      if (res.ok) {
+        const json = await res.json();
+        logs = json.data ?? [];
+        console.log('Fetched logs:', logs);
+        await preloadUserNames(logs);
+        await preloadAdminNames(logs);
+      } else {
+        console.error('Failed to fetch logs');
+      }
+
+      const userListRes = await fetch('/admin/manage/userlist');
+      if(userListRes.ok){
+        const userJson = await userListRes.json();
+        userList = userJson.data ?? [];
+        console.log("List of users:", userList);
+      }else{
+        console.error("Failed to retrieve user list.");
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  });
   let filteredLogs: any[] = [];
   
   const logsPerPage = 10;
-  
-  // Mock data generation
-  const generateMockLogs = () => {
-  const fixedLogs = [
-    {
-      id: 1,
-      action: 'Created new user account',
-      type: 'create',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-      icon: '➕',
-      user: 'John Doe',
-      date: new Date('2025-07-10T09:30:00'),
-      details: 'Created new user account for user ID: 7234. IP: 192.168.1.45. Session: kj8h3m4n2. Duration: 3m 24s'
-    },
-    {
-      id: 2,
-      action: 'Updated user permissions',
-      type: 'edit',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-      icon: '✏️',
-      user: 'Jane Smith',
-      date: new Date('2025-07-09T14:15:00'),
-      details: 'Updated user permissions for user ID: 5621. IP: 192.168.1.122. Session: p9q2r5t7w. Duration: 2m 17s'
-    },
-    {
-      id: 3,
-      action: 'Deleted user account',
-      type: 'delete',
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
-      icon: '🗑️',
-      user: 'Mike Johnson',
-      date: new Date('2025-07-08T16:45:00'),
-      details: 'Deleted user account for user ID: 3408. IP: 192.168.1.98. Session: x4z7a1b3c. Duration: 1m 52s'
-    },
-    {
-      id: 4,
-      action: 'Viewed user profile',
-      type: 'view',
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100',
-      icon: '👁️',
-      user: 'Sarah Wilson',
-      date: new Date('2025-07-07T11:20:00'),
-      details: 'Viewed user profile for user ID: 9156. IP: 192.168.1.203. Session: m8n4l6p2q. Duration: 4m 08s'
-    },
-    {
-      id: 5,
-      action: 'Changed user role',
-      type: 'edit',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-      icon: '✏️',
-      user: 'David Brown',
-      date: new Date('2025-07-06T13:55:00'),
-      details: 'Changed user role for user ID: 6789. IP: 192.168.1.77. Session: v3w9e4r6t. Duration: 2m 43s'
-    },
-    {
-      id: 6,
-      action: 'Created user group',
-      type: 'create',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-      icon: '➕',
-      user: 'Emma Davis',
-      date: new Date('2025-07-05T10:30:00'),
-      details: 'Created user group for user ID: 2345. IP: 192.168.1.156. Session: h7j2k5l8m. Duration: 5m 31s'
-    },
-    {
-      id: 7,
-      action: 'Updated user profile',
-      type: 'edit',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-      icon: '✏️',
-      user: 'Alex Chen',
-      date: new Date('2025-07-04T15:12:00'),
-      details: 'Updated user profile for user ID: 4567. IP: 192.168.1.89. Session: s1d4f7g9h. Duration: 3m 16s'
-    },
-    {
-      id: 8,
-      action: 'Removed user permissions',
-      type: 'delete',
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
-      icon: '🗑️',
-      user: 'Lisa Wang',
-      date: new Date('2025-07-03T12:48:00'),
-      details: 'Removed user permissions for user ID: 8901. IP: 192.168.1.134. Session: c2v5b8n1m. Duration: 1m 39s'
-    },
-    {
-      id: 9,
-      action: 'Accessed user dashboard',
-      type: 'view',
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100',
-      icon: '👁️',
-      user: 'Tom Anderson',
-      date: new Date('2025-07-02T08:25:00'),
-      details: 'Accessed user dashboard for user ID: 1234. IP: 192.168.1.67. Session: q9w8e7r6t. Duration: 6m 22s'
-    },
-    {
-      id: 10,
-      action: 'Added new admin user',
-      type: 'create',
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-      icon: '➕',
-      user: 'Maria Garcia',
-      date: new Date('2025-07-01T17:33:00'),
-      details: 'Added new admin user for user ID: 5678. IP: 192.168.1.201. Session: i3o6p9u2y. Duration: 4m 07s'
-    },
-    {
-      id: 11,
-      action: 'Reset user password',
-      type: 'edit',
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
-      icon: '🔑',
-      user: 'Robert Taylor',
-      date: new Date('2025-07-01T14:18:00'),
-      details: 'Reset user password for user ID: 9012. IP: 192.168.1.88. Session: z4x7c1v5b. Duration: 2m 55s'
-    },
-    {
-      id: 12,
-      action: 'Exported user data',
-      type: 'view',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
-      icon: '📊',
-      user: 'Jennifer Lee',
-      date: new Date('2025-07-01T11:42:00'),
-      details: 'Exported user data for user ID: 3456. IP: 192.168.1.112. Session: a8s3d6f4g. Duration: 8m 14s'
-    }
-  ];
-
-  return fixedLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-};
 
   // Header tooltip content
   const getHeaderTooltipContent = (headerType: string) => {
@@ -174,12 +63,15 @@
       case 'action':
         return 'Click to sort by action type alphabetically.';
       case 'user':
-        return 'Click to sort by user name in alphabetical order.';
+        return 'Click to sort by username in alphabetical order.';
+      case 'admin':
+        return 'Click to sort by admin name in alphabetical order';
       default:
         return '';
     }
   };
 
+  
   // Tooltip functions for headers
   const showHeaderTooltip = (event: MouseEvent, headerType: string) => {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -219,6 +111,48 @@
     hoveredHeader = null;
   };
 
+  let userNameMap = new Map<string, string>();
+  let adminNameMap = new Map<string, string>();
+  
+  function goToCreatePage(){
+    goto('/admin/manage/create');
+  }
+
+  function goToUserPage(id: number){
+    goto(`/admin/manage/view/${id}`)
+  }
+
+  async function preloadUserNames(logs: any[]) {
+    const ids = [...new Set(logs.map(log => log.user_id))];
+    
+    const entries = await Promise.all(
+      ids.map(async id => {
+        const name = await getUserByID(id); // This is already a string
+        return [id, name || 'Unknown'] as const;
+      })
+    );
+
+    userNameMap = new Map<string, string>(entries);
+  }
+
+  async function preloadAdminNames(logs: any[]) {
+    const adminIds = [...new Set(logs.map(log => log.admin_id))];
+
+    const entries = await Promise.all(
+      adminIds.map(async adminId => {
+        const name = await getUserByID(adminId); // This is already a string
+        return [adminId, name || 'Unknown'] as const;
+      })
+    );
+
+    adminNameMap = new Map<string, string>(entries);
+  }
+
+  $: if (logs.length > 0) {
+    preloadUserNames(logs);
+  }
+
+
   // Utility functions
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -227,7 +161,6 @@
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZoneName: 'short'
     });
   };
 
@@ -259,34 +192,19 @@
     currentPage = 1;
   };
 
-  const exportLogs = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Date,Action,User,Details\n"
-      + filteredLogs.map(log => 
-          `"${formatDate(log.date)}","${log.action}","${log.user}","${log.details}"`
-        ).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `audit_logs_${months[selectedMonth]}_${selectedYear}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   // Reactive statements
   $: {
     isLoading = true;
     
     let filtered = logs.filter(log => {
-      const logDate = new Date(log.date);
+      const logDate = new Date(log.created_at);
+      const userName = String(userNameMap.get(log.user_id))?.toLowerCase() ?? '';
       const matchesMonth = logDate.getMonth() === selectedMonth;
       const matchesYear = logDate.getFullYear() === selectedYear;
       const matchesSearch = searchTerm === '' || 
-        log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.user.toLowerCase().includes(searchTerm.toLowerCase());
-      
+        log.action_performed.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        userName.includes(searchTerm.toLowerCase());
+
       return matchesMonth && matchesYear && matchesSearch;
     });
 
@@ -296,20 +214,24 @@
       
       switch (sortBy) {
         case 'date':
-          aValue = new Date(a.date);
-          bValue = new Date(b.date);
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
           break;
         case 'user':
-          aValue = a.user.toLowerCase();
-          bValue = b.user.toLowerCase();
+          aValue = String(userNameMap.get(a.user_id))?.toLowerCase() ?? '';
+          bValue = String(userNameMap.get(b.user_id))?.toLowerCase() ?? '';
           break;
         case 'action':
-          aValue = a.action.toLowerCase();
-          bValue = b.action.toLowerCase();
+          aValue = a.action_performed.toLowerCase();
+          bValue = b.action_performed.toLowerCase();
+          break;
+        case 'admin':
+          aValue = String(adminNameMap.get(a.admin_id))?.toLowerCase() ?? '';
+          bValue = String(adminNameMap.get(b.admin_id))?.toLowerCase() ?? '';
           break;
         default:
-          aValue = new Date(a.date);
-          bValue = new Date(b.date);
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
       }
 
       if (sortOrder === 'asc') {
@@ -328,10 +250,6 @@
   $: currentLogs = filteredLogs.slice((currentPage - 1) * logsPerPage, currentPage * logsPerPage);
   $: startIndex = (currentPage - 1) * logsPerPage + 1;
   $: endIndex = Math.min(currentPage * logsPerPage, filteredLogs.length);
-
-  onMount(() => {
-    logs = generateMockLogs();
-  });
 </script>
 
 <svelte:head>
@@ -349,12 +267,12 @@
     </div>
   </div>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-7xl mt-10 mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <!-- Edit User Section -->
       <div class="lg:col-span-1">
         <div class="bg-white rounded-xl shadow-2xl p-6 h-full mb-8">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">Edit User (DUMMY)</h3>
+          <h3 class="text-2xl font-bold text-gray-900 mb-6">Edit User</h3>
           
           <div class="space-y-4">
             <div class="flex space-x-2">
@@ -368,7 +286,7 @@
                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1A5A9E] focus:border-transparent"
                 />
               </div>
-              <button class="flex items-center space-x-2 bg-[#1A5A9E] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              <button class="flex items-center space-x-2 bg-[#1A5A9E] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors" on:click={goToCreatePage} aria-label="Create Account">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -377,13 +295,13 @@
             </div>
 
             <div class="space-y-3">
-              {#each ['Username1', 'Username2', 'Username3', 'Username4'] as username, index}
+              {#each userList as user , index}
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                   <div class="flex items-center space-x-3">
                     <span class="text-gray-600 font-medium">{index + 1}.</span>
-                    <span class="text-gray-900">{username}</span>
+                    <span class="text-gray-900">{user.username}</span>
                   </div>
-                  <button class="bg-[#1A5A9E] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-colors">
+                  <button class="bg-[#1A5A9E] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-colors" on:click={() => goToUserPage(user.id)}>
                     View
                   </button>
                 </div>
@@ -514,7 +432,7 @@
             <div class="overflow-hidden bg-white rounded-lg border border-gray-200">
               <!-- Table Header -->
               <div class="bg-gray-50 px-6 py-3 grid grid-cols-12 gap-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div class="col-span-4">
+                <div class="col-span-3">
                   <button
                     class="flex items-center space-x-1 hover:text-gray-700 transition-colors group"
                     on:click={() => handleSort('date')}
@@ -525,7 +443,7 @@
                     <span class="text-gray-400 group-hover:text-gray-600">{getSortIcon('date')}</span>
                   </button>
                 </div>
-                <div class="col-span-4">
+                <div class="col-span-3">
                   <button
                     class="flex items-center space-x-1 hover:text-gray-700 transition-colors group"
                     on:click={() => handleSort('action')}
@@ -536,7 +454,7 @@
                     <span class="text-gray-400 group-hover:text-gray-600">{getSortIcon('action')}</span>
                   </button>
                 </div>
-                <div class="col-span-4">
+                <div class="col-span-3">
                   <button
                     class="flex items-center space-x-1 hover:text-gray-700 transition-colors group"
                     on:click={() => handleSort('user')}
@@ -547,26 +465,45 @@
                     <span class="text-gray-400 group-hover:text-gray-600">{getSortIcon('user')}</span>
                   </button>
                 </div>
+                <div class="col-span-3">
+                  <button
+                    class="flex items-center space-x-1 hover:text-gray-700 transition-colors group"
+                    on:click={() => handleSort('admin')}
+                    on:mouseenter={(e) => showHeaderTooltip(e, 'admin')}
+                    on:mouseleave={hideHeaderTooltip}
+                  >
+                    <span>Admin</span>
+                    <span class="text-gray-400 group-hover:text-gray-600">{getSortIcon('admin')}</span>
+                  </button>
+                </div>
               </div>
 
               <!-- Table Body -->
               <div class="divide-y divide-gray-200">
                 {#each currentLogs as log}
                   <div class="px-6 py-4 grid grid-cols-12 gap-4 hover:bg-gray-50 transition-colors">
-                    <div class="col-span-4">
+                    <div class="col-span-3">
                       <div class="text-sm text-gray-900 font-medium">
-                        {formatDate(log.date)}
+                        {formatDate(log.created_at)}
                       </div>
                     </div>
-                    <div class="col-span-4">
+                    <div class="col-span-3">
                       <div class="flex items-center space-x-2">
-                        <span class="text-lg">{log.icon}</span>
-                        <span class="text-sm font-medium {log.color}">{log.action}</span>
+                        <span class="text-sm font-medium {log.color}">{log.action_performed}</span>
                       </div>
                     </div>
-                    <div class="col-span-4">
+                    <div class="col-span-3">
                       <div class="text-sm text-gray-900 font-medium">
-                        {log.user}
+                        {userNameMap.has(log.user_id)
+                          ? String(userNameMap.get(log.user_id))
+                          : 'Loading...'}
+                      </div>
+                    </div>
+                    <div class="col-span-3">
+                      <div class="text-sm text-gray-900 font-medium">
+                        {adminNameMap.has(log.admin_id)
+                          ? String(adminNameMap.get(log.admin_id))
+                          : 'Loading...'}
                       </div>
                     </div>
                   </div>

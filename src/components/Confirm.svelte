@@ -1,20 +1,18 @@
 <script lang="ts">
-  import { deleteSCRecords } from '../routes/admin/data/recordQuery';
 
   export let show = false;
-  export let recordIds: number[];
-  export let onConfirm: () => void = () => {};
+  export let ids: unknown[] = [];
+  export let deleteMessage: string;
+  export let onConfirmAction: (ids: unknown[]) => Promise<void>;
   export let onCancel: () => void = () => {};
 
   const handleConfirm = async () => {
     try {
-        await deleteSCRecords(recordIds);
-        onConfirm(); // callback after deletion (e.g., refresh UI)
-        show = false;
-        console.log("Records deleted successfully:", recordIds);
+      await onConfirmAction(ids);
+      show = false;
     } catch (error) {
-        console.error("Delete failed:", error);
-        alert("Something went wrong while deleting the record.");
+      console.error("Delete failed:", error);
+      alert("Something went wrong.");
     }
   };
 
@@ -26,7 +24,7 @@
 {#if show}
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
     <div class="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
-      <h2 class="text-lg font-semibold mb-4">Are you sure you want to delete the selected records?</h2>
+      <h2 class="text-lg font-semibold mb-4">{deleteMessage}</h2>
       <div class="flex justify-end space-x-3">
         <button
           on:click={handleCancel}

@@ -62,7 +62,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { supabase } from '$lib/db'
-    import Header from '../../../components/Header.svelte'; // Adjust path if needed
+    import Header from '../../../../components/Header.svelte'; // Adjust path if needed
 
     let showPassword = false;
 
