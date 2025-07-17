@@ -92,6 +92,30 @@
                 return field.answer;
         }
     }
+    // Handle Edit button click
+    function handleEdit() {
+        // This will be implemented with backend functionality later
+        // For now, just log the action
+        console.log('Edit record:', record.sc_id);
+        // Uncomment when ready to implement:
+        // goto(`/admin/data/fis/${record.sc_id}/edit`);
+    }
+
+    // Handle Delete button click
+    function handleDelete() {
+        if (confirm(`Are you sure you want to delete the record for ${record.sc_name}?`)) {
+            // This will be implemented with backend functionality later
+            // For now, just log the action
+            console.log('Delete record:', record.sc_id);
+        }
+    }
+
+    // Add these two lines:
+    let showDetails = false;
+    
+    function toggleDetails() {
+        showDetails = !showDetails;
+    }
 </script>
 
 <div class="app-container">
@@ -109,10 +133,62 @@
                     SCN: <span class="font-bold">{record.sc_id}</span>
                 </p>
             </div>
-            <div>
-                <p class="text-gray-500">Form submitted on {formatDateString(record.created_at)}</p>
+            <div class="flex flex-col items-center md:items-end">
+                <p class="text-gray-500 mb-3">Form submitted on {formatDateString(record.created_at)}</p>
+                <div class="flex gap-3">
+                    <!-- Edit Button -->
+                    <button 
+                        class="bg-[#0C376C] hover:bg-[#0a2c56] text-white px-3 py-1.5 rounded flex items-center gap-1.5"
+                        on:click={handleEdit}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                    </button>
+                    
+                    <!-- View Button -->
+                    <button 
+                        class="bg-[#0C376C] hover:bg-[#0a2c56] text-white px-3 py-1.5 rounded flex items-center gap-1.5"
+                        on:click={toggleDetails}
+                    >
+                        <span>View</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={showDetails ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
+
+        <!-- Additional details section that appears when View is clicked -->
+        {#if showDetails}
+            <div class="w-full max-w-7xl bg-gray-50 rounded-lg shadow p-4 mb-8 border border-gray-200">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-600">Created:</p>
+                        <p class="font-medium">{formatDateString(record.created_at)}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Filled out by:</p>
+                        <p class="font-medium">{record.filled_out_by || 'Unknown'}</p>
+                    </div>
+                    <!-- Add more details as needed -->
+                </div>
+                
+                <div class="mt-4 flex justify-end">
+                    <button 
+                        class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded flex items-center gap-1.5"
+                        on:click={handleDelete}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        {/if}
         
         <!-- Form data sections -->
         {#each organizedData as section}
