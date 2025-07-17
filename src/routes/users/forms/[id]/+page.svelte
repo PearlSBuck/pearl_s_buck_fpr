@@ -2,7 +2,7 @@
     // +page.svelte - Enhanced form display component with version support and fixed slug handling
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
-    import { formAnswers, saveAnswersOffline, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
+    import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
     
     import Header from './Header.svelte'; // Import the Header component
     import cloneDeep from 'lodash/cloneDeep';
@@ -81,7 +81,6 @@
     async function printInputs(){
         try {
             console.log($formAnswers);
-            saveAnswersOffline();
             const success = await submitAnswersToSupabase();
             if (success) {
                 console.log('Form submitted!');

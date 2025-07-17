@@ -1,16 +1,16 @@
 import { writable } from 'svelte/store';
 import { supabaseAdmin } from '$lib/db'; // replace with your client instance
-import { v4 as uuidv4 } from 'uuid';
 
 // Local reactive answer state (used in the UI)
 export const formAnswers = writable<Record<string, any>>({}); // key = question_id
 
 // Save locally for offline support
-export function saveAnswersOffline() {
+if (typeof window !== 'undefined') {
 	formAnswers.subscribe((answers) => {
 		localStorage.setItem('offlineAnswers', JSON.stringify(answers));
-	})();
+	});
 }
+
 
 // will be used later
 export function loadOfflineAnswers() {
