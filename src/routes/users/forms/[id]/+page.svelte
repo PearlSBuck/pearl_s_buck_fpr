@@ -2,11 +2,13 @@
     // +page.svelte - Enhanced form display component with version support and fixed slug handling
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
-    import { formDelta } from '$lib/stores/formEditor';
+    import { formAnswers, saveAnswersOffline, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
+    
     import Header from './Header.svelte'; // Import the Header component
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
     import {notification} from '$lib/stores/formEditor';
+	import DataInput from '../DataInput.svelte';
 
     export let data;
     let editModeData: any;
@@ -75,8 +77,22 @@
     }
 
     // useful for form submission
-    $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
-    
+    // $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
+    async function printInputs(){
+        try {
+            console.log($formAnswers);
+            saveAnswersOffline();
+            const success = await submitAnswersToSupabase();
+            if (success) {
+                console.log('Form submitted!');
+            } else {
+                console.warn('Form submission failed.');
+            }
+        } catch(error){
+            console.error(error);
+        }
+
+    }
 
     function formatDate(dateString: string) {
         if (!dateString) return 'No date';
@@ -198,128 +214,26 @@
                                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                             {#each section.fields as field}
                                                 <div class="space-y-2">
-                                                    <label class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm" for={"field-" + field.id}>
-                                                        {field.label}
-                                                        {#if field.required}
-                                                            <span class="text-red-600">*</span>
-                                                        {/if}
-                                                        
-
-                                                    </label>
-
-                                                    {#if field.type === 'textarea'}
-                                                        <textarea
-                                                            id={"field-" + field.id}
-                                                            class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
-                                                            placeholder={field.placeholder || 'Enter value...'}
-                                                            required={field.required}
-                                                            rows="4"
-                                                            on:focus={clearMessages}
-                                                            disabled={false}
-                                                            readonly={false}
-                                                        ></textarea>
-                                                    {:else if field.type === 'select'}
-                                                        <select
-                                                            id={"field-" + field.id}
-                                                            class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
-                                                            required={field.required}
-                                                            on:focus={clearMessages}
-                                                        >
-                                                            <option value="">Select an option...</option>
-                                                            {#if field.options && Array.isArray(field.options)}
-                                                                {#each field.options as option}
-                                                                    <option value={typeof option === 'object' ? option.value : option}>
-                                                                        {typeof option === 'object' ? option.label : option}
-                                                                    </option>
-                                                                {/each}
-                                                            {/if}
-                                                        </select>
-                                                    {:else if field.type === 'radio'}
-                                                        <div class="space-y-3">
-                                                            {#if field.options && Array.isArray(field.options)}
-                                                                {#each field.options as option, i}
-                                                                    {#if option.label != 'Others'}
-                                                                    <label class="flex items-center gap-3 cursor-pointer" for={"field-" + field.id + "-radio-" + i}>
-                                                                        <input
-                                                                            id={"field-" + field.id + "-radio-" + i}
-                                                                            type="radio"
-                                                                            class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E]"
-                                                                            value={typeof option === 'object' ? option.value : option}
-                                                                            required={field.required}
-                                                                            on:focus={clearMessages}
-                                                                        />
-                                                                        <span class="text-gray-700">{typeof option === 'object' ? option.label : option}</span>
-                                                                    </label>
-
-                                                                    {:else}
-                                                                        <div class="flex items-center">
-                                                                            <input
-                                                                                id={"field-" + field.id + "-radio-" + i}
-                                                                                type="radio"
-                                                                                class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E]"
-                                                                                value={typeof option === 'object' ? option.value : option}
-                                                                                required={field.required}
-                                                                                on:focus={clearMessages}
-                                                                            />
-                                                                            <input
-                                                                                type="text"
-                                                                                class="w-full ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
-                                                                                placeholder={'Please specify...'}
-                                                                            />
-                                                                        </div>
-                                                                    {/if}
-                                                                {/each}
-                                                            {/if}
-                                                        </div>
-                                                    
-                                                    {:else if (field.type === 'checkbox' || field.type === 'multiple_choice')}
-                                                        <div class="space-y-3">
-                                                            {#if field.options && Array.isArray(field.options)}
-                                                                {#each field.options as option, i}
-                                                                    {#if option.label != 'Others'}
-                                                                    <label class="flex items-center gap-3 cursor-pointer" for={"field-" + field.id + "-checkbox-" + i}>
-                                                                        <input
-                                                                            id={"field-" + field.id + "-checkbox-" + i}
-                                                                            type="checkbox"
-                                                                            class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
-                                                                        />
-                                                                        <span class="text-gray-700">{typeof option === 'object' ? option.label : option}</span>
-                                                                    </label>
-                                                                    {:else}
-                                                                        <div class="flex items-center">
-                                                                            <input
-                                                                                id={"field-" + field.id + "-checkbox-" + i}
-                                                                                type="checkbox"
-                                                                                class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
-                                                                                value={typeof option === 'object' ? option.value : option}
-                                                                                required={field.required}
-                                                                                on:focus={clearMessages}
-                                                                            />
-                                                                            <input
-                                                                                type="text"
-                                                                                class="w-full ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
-                                                                                placeholder={'Please specify...'}
-                                                                                disabled={false}                                                                                
-                                                                            />
-                                                                        </div>
-                                                                    {/if}
-                                                                {/each}
-                                                            {/if}
-                                                        </div>
-                                                    {:else}
-                                                        <!-- Other field types in edit mode -->
-                                                        <input
-                                                            id={"field-" + field.id}
-                                                            class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
-                                                            type={field.type}
-                                                            placeholder={field.placeholder || 'Enter value...'}
-                                                            required={field.required}
-                                                            on:focus={clearMessages}
-                                                            disabled={false}
-                                                            readonly={false}
-                                                        />
-                                                    {/if}
-                                                    
+                                                    <DataInput
+                                                        id={field.id}
+                                                        type={field.type}
+                                                        label={field.label}
+                                                        name={field.name}
+                                                        placeholder={field.placeholder}
+                                                        required={field.required}
+                                                        options={field.options}
+                                                        value={$formAnswers[field.id] || ''}
+                                                        on:change={(e) => {
+                                                            formAnswers.update((answers) => ({
+                                                                ...answers,
+                                                                [field.id]: e.detail
+                                                            }));
+                                                        }}
+                                                    />
+                                                    <!-- 
+                                                    The following block is commented out to avoid interfering with Svelte's block structure.
+                                                    If you want to enable these field renderings, uncomment and ensure all {#each} and {#if} blocks are properly matched.
+                                                    -->
                                                 </div>
                                             {/each}
                                         </div>
@@ -338,6 +252,9 @@
                         No sections in this form.
                     </div>
                 {/if}
+                <button type="button" class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700" on:click={printInputs}>
+                    Test Submit
+                </button>
             </div>
         {:else}
             <div class="font-[Coda Caption] text-white font-bold lg:text-3xl md:text-2xl sm:text-xl bg-[#1A5A9E] flex justify-center items-center rounded-lg h-20 mt-16 relative z-10">

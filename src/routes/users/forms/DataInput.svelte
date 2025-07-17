@@ -23,6 +23,7 @@
         value?: string;
     }
     export interface Props {
+        id?: string;
         label: string;
         value: string;
         name: string;
@@ -33,6 +34,7 @@
     }
 
     let { 
+        id = '',
         label = '', 
         value =  $bindable(),
         name = '', 
@@ -61,18 +63,20 @@
         - image
 -->
 <div class="mb-4">
-    <label for={name} class="block text-sm font-medium mb-1">{label}</label>
+    <label for={name} class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">{label}</label>
     <!-- UI for text input -->
-    {#if type === 'text'}
-        <input
-        id={name}
-        name={name}
-        class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-full"
-        type="text"
-        bind:value 
-        placeholder={placeholder}
-        required={required}
-        />
+    {#if type === 'text' || type==='number'}
+        <textarea
+            id={"field-" + id}
+            class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg  focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
+            placeholder={placeholder || 'Enter value...'}
+            required={required}
+            rows="4"
+            disabled={false}
+            readonly={false}
+            bind:value
+            oninput={() => dispatch('change', value)}
+        ></textarea>
 
     <!-- UI for radio group input -->
     {:else if type === 'radio'}
@@ -85,6 +89,7 @@
                 bind:group={value}
                 value={option.value}
                 required={required}
+                
                 />
                 <span>{option.label}</span>
             </label>
