@@ -2,6 +2,8 @@
 <!--+page.svelte-->
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import Header from '../../../components/Header.svelte'; // adjust the paths as needed
   import PasswordEdit from '../../../components/PasswordEdit.svelte'
   import { getUserByID } from './auditLog'
@@ -173,13 +175,30 @@
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
-  const handleSort = (field: string) => {
+  // Navigation functions
+  const updateFilters = async () => {
+    isLoading = true;
+    const url = new URL($page.url);
+    url.searchParams.set('month', selectedMonth.toString());
+    url.searchParams.set('year', selectedYear.toString());
+    url.searchParams.set('page', currentPage.toString());
+    url.searchParams.set('sortBy', sortBy);
+    url.searchParams.set('sortOrder', sortOrder);
+    url.searchParams.set('search', searchTerm);
+    
+    await goto(url.toString(), { replaceState: true });
+    isLoading = false;
+  };
+
+  const handleSort = async (field: string) => {
     if (sortBy === field) {
       sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     } else {
       sortBy = field;
       sortOrder = 'desc';
     }
+    currentPage = 1;
+    await updateFilters();
   };
 
   const getSortIcon = (field: string) => {
@@ -187,11 +206,14 @@
     return sortOrder === 'asc' ? '↑' : '↓';
   };
 
-  const clearFilters = () => {
+  const clearFilters = async () => {
     selectedMonth = new Date().getMonth();
     selectedYear = new Date().getFullYear();
     searchTerm = '';
     currentPage = 1;
+    sortBy = 'date';
+    sortOrder = 'desc';
+    await updateFilters();
   };
 
   // Reactive statements
@@ -245,7 +267,58 @@
 
     filteredLogs = filtered;
     currentPage = 1;
-    isLoading = false;
+    await updateFilters();
+  };
+
+  // Cleaner debounced search input handler
+  const handleSearchInput = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    searchTerm = target.value;
+    
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+      handleSearch();
+    }, 500);
+  };
+
+  const exportLogs = async () => {
+    try {
+      isLoading = true;
+      const formData = new FormData();
+      formData.append('month', selectedMonth.toString());
+      formData.append('year', selectedYear.toString());
+      formData.append('searchTerm', searchTerm);
+
+      const response = await fetch($page.url.pathname + '?/exportLogs', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          // Create and download CSV file
+          const blob = new Blob([result.csvContent], { type: 'text/csv' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = result.filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }
+      }
+    } catch (error) {
+      console.error('Error exporting logs:', error);
+    } finally {
+      isLoading = false;
+    }
+  };
+
+  // Watch for month/year changes
+  $: if (selectedMonth !== filters.month || selectedYear !== filters.year) {
+    updateFilters();
   }
 
   $: filteredUsers = userList.filter(user =>
@@ -365,12 +438,13 @@
                   </select>
                 </div>
                 <div>
-                  <label for="search-logs-input" class="block text-sm font-medium text-gray-700 mb-2">Search User</label>
+                  <label for="search-logs-input" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
                   <input
                     id="search-logs-input"
                     type="text"
                     placeholder="Search action or user..."
-                    bind:value={searchTerm}
+                    value={searchTerm}
+                    on:input={handleSearchInput}
                     class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1A5A9E] focus:border-transparent"
                   />
                 </div>
@@ -401,10 +475,10 @@
             </div>
             <div class="flex items-center space-x-2">
               <span class="text-sm text-gray-600">
-                {filteredLogs.length > 0 ? `${startIndex}-${endIndex} of ${filteredLogs.length}` : '0 of 0'}
+                {auditLogs.totalCount > 0 ? `${startIndex}-${endIndex} of ${auditLogs.totalCount}` : '0 of 0'}
               </span>
               <button
-                on:click={() => currentPage = Math.max(1, currentPage - 1)}
+                on:click={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
                 class="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Previous page"
@@ -414,7 +488,7 @@
                 </svg>
               </button>
               <button
-                on:click={() => currentPage = Math.min(totalPages, currentPage + 1)}
+                on:click={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages || totalPages === 0}
                 class="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Next page"
@@ -486,7 +560,7 @@
 
               <!-- Table Body -->
               <div class="divide-y divide-gray-200">
-                {#each currentLogs as log}
+                {#each transformedLogs as log}
                   <div class="px-6 py-4 grid grid-cols-12 gap-4 hover:bg-gray-50 transition-colors">
                     <div class="col-span-3">
                       <div class="text-sm text-gray-900 font-medium">
@@ -517,7 +591,7 @@
               </div>
 
               <!-- Empty State -->
-              {#if filteredLogs.length === 0}
+              {#if transformedLogs.length === 0}
                 <div class="px-6 py-8 text-center">
                   <div class="text-gray-500 text-sm">
                     No audit logs found for the selected criteria.
