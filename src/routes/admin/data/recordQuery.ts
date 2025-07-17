@@ -51,7 +51,13 @@ export async function getFISRecord(id: number) {
     .eq("sc_id", id)
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Check if this is a "no rows returned" error
+    if (error.code === 'PGRST116') {
+      throw { code: 'PGRST116', message: `No record found for child ID ${id}` };
+    }
+    throw new Error(error.message);
+  }
   
   return data;
 }
