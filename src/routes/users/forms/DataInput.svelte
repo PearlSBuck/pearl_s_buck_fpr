@@ -68,7 +68,7 @@
     {#if type === 'text' || type==='number'}
         <textarea
             id={"field-" + id}
-            class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg  focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
+            class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg h-13 focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
             placeholder={placeholder || 'Enter value...'}
             required={required}
             rows="4"
@@ -83,14 +83,31 @@
         <div class="space-y-2 ml-2">
             {#each options as option}
             <label class="flex items-center space-x-2">
-                <input
-                type="radio"
-                name={name}
-                bind:group={value}
-                value={option.value}
-                required={required}
-                
-                />
+                {#if option.label != 'Others'}
+                    <input
+                    type="radio"
+                    name={name}
+                    bind:group={value}
+                    value={option.value}
+                    required={required}
+                    
+                    />
+                {:else}
+                    <div class="flex items-center w-full">
+                        <input
+                            type="radio"
+                            class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
+                            value={typeof option === 'object' ? option.value : option}
+                        />
+                        <span>Others:</span>
+                        <!-- <input
+                            type="text"
+                            class=" ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
+                            placeholder={'Please specify...'}
+                            disabled={false}                                                                                
+                        /> -->
+                    </div>
+                {/if}
                 <span>{option.label}</span>
             </label>
             {/each}
@@ -101,14 +118,31 @@
         <div class="space-y-2 ml-2">
             {#each options as option}
             <label class="flex items-center space-x-2">
-                <input
-                type="checkbox"
-                name={name}
-                bind:group={value}
-                value={option.value}
-                required={required}
-                />
-                <span>{option.label}</span>
+                {#if option.label != 'Others'}
+                    <input
+                    type="checkbox"
+                    class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
+                    name={name}
+                    bind:group={value}
+                    value={option.value}
+                    required={required}
+                    />
+                    <span>{option.label}</span>
+                {:else}
+                    <div class="flex items-center w-full">
+                    <input
+                        type="checkbox"
+                        class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
+                        value={typeof option === 'object' ? option.value : option}
+                    />
+                    <input
+                        type="text"
+                        class="w-full ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
+                        placeholder={'Please specify...'}
+                        disabled={false}                                                                                
+                    />
+                </div>
+                {/if}
             </label>
             {/each}
         </div>
@@ -124,7 +158,7 @@
         <input
             id={name}
             name={name}
-            class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-full"
+            class="border-0 border-b-2 bg-[#DDE1E6] rounded-md border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-full"
             type="date"
             bind:value 
             required={required}
