@@ -5,9 +5,9 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import Header from '../../../components/Header.svelte'; // adjust the paths as needed
-  import PasswordEdit from '../../../components/PasswordEdit.svelte'
-  import { getUserByID } from './auditLog'
-	import { goto } from '$app/navigation';
+  import { onDestroy } from 'svelte';
+
+  let debounceTimeout: ReturnType<typeof setTimeout>;
 
   // Page name for header
   let pageName = "User Management Page";
@@ -24,40 +24,77 @@
   let isLoading = false;
   let tooltipPosition = { x: 0, y: 0 };
   let tooltipVisible = false;
-  let userSearchQuery = '';
   
-  // Data
-  let userList: any[] = [];
-  let logs: any[] = [];
-
-  onMount(async () => {
-    try {
-      const res = await fetch('/admin/manage');
-      if (res.ok) {
-        const json = await res.json();
-        logs = json.data ?? [];
-        console.log('Fetched logs:', logs);
-        await preloadUserNames(logs);
-        await preloadAdminNames(logs);
-      } else {
-        console.error('Failed to fetch logs');
-      }
-
-      const userListRes = await fetch('/admin/manage/userlist');
-      if(userListRes.ok){
-        const userJson = await userListRes.json();
-        userList = userJson.data ?? [];
-        console.log("List of users:", userList);
-      }else{
-        console.error("Failed to retrieve user list.");
-      }
-    } catch (err) {
-      console.error('Error:', err);
-    }
-  });
-  let filteredLogs: any[] = [];
+  // Data from server
+  export let data;
+  
+  // Reactive statements to get data from server
+  $: auditLogs = data?.auditLogs || { logs: [], totalCount: 0, totalPages: 0, currentPage: 1, hasMore: false };
+  $: filters = data?.filters || {};
+  
+  // Update local state when server data changes
+  $: if (filters.month !== undefined) selectedMonth = filters.month;
+  $: if (filters.year !== undefined) selectedYear = filters.year;
+  $: if (filters.page !== undefined) currentPage = filters.page;
+  $: if (filters.sortBy !== undefined) sortBy = filters.sortBy;
+  $: if (filters.sortOrder !== undefined) sortOrder = filters.sortOrder;
+  $: if (filters.searchTerm !== undefined) searchTerm = filters.searchTerm;
   
   const logsPerPage = 10;
+  
+  // Transform server data to match frontend expectations
+  $: transformedLogs = auditLogs.logs.map(log => ({
+    id: log.log_id,
+    action: log.action_performed,
+    type: getActionType(log.action_performed),
+    color: getActionColor(log.action_performed),
+    bgColor: getActionBgColor(log.action_performed),
+    icon: getActionIcon(log.action_performed),
+    user: log.user_fullname || log.admin_fullname || 'Unknown User',
+    date: new Date(log.created_at),
+    details: `${log.action_performed} - User ID: ${log.user_id || log.admin_id || 'N/A'}`
+  }));
+  
+  // Helper functions to determine action styling
+  const getActionType = (action: string) => {
+    if (action.toLowerCase().includes('creat')) return 'create';
+    if (action.toLowerCase().includes('delet')) return 'delete';
+    if (action.toLowerCase().includes('view') || action.toLowerCase().includes('access')) return 'view';
+    return 'edit';
+  };
+  
+  const getActionColor = (action: string) => {
+    const type = getActionType(action);
+    switch (type) {
+      case 'create': return 'text-green-600';
+      case 'delete': return 'text-red-600';
+      case 'view': return 'text-gray-600';
+      case 'edit': return 'text-blue-600';
+      default: return 'text-gray-600';
+    }
+  };
+  
+  const getActionBgColor = (action: string) => {
+    const type = getActionType(action);
+    switch (type) {
+      case 'create': return 'bg-green-100';
+      case 'delete': return 'bg-red-100';
+      case 'view': return 'bg-gray-100';
+      case 'edit': return 'bg-blue-100';
+      default: return 'bg-gray-100';
+    }
+  };
+  
+  const getActionIcon = (action: string) => {
+    const type = getActionType(action);
+    switch (type) {
+      case 'create': return '➕';
+      case 'delete': return '🗑️';
+      case 'view': return '👁️';
+      case 'edit': return '✏️';
+      default: return '📝';
+    }
+  };
 
   // Header tooltip content
   const getHeaderTooltipContent = (headerType: string) => {
@@ -67,15 +104,12 @@
       case 'action':
         return 'Click to sort by action type alphabetically.';
       case 'user':
-        return 'Click to sort by username in alphabetical order.';
-      case 'admin':
-        return 'Click to sort by admin name in alphabetical order';
+        return 'Click to sort by user name in alphabetical order.';
       default:
         return '';
     }
   };
 
-  
   // Tooltip functions for headers
   const showHeaderTooltip = (event: MouseEvent, headerType: string) => {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -115,48 +149,6 @@
     hoveredHeader = null;
   };
 
-  let userNameMap = new Map<string, string>();
-  let adminNameMap = new Map<string, string>();
-  
-  function goToCreatePage(){
-    goto('/admin/manage/create');
-  }
-
-  function goToUserPage(id: number){
-    goto(`/admin/manage/view/${id}`)
-  }
-
-  async function preloadUserNames(logs: any[]) {
-    const ids = [...new Set(logs.map(log => log.user_id))];
-    
-    const entries = await Promise.all(
-      ids.map(async id => {
-        const name = await getUserByID(id); // This is already a string
-        return [id, name || 'Unknown'] as const;
-      })
-    );
-
-    userNameMap = new Map<string, string>(entries);
-  }
-
-  async function preloadAdminNames(logs: any[]) {
-    const adminIds = [...new Set(logs.map(log => log.admin_id))];
-
-    const entries = await Promise.all(
-      adminIds.map(async adminId => {
-        const name = await getUserByID(adminId); // This is already a string
-        return [adminId, name || 'Unknown'] as const;
-      })
-    );
-
-    adminNameMap = new Map<string, string>(entries);
-  }
-
-  $: if (logs.length > 0) {
-    preloadUserNames(logs);
-  }
-
-
   // Utility functions
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -165,6 +157,7 @@
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZoneName: 'short'
     });
   };
 
@@ -216,56 +209,12 @@
     await updateFilters();
   };
 
-  // Reactive statements
-  $: {
-    isLoading = true;
-    
-    let filtered = logs.filter(log => {
-      const logDate = new Date(log.created_at);
-      const userName = String(userNameMap.get(log.user_id))?.toLowerCase() ?? '';
-      const matchesMonth = logDate.getMonth() === selectedMonth;
-      const matchesYear = logDate.getFullYear() === selectedYear;
-      const matchesSearch = searchTerm === '' || 
-        log.action_performed.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        userName.includes(searchTerm.toLowerCase());
+  const handlePageChange = async (newPage: number) => {
+    currentPage = newPage;
+    await updateFilters();
+  };
 
-      return matchesMonth && matchesYear && matchesSearch;
-    });
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue, bValue;
-      
-      switch (sortBy) {
-        case 'date':
-          aValue = new Date(a.created_at);
-          bValue = new Date(b.created_at);
-          break;
-        case 'user':
-          aValue = String(userNameMap.get(a.user_id))?.toLowerCase() ?? '';
-          bValue = String(userNameMap.get(b.user_id))?.toLowerCase() ?? '';
-          break;
-        case 'action':
-          aValue = a.action_performed.toLowerCase();
-          bValue = b.action_performed.toLowerCase();
-          break;
-        case 'admin':
-          aValue = String(adminNameMap.get(a.admin_id))?.toLowerCase() ?? '';
-          bValue = String(adminNameMap.get(b.admin_id))?.toLowerCase() ?? '';
-          break;
-        default:
-          aValue = new Date(a.created_at);
-          bValue = new Date(b.created_at);
-      }
-
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-
-    filteredLogs = filtered;
+  const handleSearch = async () => {
     currentPage = 1;
     await updateFilters();
   };
@@ -321,13 +270,14 @@
     updateFilters();
   }
 
-  $: filteredUsers = userList.filter(user =>
-    user.username.toLowerCase().includes(userSearchQuery.toLowerCase())
-  );
-  $: totalPages = Math.ceil(filteredLogs.length / logsPerPage);
-  $: currentLogs = filteredLogs.slice((currentPage - 1) * logsPerPage, currentPage * logsPerPage);
-  $: startIndex = (currentPage - 1) * logsPerPage + 1;
-  $: endIndex = Math.min(currentPage * logsPerPage, filteredLogs.length);
+  $: totalPages = auditLogs.totalPages || 0;
+  $: startIndex = auditLogs.logs.length > 0 ? (currentPage - 1) * logsPerPage + 1 : 0;
+  $: endIndex = Math.min(currentPage * logsPerPage, auditLogs.totalCount || 0);
+
+  // Clean up timeout on component destroy
+  onDestroy(() => {
+    clearTimeout(debounceTimeout);
+  });
 </script>
 
 <svelte:head>
@@ -345,12 +295,12 @@
     </div>
   </div>
 
-  <div class="max-w-7xl mt-10 mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <!-- Edit User Section -->
       <div class="lg:col-span-1">
         <div class="bg-white rounded-xl shadow-2xl p-6 h-full mb-8">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">Edit User</h3>
+          <h3 class="text-2xl font-bold text-gray-900 mb-6">Edit User (DUMMY)</h3>
           
           <div class="space-y-4">
             <div class="flex space-x-2">
@@ -360,12 +310,11 @@
                 </svg>
                 <input
                   type="text"
-                  bind:value={userSearchQuery}
                   placeholder="Search by Name"
                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1A5A9E] focus:border-transparent"
                 />
               </div>
-              <button class="flex items-center space-x-2 bg-[#1A5A9E] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors" on:click={goToCreatePage} aria-label="Create Account">
+              <button class="flex items-center space-x-2 bg-[#1A5A9E] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -374,13 +323,13 @@
             </div>
 
             <div class="space-y-3">
-              {#each filteredUsers as user , index}
+              {#each ['Username1', 'Username2', 'Username3', 'Username4'] as username, index}
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                   <div class="flex items-center space-x-3">
                     <span class="text-gray-600 font-medium">{index + 1}.</span>
-                    <span class="text-gray-900">{user.username}</span>
+                    <span class="text-gray-900">{username}</span>
                   </div>
-                  <button class="bg-[#1A5A9E] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-colors" on:click={() => goToUserPage(user.id)}>
+                  <button class="bg-[#1A5A9E] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-colors">
                     View
                   </button>
                 </div>
@@ -512,7 +461,7 @@
             <div class="overflow-hidden bg-white rounded-lg border border-gray-200">
               <!-- Table Header -->
               <div class="bg-gray-50 px-6 py-3 grid grid-cols-12 gap-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <div class="col-span-3">
+                <div class="col-span-4">
                   <button
                     class="flex items-center space-x-1 hover:text-gray-700 transition-colors group"
                     on:click={() => handleSort('date')}
@@ -523,7 +472,7 @@
                     <span class="text-gray-400 group-hover:text-gray-600">{getSortIcon('date')}</span>
                   </button>
                 </div>
-                <div class="col-span-3">
+                <div class="col-span-4">
                   <button
                     class="flex items-center space-x-1 hover:text-gray-700 transition-colors group"
                     on:click={() => handleSort('action')}
@@ -534,7 +483,7 @@
                     <span class="text-gray-400 group-hover:text-gray-600">{getSortIcon('action')}</span>
                   </button>
                 </div>
-                <div class="col-span-3">
+                <div class="col-span-4">
                   <button
                     class="flex items-center space-x-1 hover:text-gray-700 transition-colors group"
                     on:click={() => handleSort('user')}
@@ -545,45 +494,26 @@
                     <span class="text-gray-400 group-hover:text-gray-600">{getSortIcon('user')}</span>
                   </button>
                 </div>
-                <div class="col-span-3">
-                  <button
-                    class="flex items-center space-x-1 hover:text-gray-700 transition-colors group"
-                    on:click={() => handleSort('admin')}
-                    on:mouseenter={(e) => showHeaderTooltip(e, 'admin')}
-                    on:mouseleave={hideHeaderTooltip}
-                  >
-                    <span>Admin</span>
-                    <span class="text-gray-400 group-hover:text-gray-600">{getSortIcon('admin')}</span>
-                  </button>
-                </div>
               </div>
 
               <!-- Table Body -->
               <div class="divide-y divide-gray-200">
                 {#each transformedLogs as log}
                   <div class="px-6 py-4 grid grid-cols-12 gap-4 hover:bg-gray-50 transition-colors">
-                    <div class="col-span-3">
+                    <div class="col-span-4">
                       <div class="text-sm text-gray-900 font-medium">
-                        {formatDate(log.created_at)}
+                        {formatDate(log.date)}
                       </div>
                     </div>
-                    <div class="col-span-3">
+                    <div class="col-span-4">
                       <div class="flex items-center space-x-2">
-                        <span class="text-sm font-medium {log.color}">{log.action_performed}</span>
+                        <span class="text-lg">{log.icon}</span>
+                        <span class="text-sm font-medium {log.color}">{log.action}</span>
                       </div>
                     </div>
-                    <div class="col-span-3">
+                    <div class="col-span-4">
                       <div class="text-sm text-gray-900 font-medium">
-                        {userNameMap.has(log.user_id)
-                          ? String(userNameMap.get(log.user_id))
-                          : 'Loading...'}
-                      </div>
-                    </div>
-                    <div class="col-span-3">
-                      <div class="text-sm text-gray-900 font-medium">
-                        {adminNameMap.has(log.admin_id)
-                          ? String(adminNameMap.get(log.admin_id))
-                          : 'Loading...'}
+                        {log.user}
                       </div>
                     </div>
                   </div>
