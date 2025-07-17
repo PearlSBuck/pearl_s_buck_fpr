@@ -80,6 +80,7 @@
     // $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
     async function printInputs(){
         try {
+            validateForm(data.form.sections);
             console.log($formAnswers);
             const success = await submitAnswersToSupabase();
             if (success) {
@@ -107,6 +108,28 @@
         } catch (e) {
             return dateString;
         }
+    }
+
+    function validateForm(sections:any) {
+        const missingFields = [];
+
+        for (const section of sections) {
+            for (const field of section.fields) {
+                if (field.required) {
+                    const value = $formAnswers[field.id];
+
+                    const isEmpty =
+                        value === undefined || value === '' ||
+                        (Array.isArray(value) && value.length === 0);
+
+                    if (isEmpty) {
+                        missingFields.push(field.label || field.name || field.id);
+                    }
+                }
+            }
+        }
+        console.log(missingFields);
+        return missingFields;
     }
 
     function clearMessages() {
@@ -251,8 +274,11 @@
                         No sections in this form.
                     </div>
                 {/if}
-                <button type="button" class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700" on:click={printInputs}>
-                    Test Submit
+                
+            </div>
+            <div class='flex justify-end'>
+                <button type="button" class="bg-green-600 p-4 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-green-700" on:click={printInputs}>
+                        Submit Form
                 </button>
             </div>
         {:else}

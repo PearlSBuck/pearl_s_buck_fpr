@@ -31,6 +31,7 @@
         required: boolean;
         type: string;
         options?: Option[];
+        customOther?: string;
     }
 
     let { 
@@ -41,7 +42,8 @@
         placeholder = '', 
         required = false,
         type = '',
-        options = []
+        options = [],
+        customOther = $bindable()
     }: Props = $props();
 
     import { createEventDispatcher } from 'svelte';
@@ -63,7 +65,7 @@
         - image
 -->
 <div class="mb-4">
-    <label for={name} class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">{label}</label>
+    <label for={name} class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">{label}{#if required} <label class='text-red-400'> *</label>{/if}</label>
     <!-- UI for text input -->
     {#if type === 'text' || type==='number'}
         <textarea
@@ -72,8 +74,6 @@
             placeholder={placeholder || 'Enter value...'}
             required={required}
             rows="4"
-            disabled={false}
-            readonly={false}
             bind:value
             oninput={() => dispatch('change', value)}
         ></textarea>
@@ -90,25 +90,36 @@
                     bind:group={value}
                     value={option.value}
                     required={required}
-                    
+                    onchange={() => dispatch('change', option.value)}
                     />
+                    <span>{option.label}</span>
                 {:else}
-                    <div class="flex items-center w-full">
+                    <div class="flex items-center w-full space-x-2">
                         <input
                             type="radio"
-                            class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
-                            value={typeof option === 'object' ? option.value : option}
+                            name={name}
+                            bind:group={value}
+                            value="__other__"
+                            onchange={() => {
+                                // When selected, start tracking as 'Other: '
+                                dispatch('change', 'Other: ');
+                            }}
                         />
                         <span>Others:</span>
-                        <!-- <input
+                        <input
                             type="text"
-                            class=" ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
-                            placeholder={'Please specify...'}
-                            disabled={false}                                                                                
-                        /> -->
+                            class="ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
+                            placeholder="Please specify..."
+                            bind:value={customOther}
+                            oninput={(e) => {
+                                // Update the answer as: "Other: <custom text>"
+                                const input = e.target as HTMLInputElement;
+                                const text = input.value;
+                                dispatch('change', `Other: ${text}`);
+                            }}
+                        />
                     </div>
                 {/if}
-                <span>{option.label}</span>
             </label>
             {/each}
         </div>
