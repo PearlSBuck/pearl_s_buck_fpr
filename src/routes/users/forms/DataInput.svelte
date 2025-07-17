@@ -25,13 +25,15 @@
     export interface Props {
         id?: string;
         label: string;
-        value: string;
+        value: string | string[];
         name: string;
         placeholder?: string;
         required: boolean;
         type: string;
         options?: Option[];
         customOther?: string;
+        otherText?: string;
+        otherChecked?: boolean;
     }
 
     let { 
@@ -43,7 +45,9 @@
         required = false,
         type = '',
         options = [],
-        customOther = $bindable()
+        customOther = $bindable(),
+        otherText = $bindable(),
+        otherChecked = false
     }: Props = $props();
 
     import { createEventDispatcher } from 'svelte';
@@ -53,6 +57,29 @@
         const target = event.target as HTMLSelectElement;
         dispatch('change', target.value); // send selected value as `e.detail`
     }
+
+    // Watch for changes to "Other" checkbox or text input
+    $effect(() => {
+        if (Array.isArray(value)) {
+            let othersValue = otherChecked && otherText ? [`Other: ${otherText}`] : [];
+
+            // Filter out old "Other:" entries, and add updated one if needed
+            let cleaned = value.filter(v => !v.startsWith('Other:'));
+            let updated = [...cleaned, ...othersValue];
+
+            if (JSON.stringify(updated) !== JSON.stringify(value)) {
+                value = updated;
+                dispatch('change', value);
+            }
+        }
+    });
+
+    // Reactively clears the textfield in others when others is unchecked
+    $effect(() =>{
+        if (!otherChecked) {
+                otherText = '';
+            }
+    });
 </script>
 
 <!-- 
@@ -137,20 +164,22 @@
                     bind:group={value}
                     value={option.value}
                     required={required}
-                    />
-                    <span>{option.label}</span>
+                    onchange={() => dispatch('change', value)}
+                />
+                <span>{option.label}</span>
                 {:else}
                     <div class="flex items-center w-full">
                     <input
                         type="checkbox"
                         class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
-                        value={typeof option === 'object' ? option.value : option}
+                        bind:checked={otherChecked}
                     />
                     <input
                         type="text"
+                        bind:value={otherText}
                         class="w-full ml-2 p-2 rounded-md bg-white border border-gray-300 shadow-sm focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none text-sm"
                         placeholder={'Please specify...'}
-                        disabled={false}                                                                                
+                        disabled={!otherChecked}                                                                                
                     />
                 </div>
                 {/if}

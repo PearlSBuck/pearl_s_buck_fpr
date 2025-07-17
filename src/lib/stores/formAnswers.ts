@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { supabase } from '$lib/db'; // replace with your client instance
+import { supabaseAdmin } from '$lib/db'; // replace with your client instance
 
 // Local reactive answer state (used in the UI)
 export const formAnswers = writable<Record<string, any>>({}); // key = question_id
@@ -31,7 +31,7 @@ export function clearAnswers() {
 	localStorage.removeItem('offlineAnswers');
 }
 
-// Save answers to Supabase
+// Save answers to SupabaseAdmin
 export async function submitAnswersToSupabase() {
 	const answers = JSON.parse(localStorage.getItem('offlineAnswers') || '{}');
 	const answerEntries = Object.entries(answers);
@@ -47,7 +47,7 @@ export async function submitAnswersToSupabase() {
 		answer: answer, // expected to be any JSON-serializable value
 	}));
 
-	const { error } = await supabase.from('fpr_answers_list').insert(submissions);
+	const { error } = await supabaseAdmin.from('fpr_answers_list').insert(submissions);
 
 	if (error) {
 		console.error('Error submitting answers:', error);
