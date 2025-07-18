@@ -1,50 +1,72 @@
+// src/lib/stores/formAnswers.ts
 import { writable } from 'svelte/store';
-import { supabaseAdmin } from '$lib/db'; // replace with your client instance
+import { supabaseAdmin } from '$lib/db';
 
+const OFFLINE_ANSWERS_KEY = 'offlineAnswers';
+let hasLoaded = false;
 // Local reactive answer state (used in the UI)
-export const formAnswers = writable<Record<string, any>>({}); // key = question_id
+export const formAnswers = writable<Record<string, any>>({});
+// --- LOCAL STORAGE PERSISTENCE ---
 
-// Save locally for offline support
-if (typeof window !== 'undefined') {
-	formAnswers.subscribe((answers) => {
-		localStorage.setItem('offlineAnswers', JSON.stringify(answers));
-	});
-}
-
-
-// will be used later
+// 1. Load from localStorage (on client only)
 export function loadOfflineAnswers() {
-	const stored = localStorage.getItem('offlineAnswers');
+	if (typeof localStorage === 'undefined') return;
+
+	const stored = localStorage.getItem(OFFLINE_ANSWERS_KEY);
 	if (stored) {
 		try {
 			const parsed = JSON.parse(stored);
 			formAnswers.set(parsed);
 		} catch (e) {
 			console.error('Invalid offline answer data:', e);
+			formAnswers.set({});
 		}
 	}
+	hasLoaded=true;
+	formAnswers.subscribe((answers) => {
+		if(hasLoaded){
+		localStorage.setItem(OFFLINE_ANSWERS_KEY, JSON.stringify(answers));
+		}
+	});
 }
 
-// Clear local answers
+
+
+
+
+// 3. Clear answers manually or after submit
 export function clearAnswers() {
 	formAnswers.set({});
-	localStorage.removeItem('offlineAnswers');
+	localStorage.removeItem(OFFLINE_ANSWERS_KEY);
 }
 
-// Save answers to SupabaseAdmin
-export async function submitAnswersToSupabase() {
-	const answers = JSON.parse(localStorage.getItem('offlineAnswers') || '{}');
-	const answerEntries = Object.entries(answers);
+// --- SUBMISSION TO SUPABASE ---
 
+export async function submitAnswersToSupabase() {
+	const stored = localStorage.getItem(OFFLINE_ANSWERS_KEY);
+	if (!stored) {
+		console.warn('No answers to submit.');
+		return false;
+	}
+
+	let answers: Record<string, any>;
+	try {
+		answers = JSON.parse(stored);
+	} catch (e) {
+		console.error('Invalid JSON in offline answers:', e);
+		return false;
+	}
+
+	const answerEntries = Object.entries(answers);
 	if (answerEntries.length === 0) {
 		console.warn('No answers to submit.');
-		return;
+		return false;
 	}
 
 	const submissions = answerEntries.map(([question_id, answer]) => ({
-		answer_id: '4b7d66fe-6899-4f03-bdc2-739698ffec52', // change this to the one in fpr asnwers
+		answer_id: '4b7d66fe-6899-4f03-bdc2-739698ffec52', // replace with real dynamic ID later
 		question_id,
-		answer: answer, // expected to be any JSON-serializable value
+		answer,
 	}));
 
 	const { error } = await supabaseAdmin.from('fpr_answers_list').insert(submissions);
@@ -53,8 +75,8 @@ export async function submitAnswersToSupabase() {
 		console.error('Error submitting answers:', error);
 		return false;
 	}
-    console.log(submissions);
-	console.log('Answers submitted successfully.');
+
+	console.log('Answers submitted successfully:', submissions);
 	clearAnswers();
 	return true;
 }

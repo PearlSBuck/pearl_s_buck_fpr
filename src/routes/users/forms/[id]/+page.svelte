@@ -7,6 +7,7 @@
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
     import {notification} from '$lib/stores/formEditor';
+    import { isOnline } from '$lib/stores/online';
 	import DataInput from '../DataInput.svelte';
 
     export let data;
@@ -25,6 +26,9 @@
     let formTitle = data.form?.title || '';
 
     
+    onMount(() => {
+		loadOfflineAnswers(); // restore from localStorage on page load
+	});
 
 
 
@@ -141,7 +145,7 @@
         search={false} 
         backButton={true} 
     />
-   
+
 <!-------------- ---------------------------->
     <!-- Main Content Container -->
      <div
@@ -185,7 +189,15 @@
 
                     </div>
                 </div>
-
+                {#if !$isOnline}
+                 <div class="fixedleft-0 w-full bg-red-600 text-white z-50 py-2 shadow-md">
+                    <div class="flex items-center justify-center">
+                    <p class="font-semibold text-sm sm:text-base">
+                        You are currently offline. Changes will be saved locally.
+                    </p>
+                    </div>
+                </div>
+                {/if}
                 <!-- Alert Messages -->
                 {#if error}
                     <div class="mx-6 mt-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md flex items-center gap-2">
@@ -229,7 +241,7 @@
                                                         placeholder={field.placeholder}
                                                         required={field.required}
                                                         options={field.options}
-                                                        value={$formAnswers[field.id] || ''}
+                                                        value={$formAnswers[field.id] ?? ''}
                                                         on:change={(e) => {
                                                             formAnswers.update((answers) => ({
                                                                 ...answers,
@@ -263,7 +275,16 @@
                 
             </div>
             <div class='flex justify-end'>
-                <button type="button" class="bg-green-600 p-4 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-green-700" on:click={printInputs}>
+                <button type="button" 
+                        class="bg-green-600 p-4 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-green-700" 
+                        
+                        on:click={() => {
+                            if($isOnline){
+                                printInputs();
+                            } else{
+                                notification.set({ message: 'Error: Cannot submit form while offline.', type: 'error' });
+                            }
+                        }}>
                         Submit Form
                 </button>
             </div>
