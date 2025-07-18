@@ -3,7 +3,6 @@
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
     import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
-    
     import Header from './Header.svelte'; // Import the Header component
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
@@ -13,42 +12,12 @@
     export let data;
     let editModeData: any;
 
-
-
-    
-
-    // // Popup Notificaiton for update
-    // async function call_confirm_edits(formId: string) {
-    //     let status = await handleConfirmEdits(formId);
-
-    //     if (status) {
-    //         console.log('worked');
-    //         notification.set({ message: 'All changes applied successfully', type: 'success' });
-    //     } else {
-    //         notification.set({ message: 'Update unsuccessful', type: 'error' });
-    //     }
-
-    //     editMode = false;
-    //     data = editModeData;
-    //     displayedData.set(data);
-
-    //     // Auto-clear after 3 seconds
-    //     setTimeout(() => {
-    //         notification.set({ message: '', type: null });
-    //     }, 3000);
-    // }
-    // $: show = $notification.type !== null;
-
-
-    
-
-
-
     let editMode = false;
     let isLoading = false;
     let error: string | null = null;
     let successMessage: string | null = null;
-    
+    $: show = $notification.type !== null;
+
     
 
 
@@ -80,14 +49,22 @@
     // $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
     async function printInputs(){
         try {
-            validateForm(data.form.sections);
-            console.log($formAnswers);
-            const success = await submitAnswersToSupabase();
-            if (success) {
-                console.log('Form submitted!');
-            } else {
-                console.warn('Form submission failed.');
+            //all required answers were submitted successfully
+            if(!validateForm(data.form.sections)){
+                console.log($formAnswers);
+                const success = await submitAnswersToSupabase();
+                if (success) {
+                    notification.set({ message: 'Successfully submitted form entry', type: 'success' });
+                } else {
+                    notification.set({ message: 'Form submission failed', type: 'error' });
+                }
+            } else{
+                notification.set({ message: 'Fill all required fields', type: 'error' });
             }
+
+            setTimeout(() => {
+            notification.set({ message: '', type: null });
+        }, 3000);
         } catch(error){
             console.error(error);
         }
@@ -150,6 +127,7 @@
 
 </script>
 
+
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
@@ -166,6 +144,12 @@
    
 <!-------------- ---------------------------->
     <!-- Main Content Container -->
+     <div
+        class="fixed top-4 z-70 right-4 px-4 py-2 rounded shadow-lg text-white transition-opacity  duration-300"
+        class:bg-green-600={$notification.type === 'success'}
+        class:bg-red-600={$notification.type === 'error'}>
+        {$notification.message}
+    </div>
     <div class="pt-4">
         {#if data.form}
             <!-- Form Title Header -->
