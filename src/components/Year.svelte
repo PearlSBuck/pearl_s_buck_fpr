@@ -1,43 +1,69 @@
 <script lang="ts">
-    export let fprData: any[];
-    import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
+    // Change from fprData to receiving these directly
+    export let years: number[];
+    export let recordsByYear: Record<number, any[]>;
+    export let childId: number;
 
-    let versionNames: string[] = [];
+    function formatDate(dateString: string) {
+        return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+        });
+    }
 
-    let fprList = fprData.map(item => ({
-        ...item,
-        activated: false
-    }));
-    
-    function toggleActivation(index: number) {
-        fprList[index].activated = !fprList[index].activated;
+    function viewReport(answerId: string, childId: number) {
+    goto(`/admin/data/fpr/${childId}/${answerId}`);
     }
 </script>
-{#each fprList as versionName, index}
-    <button on:click={() => toggleActivation(index)} class="cursor-pointer">
-        <div class="bg-[#0C376C] w-fit text-white rounded-xl p-2 px-3 text-lg">
-            <div class="whitespace-nowrap flex items-center gap-1">
-                <span>{new Date(versionName.created_at).getFullYear()}</span>
-                {#if versionName.activated}
-                    <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11.667 20.5418V8.4585L17.5003 14.5002L11.667 20.5418Z" fill="white"/>
-                    </svg>
 
-                {:else}
-                    <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14.0003 18.1252L8.16699 12.0835H19.8337L14.0003 18.1252Z" fill="white"/>
-                    </svg>
-                {/if}
-            </div>
+<div class="years-container w-full p-4">
+    {#if years.length === 0}
+        <div class="empty-state py-12 text-center text-gray-500">
+        <p>No progress reports available for this child.</p>
         </div>
-    </button>
-    {#if versionName.activated}
-        <div class="flex justify-between rounded-md text-white bg-[#474C58] h-16 p-3 w-60 m-1 lg:w-250 md:w-150 sm:w-125 relative">
-            <div class="flex items-start flex-col justify-center">
-                <div class="flex flex-col justify-center items-start gap-1">
-                    <span class="text-sm md:text-md lg:text-lg">{versionName.forms ? versionName.forms.title : "No title."}</span>
+    {:else}
+        {#each years as year}
+            <div class="year-group mb-8 pb-4 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-[#1A5A9E] mb-3">{year}</h2>
+                
+                <div class="space-y-2">
+                {#each recordsByYear[year] as record}
+                    <button 
+                        class="record-card w-full p-3 bg-gray-50 rounded-md hover:bg-gray-100 cursor-pointer transition-colors text-left"
+                        on:click={() => viewReport(record.answer_id, record.sc_id)}
+                    >
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="font-medium">Progress Report</p>
+                                <p class="text-sm text-gray-600">Form v{record.forms?.version || '1.0'}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-600">{formatDate(record.created_at)}</p>
+                            </div>
+                        </div>
+                    </button>
+                {/each}
                 </div>
             </div>
-        </div>
+        {/each}
     {/if}
-{/each}
+</div>
+
+
+<style>
+    .years-container {
+        width: 100%;
+        padding: 1rem;
+    }
+    .empty-state {
+        padding: 3rem 0;
+        text-align: center;
+        color: #666;
+    }
+    .year-group {
+        border-bottom: 1px solid #eee;
+        padding-bottom: 1rem;
+    }
+</style>
