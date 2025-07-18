@@ -196,7 +196,9 @@ export async function load({ params, url }) {
                 title: section.title,
                 orderIndex: section.orderindex,
                 formId: section.formid,
-                fields: (fieldsBySection[section.id] || []).map(field => ({
+                fields: (fieldsBySection[section.id] || [])
+                    .sort((a, b) => a.orderindex - b.orderindex)
+                    .map(field => ({
                     id: field.id,
                     label: field.label,
                     name: field.name,
