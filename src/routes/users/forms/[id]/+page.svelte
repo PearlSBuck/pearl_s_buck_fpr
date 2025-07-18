@@ -12,7 +12,7 @@
 
     export let data;
     let editModeData: any;
-
+    let openDeletePopup = false;
     let editMode = false;
     let isLoading = false;
     let error: string | null = null;
@@ -289,7 +289,13 @@
             </div>
             <div class='flex justify-end'>
                 <button type="button" 
-                        class="bg-green-600 p-4 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-green-700" 
+                        class="bg-red-600 p-2 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-red-700" 
+                        
+                        on:click={() => {openDeletePopup=true}}>
+                        Clear Form
+                </button>
+                <button type="button" 
+                        class="bg-green-600 p-2 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-green-700" 
                         
                         on:click={() => {
                             if($isOnline){
@@ -314,5 +320,42 @@
     </div>
 </div>
 
+<!-- clear all fields confirmation popup -->
+{#if openDeletePopup}
+<div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
+	<!-- Modal content -->
+	<div class="bg-white w-full max-w-sm rounded-xl shadow-lg p-6 text-center space-y-4">
+		<!-- Icon -->
+		<div class="mx-auto w-16 h-16">
+			<svg fill="#e01f1f" viewBox="0 -8 72 72" xmlns="http://www.w3.org/2000/svg" stroke="#e01f1f">
+				<path d="M15.8,49.7H56.22a3.78,3.78,0,0,0,3.36-5.5L39.38,8.39a3.8,3.8,0,0,0-6.78,0L12.4,44.2A3.81,3.81,0,0,0,15.8,49.7Zm23.38-8.33a3.29,3.29,0,1,1-6.58,0V41.3a3.29,3.29,0,0,1,6.58,0ZM34.11,17.18h3.8a1.63,1.63,0,0,1,1.54,2L37.79,33.75a1.78,1.78,0,0,1-3.56,0L32.56,19.19A1.64,1.64,0,0,1,34.11,17.18Z" />
+			</svg>
+		</div>
+
+		<!-- Message -->
+		<p class="text-lg font-medium text-gray-800">Are you sure you want to clear all entries?</p>
+
+		<!-- Buttons -->
+		<div class="flex flex-col sm:flex-row justify-center gap-2 mt-4">
+			<button
+				class="w-full sm:w-auto px-4 py-2 border rounded-lg text-gray-700 bg-white hover:bg-gray-100 transition"
+				on:click={() => (openDeletePopup = false)}
+			>
+				Cancel
+			</button>
+			<button
+				class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+				on:click={() => {
+					// Replace with your delete logic
+					clearAnswers();
+					openDeletePopup = false;
+				}}
+			>
+				Delete
+			</button>
+		</div>
+	</div>
+</div>
+{/if}
 
                                                     
