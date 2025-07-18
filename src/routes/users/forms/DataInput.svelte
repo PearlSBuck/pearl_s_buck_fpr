@@ -1,5 +1,5 @@
 <script lang="ts">
-    // import SignaturePad from './SignaturePad.svelte'; 
+    import SignaturePad from './SignaturePad.svelte'; 
     // 
 
     let sigRef: any;
@@ -204,7 +204,7 @@
             required={required}
             />
 
-    <!-- {:else if type === 'signature'}
+    {:else if type === 'signature'}
         <SignaturePad bind:this={sigRef} penColor="blue" />
 
         <div class="place-self-center">
@@ -214,7 +214,7 @@
         {#if img}
         <h3>Preview:</h3>
         <img src={img} alt="Signature" />
-        {/if} -->
+        {/if}
     
     {/if}
     
