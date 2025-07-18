@@ -221,8 +221,9 @@
                 {#if data.form.sections && data.form.sections.length > 0}
                     <div class="p-6 space-y-8">
                         {#if $displayedData?.form}
+                        <div class="w-full max-w-4xl mx-auto">
                         {#each $displayedData.form.sections as section, sectionIndex}
-                            <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
+                            <div class="bg-[#F6F8FF] my-5 rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
                                 <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
                                     <h2 class="text-xl font-bold">{section.title}</h2>
@@ -233,7 +234,7 @@
                                 <!-- Section Content -->
                                 <div class="p-6">
                                     {#if section.fields && section.fields.length > 0}
-                                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div class="grid grid-cols-1 gap-6">
                                             {#each section.fields as field}
                                                 <div class="space-y-2">
                                                     <DataInput
@@ -267,6 +268,7 @@
                                 </div>
                             </div>
                         {/each}
+                        </div>
                         {/if}
                     </div>
                 {:else}
