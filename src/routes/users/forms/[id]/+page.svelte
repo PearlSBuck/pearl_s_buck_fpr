@@ -243,10 +243,23 @@
                                                         options={field.options}
                                                         value={$formAnswers[field.id] ?? ''}
                                                         on:change={(e) => {
-                                                            formAnswers.update((answers) => ({
-                                                                ...answers,
-                                                                [field.id]: e.detail
-                                                            }));
+                                                            formAnswers.update((answers) => {
+                                                                const updated = { ...answers };
+
+                                                                const value = e.detail;
+                                                                const isEmpty =
+                                                                    value === '' ||
+                                                                    value === null ||
+                                                                    (Array.isArray(value) && value.length === 0);
+
+                                                                if (isEmpty) {
+                                                                    delete updated[field.id];
+                                                                } else {
+                                                                    updated[field.id] = value;
+                                                                }
+
+                                                                return updated;
+                                                            });
                                                         }}
                                                     />
                                                     <!-- 

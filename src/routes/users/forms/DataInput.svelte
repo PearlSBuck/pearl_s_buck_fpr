@@ -4,7 +4,7 @@
 
     let sigRef: any;
     let img = '';
-
+    let initialized = false;
     function save() {
         if (sigRef && !sigRef.isEmpty()) {
             img = sigRef.toDataURL();
@@ -34,6 +34,7 @@
         customOther?: string;
         otherText?: string;
         otherChecked?: boolean;
+        otherSelected?: boolean;
     }
 
     let { 
@@ -47,6 +48,7 @@
         options = [],
         customOther = $bindable(),
         otherText = $bindable(),
+        otherSelected = false,
         otherChecked = false
     }: Props = $props();
 
@@ -57,6 +59,48 @@
         const target = event.target as HTMLSelectElement;
         dispatch('change', target.value); // send selected value as `e.detail`
     }
+
+    // Restore "Other" state from persisted value (only runs once)
+    $effect(() => {
+        if (!initialized && typeof value === 'string') {
+            if (value.startsWith('Other: ')) {
+                otherSelected = true;
+                otherText = value.slice(7);
+            } else {
+                otherSelected = false;
+                otherText = '';
+            }
+            initialized = true;
+        }
+    });
+
+    // Update value when otherSelected or otherText changes
+    $effect(() => {
+        if (!initialized) return;
+
+        if (otherSelected) {
+            const newVal = otherText ? `Other: ${otherText}` : '';
+            if (value !== newVal) {
+                value = newVal;
+                dispatch('change', value);
+            }
+        }
+    });
+
+    // Restore `otherChecked` and `otherText` on mount/hydration
+    $effect(() => { 
+        if (Array.isArray(value) && !initialized) {
+            const otherValue = value.find((v) => v.startsWith('Other: '));
+            if (otherValue) {
+                otherChecked = true;
+                otherText = otherValue.slice(7); // remove "Other: "
+            } else {
+                otherChecked = false;
+                otherText = '';
+            }
+            initialized = true;
+        }
+    }); 
 
     // Watch for changes to "Other" checkbox or text input
     $effect(() => {
@@ -202,6 +246,7 @@
             type="date"
             bind:value 
             required={required}
+            oninput={() => dispatch('change', value)}
             />
 
     {:else if type === 'signature'}
