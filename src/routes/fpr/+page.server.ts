@@ -39,7 +39,7 @@ export async function load() {
 
 // Optional: Add actions for form operations
 export const actions = {
-    delete: async ({ request }) => {
+    delete: async ({ request }: { request: Request }) => {
         const data = await request.formData();
         const formId = data.get('formId');
 
