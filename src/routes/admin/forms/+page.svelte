@@ -1,9 +1,12 @@
 <!--+page.svelte-->
 <script>
+    // @ts-ignore
     import { onMount } from 'svelte';
+    // @ts-ignore
     import { enhance } from '$app/forms';
     import { goto } from '$app/navigation';
     
+    // @ts-ignore
     export let data;
     
     let show = false;
@@ -14,12 +17,14 @@
     let selectedYear = new Date().getFullYear(); // Default to current year
     /** @type {number[]} */
     let availableYears = [];
+    // @ts-ignore
     let currentFormType = '';
 
     function handleProgressReport() {
         displayText = 'FPR';
         console.log('All forms:', data.forms);
         console.log('First form createdAt:', data.forms[0]?.createdAt);
+        // @ts-ignore
         selectedForms = data.forms.filter(form => {
             return form.title && form.title.trim().toLowerCase() === 'family progress report'.toLowerCase();
         });
@@ -58,6 +63,7 @@
         displayText = 'FIS';
         console.log('All forms:', data.forms);
         console.log('Looking for title:', 'Family Introduction Sheet');
+        // @ts-ignore
         selectedForms = data.forms.filter(form => {
             console.log('Checking form title:', form.title);
             return form.title && form.title.trim().toLowerCase() === 'family introduction sheet'.toLowerCase();
@@ -101,6 +107,7 @@
     function onYearChange(event) {
         selectedYear = +/** @type {HTMLSelectElement} */(event.target).value;
         // Re-filter selectedForms based on the selected year and current displayText
+        // @ts-ignore
         let formsToFilter = data.forms.filter(form => {
             if (displayText === 'FPR') {
                 return form.title && form.title.trim().toLowerCase() === 'family progress report'.toLowerCase();
@@ -109,6 +116,7 @@
             }
             return false;
         });
+        // @ts-ignore
         selectedForms = formsToFilter.filter(form => {
             if (form.createdAt) {
                 return new Date(form.createdAt).getFullYear() === selectedYear;

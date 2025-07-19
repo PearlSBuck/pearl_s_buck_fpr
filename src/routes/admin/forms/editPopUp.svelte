@@ -38,6 +38,18 @@ let editorField: Field = {
     options: []
 };
 
+function clearEditorField() {
+	editorField = {
+		label: '',
+		name: '',
+		placeholder: '',
+		required: false,
+		sectionid: '',
+		type: '',
+		orderindex: 0,
+		options: []
+	};
+}
 
 // form add section
 let addNewSection: Section = {
@@ -112,6 +124,7 @@ function handleFieldChanges(updatedField: any, changeType:string, sectionid?: st
         });
     }
     openEditPopup=false;
+    clearEditorField();
 }
 
 function handleReactiveUI(updatedField: any, changeType: string, sectionid?:string){
@@ -353,7 +366,7 @@ $: if((openEditPopup||openAddPopup) && field){
                 <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => {
                     checkOthersOption();
                     handleFieldChanges(editorField, 'update');
-                    newOption=''
+                    newOption='';
                 }
                     }>Confirm</button>
             </div>
@@ -377,6 +390,7 @@ $: if((openEditPopup||openAddPopup) && field){
             <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openDeletePopup=false}>Cancel</button>
             <button class="m-1 p-1 bg-red-600 text-white rounded hover:bg-red-700 transition" on:click={() => {
                 handleFieldChanges(editorField, 'delete', fieldId)
+                newOption='';
                 openDeletePopup = false
             }}>Delete</button>
 
@@ -505,6 +519,7 @@ $: if((openEditPopup||openAddPopup) && field){
             <button class="m-1 p-1 bg-green-600 text-white rounded hover:bg-green-700 transition" on:click={() => {
                 checkOthersOption();
                 handleFieldChanges(editorField, 'add', sectionId)
+                newOption='';
                 openAddPopup=false}}>Add</button>
 
         </div>

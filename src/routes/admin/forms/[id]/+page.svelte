@@ -424,24 +424,6 @@
 
                                                     </label>
                                                 
-                                                    <!-- -------------------------------------------------------------------------------------------------------------------------------
-                                                     
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    
-                                                    -->
                                                     <!-- edit mode of each text field -->
                                                     {#if editMode || isAlwaysEditableField(field.type)}
                                                         {#if field.type === 'textarea'}
