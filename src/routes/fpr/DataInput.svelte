@@ -233,7 +233,11 @@
 
     <!-- UI for dropdown input -->
     {:else if type === 'select'}
-        <select class="mt-0.5 w-full rounded border-gray-300 shadow-sm sm:text-sm" required={required} name={name} onchange={handleChange} bind:value>
+        <select class="mt-2 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm shadow-md focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 max-h-60 overflow-y-auto"
+                required={required} 
+                name={name} 
+                onchange={handleChange} 
+                bind:value>
             {#each options as option}
             <option value={option.value}>{option.label}</option>
             {/each}

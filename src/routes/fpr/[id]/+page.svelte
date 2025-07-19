@@ -10,6 +10,7 @@
     import { isOnline } from '$lib/stores/online';
 	import DataInput from '../DataInput.svelte';
     import { filledOutBy, SCId } from '$lib/stores/formAnswers';
+    import { getUserList } from '$lib/utils/userList';
 
     export let data;
     let editModeData: any;
@@ -19,6 +20,7 @@
     let isLoading = false;
     let error: string | null = null;
     let successMessage: string | null = null;
+    let userList:[];
     $: show = $notification.type !== null;
 
     
@@ -29,9 +31,21 @@
 
     
     onMount(() => {
-		loadOfflineAnswers(); // restore from localStorage on page load
-	});
+        loadOfflineAnswers();
+        fetchUsers();
+    });
 
+    async function fetchUsers() {
+        const { users, error } = await getUserList();
+        if (error) {
+            console.error('Failed to fetch user list:', error);
+        } else {
+            userList = users.map((user:any) => ({
+                label:user.username,
+                value:user.username
+            }));
+        }
+    }
 
 
 
@@ -375,11 +389,12 @@
 
 		<!-- Message -->
         <DataInput
-            type='text'
+            type='select'
             label='Filled out by'
             name='Filled out by'
             placeholder='Enter value...'
             required={true}
+            options = {userList}
             bind:value={$filledOutBy}
         /><DataInput
             type='text'
