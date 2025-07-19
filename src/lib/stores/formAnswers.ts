@@ -1,9 +1,13 @@
 // src/lib/stores/formAnswers.ts
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { supabaseAdmin } from '$lib/db';
 
 const OFFLINE_ANSWERS_KEY = 'offlineAnswers';
 let hasLoaded = false;
+
+// Local reactive answers to be used in the formAnswers table
+export const filledOutBy = writable('');
+export const SCId = writable('');
 // Local reactive answer state (used in the UI)
 export const formAnswers = writable<Record<string, any>>({});
 // --- LOCAL STORAGE PERSISTENCE ---
@@ -41,8 +45,7 @@ export function clearAnswers() {
 }
 
 // --- SUBMISSION TO SUPABASE ---
-
-export async function submitAnswersToSupabase() {
+export async function submitAnswersToSupabase(formId: string) {
 	const stored = localStorage.getItem(OFFLINE_ANSWERS_KEY);
 	if (!stored) {
 		console.warn('No answers to submit.');
@@ -63,16 +66,41 @@ export async function submitAnswersToSupabase() {
 		return false;
 	}
 
+	// Get store values
+	const filledOutByValue = get(filledOutBy);
+	const scIdValue = get(SCId);
+
+	// 1. Insert parent answer row
+	const { data: parentAnswer, error: parentError } = await supabaseAdmin
+		.from('fpr_answers')
+		.insert({
+			form_id: formId,
+			answer: '',
+			filled_out_by: filledOutByValue,
+			sc_id: scIdValue
+		})
+		.select()
+		.single();
+
+	if (parentError) {
+		console.error('Error inserting parent answer row:', parentError);
+		return false;
+	}
+
+	const parentAnswerId = parentAnswer.answer_id;
+	// 2. Insert answer list
 	const submissions = answerEntries.map(([question_id, answer]) => ({
-		answer_id: '4b7d66fe-6899-4f03-bdc2-739698ffec52', // replace with real dynamic ID later
+		answer_id: parentAnswerId,
 		question_id,
-		answer,
+		answer
 	}));
 
-	const { error } = await supabaseAdmin.from('fpr_answers_list').insert(submissions);
+	const { error: listError } = await supabaseAdmin
+		.from('fpr_answers_list')
+		.insert(submissions);
 
-	if (error) {
-		console.error('Error submitting answers:', error);
+	if (listError) {
+		console.error('Error submitting answer list:', listError);
 		return false;
 	}
 

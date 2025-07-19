@@ -9,10 +9,12 @@
     import {notification} from '$lib/stores/formEditor';
     import { isOnline } from '$lib/stores/online';
 	import DataInput from '../DataInput.svelte';
+    import { filledOutBy, SCId } from '$lib/stores/formAnswers';
 
     export let data;
     let editModeData: any;
     let openDeletePopup = false;
+    let openSubmitForm = false;
     let editMode = false;
     let isLoading = false;
     let error: string | null = null;
@@ -56,13 +58,17 @@
             //all required answers were submitted successfully
             if(!validateForm(data.form.sections)){
                 console.log($formAnswers);
-                const success = await submitAnswersToSupabase();
+                console.log($filledOutBy);
+                console.log($SCId);
+                const success = await submitAnswersToSupabase(data.form.id);
                 if (success) {
                     notification.set({ message: 'Successfully submitted form entry', type: 'success' });
                 } else {
                     notification.set({ message: 'Form submission failed', type: 'error' });
                 }
             } else{
+                console.log($filledOutBy);
+                console.log($SCId);
                 notification.set({ message: 'Fill all required fields', type: 'error' });
             }
 
@@ -110,6 +116,8 @@
             }
         }
         console.log(missingFields);
+        // NOTE for QA: 
+        //  if you want to test wihtout having to validate, make this return false
         return missingFields;
     }
 
@@ -290,20 +298,12 @@
             <div class='flex justify-end'>
                 <button type="button" 
                         class="bg-red-600 p-2 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-red-700" 
-                        
                         on:click={() => {openDeletePopup=true}}>
                         Clear Form
                 </button>
                 <button type="button" 
-                        class="bg-green-600 p-2 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-green-700" 
-                        
-                        on:click={() => {
-                            if($isOnline){
-                                printInputs();
-                            } else{
-                                notification.set({ message: 'Error: Cannot submit form while offline.', type: 'error' });
-                            }
-                        }}>
+                        class="bg-green-600 p-2 m-2 align-right text-white font-bold rounded-md shadow-lg hover:bg-green-700"                    
+                        on:click={() => {openSubmitForm = true;}}>
                         Submit Form
                 </button>
             </div>
@@ -319,6 +319,10 @@
         {/if}
     </div>
 </div>
+
+
+
+<!----------------------------------- POPUPS --------------------------------------------------------->
 
 <!-- clear all fields confirmation popup -->
 {#if openDeletePopup}
@@ -358,4 +362,59 @@
 </div>
 {/if}
 
+<!-- clear all fields confirmation popup -->
+{#if openSubmitForm}
+<div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
+	<!-- Modal content -->
+	<div class="bg-white w-full max-w-sm rounded-xl shadow-lg p-6 space-y-4">
+		<!-- Icon -->
+		<div class="mx-auto w-16 h-16">
+			<svg fill="#43A047" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 226.834 226.834" xml:space="preserve" stroke="#43A047"><g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M80.197,44.939v-9.746c0-1.761,1.433-3.193,3.193-3.193h60.053c1.761,0,3.193,1.433,3.193,3.193v9.746 c0,1.761-1.433,3.193-3.193,3.193H83.391C81.63,48.133,80.197,46.7,80.197,44.939z M131.841,17c-0.768-9.5-8.729-17-18.424-17 S95.761,7.5,94.993,17H131.841z M192.309,55.334v151.333c0,11.12-9.047,20.167-20.167,20.167H54.692 c-11.12,0-20.167-9.047-20.167-20.167V55.334c0-11.12,9.047-20.167,20.167-20.167h10.506c0,0.009-0.001,0.018-0.001,0.026v9.746 c0,10.032,8.162,18.193,18.193,18.193h60.053c10.032,0,18.193-8.161,18.193-18.193v-9.746c0-0.009-0.001-0.018-0.001-0.026h10.506 C183.262,35.167,192.309,44.214,192.309,55.334z M88.183,143.449c-3.526-2.173-8.147-1.077-10.32,2.449l-7.092,11.504l-3.661-2.884 c-3.252-2.563-7.97-2.002-10.532,1.252c-2.563,3.255-2.002,7.97,1.252,10.533l10.271,8.089c1.332,1.049,2.969,1.607,4.64,1.607 c0.436,0,0.875-0.038,1.311-0.115c2.105-0.374,3.952-1.629,5.074-3.449l11.506-18.666C92.806,150.243,91.709,145.623,88.183,143.449 z M88.183,89.449c-3.526-2.174-8.147-1.076-10.32,2.449l-7.092,11.504l-3.661-2.884c-3.252-2.562-7.97-2.002-10.532,1.252 c-2.563,3.255-2.002,7.97,1.252,10.533l10.271,8.089c1.332,1.049,2.969,1.607,4.64,1.607c0.436,0,0.875-0.038,1.311-0.115 c2.105-0.374,3.952-1.629,5.074-3.449L90.632,99.77C92.806,96.243,91.709,91.623,88.183,89.449z M165.858,168.5 c0-4.143-3.357-7.5-7.5-7.5h-49c-4.142,0-7.5,3.357-7.5,7.5s3.358,7.5,7.5,7.5h49C162.501,176,165.858,172.643,165.858,168.5z M165.858,114.5c0-4.143-3.357-7.5-7.5-7.5h-49c-4.142,0-7.5,3.357-7.5,7.5s3.358,7.5,7.5,7.5h49 C162.501,122,165.858,118.643,165.858,114.5z"></path> </g></svg>
+		</div>
+
+		<!-- Message -->
+        <DataInput
+            type='text'
+            label='Filled out by'
+            name='Filled out by'
+            placeholder='Enter value...'
+            required={true}
+            bind:value={$filledOutBy}
+        /><DataInput
+            type='text'
+            label="Sponsored Child's ID"
+            name="Sponsored Child's ID"
+            placeholder='Enter value...'
+            required={true}
+            bind:value={$SCId}
+        />
+		<!-- Buttons -->
+		<div class="flex flex-col sm:flex-row justify-center gap-2 mt-4">
+			<button
+				class="w-full sm:w-auto px-4 py-2 border rounded-lg text-gray-700 bg-white hover:bg-gray-100 transition"
+				on:click={() => (openSubmitForm = false)}
+			>
+				Cancel
+			</button>
+
+			<button
+				class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+				on:click={() => {
+                    if($isOnline){
+                        // Replace with your delete logic
+                        openSubmitForm = false;
+                        printInputs();
+                        clearAnswers();
+                    } else{
+                        notification.set({ message: 'Error: Cannot submit form while offline.', type: 'error' });
+                    }
+                }}
+			>
+				Submit
+			</button>
+		</div>
+	</div>
+</div>
+{/if}
                                                     
