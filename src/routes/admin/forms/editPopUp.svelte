@@ -13,6 +13,7 @@ export let openAddSectionPopup: boolean;
 export let openDeleteSectionPopup: boolean;
 export let openEditSectionPopup: boolean;
 export let openEditOrderPopup: boolean;
+export let openEditFieldOrderPopup: boolean;
 
 export let displayedFormData: any;
 export let field: any;
@@ -20,13 +21,26 @@ export let section:any;
 export let fieldId: string;
 export let sectionId: any;
 export let formId: string;
-export let items: { 
+export let items: ({ 
     id: string;
     title: string;
     orderIndex: number;
     formId: string;
     fields:[]
-}[] = [];
+}[] )= [];
+
+export let fieldItems: ({
+    id: string;
+    label: string;
+    name: string;
+    placeholder?: string;
+    required: boolean;
+    value?: string;
+    options?: { label: string; value: string }[];
+    type: string;
+    orderindex: number;
+    sectionId: string;
+}[] ) = [];
 
 
 
@@ -60,6 +74,7 @@ function clearEditorField() {
 		orderindex: 0,
 		options: []
 	};
+    fieldItems =[];
 }
 
 // form add section
@@ -142,9 +157,12 @@ function handleReactiveUI(updatedField: any, changeType: string, sectionid?:stri
     if(changeType == 'update'){
         let sectionIndex = -1;
         let fieldIndex = -1;
+
+        console.log('test fieldId: ', fieldId);
+        console.log('test updatedField.id: ', updatedField.id);
         for (let sIdx = 0; sIdx < displayedFormData.sections.length; sIdx++) {
             const section = displayedFormData.sections[sIdx];
-            const fIdx = section.fields.findIndex((field: any) => field.id === fieldId);
+            const fIdx = section.fields.findIndex((field: any) => (field.id === fieldId) || (field.id === updatedField.id));
 
             if (fIdx !== -1) {
                 console.log('successfully found field index');
@@ -162,7 +180,8 @@ function handleReactiveUI(updatedField: any, changeType: string, sectionid?:stri
                     orderIndex: updatedField.orderindex,
                     options: updatedField.options,
                 };
-
+                displayedFormData.sections[sectionIndex].fields.sort((a:any, b:any) => a.orderIndex - b.orderIndex);
+                console.log(displayedFormData.sections[sectionIndex].fields[fieldIndex]);
                 break; // exit loop once match is found
             } else {
                 console.log('Failed to find field index in section', sIdx);
@@ -224,6 +243,13 @@ function handleDndConsider(e:any){
 function handleDndFinalize(e:any){
     items = e.detail.items;
 };
+function handleDndConsiderField(e:any){
+    fieldItems = e.detail.items;
+};
+function handleDndFinalizeField(e:any){
+    fieldItems = e.detail.items;
+};
+
 
 
 // makes sure field being updatd is correct
@@ -637,7 +663,7 @@ $: if((openEditPopup||openAddPopup) && field){
             <div
                 use:dndzone={{ items }}
                 on:consider="{handleDndConsider}"
-                on:finalize="{handleDndFinalize}"
+                on:finalize="{handleDndConsider}"
                 class="space-y-2"
                 >
                 {#each items as item (item.id)}
@@ -671,6 +697,50 @@ $: if((openEditPopup||openAddPopup) && field){
   </div>
 </div>
 
+{:else if openEditFieldOrderPopup}
+<div class="fixed inset-0 bg-gray-950/70 z-60 flex items-start justify-center overflow-y-auto p-6">
+    <div class="rounded shadow-lg w-full max-w-md mt-20 mb-20">
+        <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
+            <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">Drag and drop to reorder sections</h1><br>
+            <!-- Draggable List (Step 1) -->
+            <div
+                use:dndzone={{ items: fieldItems }}
+                on:consider="{handleDndConsiderField}"
+                on:finalize="{handleDndFinalizeField}"
+                class="space-y-2"
+                >
+                {#each fieldItems as item (item.id)}
+                    <div
+                    class="p-3 bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition cursor-move"
+                    >
+                    <span class="font-medium text-gray-800">{item.label}</span>
+                    </div>
+                {/each}
+            </div>
+
+            <br>
+            <!-- Action buttons -->
+            <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openEditFieldOrderPopup = false}>Cancel</button>
+            <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => {
+                const newOrder = fieldItems.map((item, index) => ({
+                    id: item.id,
+                    label: item.label,
+                    orderindex: index,
+                    sectionid: item.sectionId
+                    }));
+                console.log('newOrder check:');
+                console.log(newOrder);
+                console.log(formId);
+                newOrder.forEach((field) => {
+                    handleFieldChanges(field, 'update', field.sectionid);
+
+                });
+                openEditFieldOrderPopup = false;
+            }}>Save</button>
+            
+        </div>
+  </div>
+</div>
 {/if}
 
 
