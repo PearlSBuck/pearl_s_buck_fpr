@@ -70,7 +70,8 @@
     async function printInputs(){
         try {
             //all required answers were submitted successfully
-            if(!validateForm(data.form.sections)){
+            const missingFields = validateForm(data.form.sections)
+            if(!missingFields){
                 console.log($formAnswers);
                 console.log($filledOutBy);
                 console.log($SCId);
@@ -83,7 +84,7 @@
             } else{
                 console.log($filledOutBy);
                 console.log($SCId);
-                notification.set({ message: 'Fill all required fields', type: 'error' });
+                notification.set({ message: `Fill out ${missingFields[0]}`, type: 'error' });
             }
 
             setTimeout(() => {
