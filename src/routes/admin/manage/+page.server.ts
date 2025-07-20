@@ -6,8 +6,6 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-
-
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase credentials. Please check your environment variables.');
 }
@@ -20,6 +18,7 @@ interface AuditLog {
   action_performed: string;
   user_id: string | null;
   admin_id: string | null;
+  user_name: string | null;  // Added this field
   user_fullname: string | null;
   admin_fullname: string | null;
 }
@@ -66,6 +65,7 @@ async function getAuditLogs(filters: AuditLogFilters): Promise<AuditLogResponse>
         action_performed,
         user_id,
         admin_id,
+        user_name,
         user:user_id(fullname),
         admin:admin_id(fullname)
       `, { count: 'exact' });
@@ -80,9 +80,6 @@ async function getAuditLogs(filters: AuditLogFilters): Promise<AuditLogResponse>
       endDateTime.setDate(endDateTime.getDate() + 1);
       query = query.lt('created_at', endDateTime.toISOString());
     }
-
-    // REMOVED: Database-level search - now doing it client-side
-    // This was the main issue - it was filtering out records before client-side search
 
     // Apply sorting
     let orderColumn = 'created_at';
@@ -110,26 +107,28 @@ async function getAuditLogs(filters: AuditLogFilters): Promise<AuditLogResponse>
       action_performed: log.action_performed,
       user_id: log.user_id,
       admin_id: log.admin_id,
+      user_name: log.user_name,  // Include the user_name field
       user_fullname: log.user?.fullname || null,
       admin_fullname: log.admin?.fullname || null
     }));
 
-    // Apply search filter client-side - THIS IS THE KEY FIX
+    // Apply search filter client-side - Updated to include user_name
     let filteredLogs = transformedLogs;
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
       filteredLogs = transformedLogs.filter(log => 
         log.action_performed.toLowerCase().includes(searchLower) ||
+        (log.user_name && log.user_name.toLowerCase().includes(searchLower)) ||
         (log.user_fullname && log.user_fullname.toLowerCase().includes(searchLower)) ||
         (log.admin_fullname && log.admin_fullname.toLowerCase().includes(searchLower))
       );
     }
 
-    // Handle user sorting client-side
+    // Handle user sorting client-side - Updated to include user_name
     if (sortBy === 'user') {
       filteredLogs.sort((a, b) => {
-        const userA = a.user_fullname || a.admin_fullname || '';
-        const userB = b.user_fullname || b.admin_fullname || '';
+        const userA = a.user_name || a.user_fullname || a.admin_fullname || '';
+        const userB = b.user_name || b.user_fullname || b.admin_fullname || '';
         const comparison = userA.localeCompare(userB);
         return sortOrder === 'asc' ? comparison : -comparison;
       });
@@ -161,7 +160,8 @@ async function getAuditLogs(filters: AuditLogFilters): Promise<AuditLogResponse>
 async function createAuditLog(
   actionPerformed: string,
   userId?: string,
-  adminId?: string
+  adminId?: string,
+  userName?: string  // Added userName parameter
 ): Promise<void> {
   try {
     const { error: insertError } = await supabase
@@ -169,7 +169,8 @@ async function createAuditLog(
       .insert({
         action_performed: actionPerformed,
         user_id: userId || null,
-        admin_id: adminId || null
+        admin_id: adminId || null,
+        user_name: userName || null  // Include user_name in insert
       });
 
     if (insertError) {
@@ -259,13 +260,14 @@ export const actions: Actions = {
     const actionPerformed = formData.get('action') as string;
     const userId = formData.get('userId') as string | null;
     const adminId = formData.get('adminId') as string | null;
+    const userName = formData.get('userName') as string | null;  // Added userName support
 
     if (!actionPerformed) {
       throw error(400, 'Action is required');
     }
 
     try {
-      await createAuditLog(actionPerformed, userId || undefined, adminId || undefined);
+      await createAuditLog(actionPerformed, userId || undefined, adminId || undefined, userName || undefined);
       return { success: true };
     } catch (err) {
       console.error('Error creating audit log:', err);
@@ -317,12 +319,12 @@ export const actions: Actions = {
         searchTerm
       );
 
-      // Convert to CSV format
+      // Convert to CSV format - Updated to include user_name priority
       const csvHeaders = ['Date', 'Action', 'User', 'Admin'];
       const csvRows = auditLogData.logs.map(log => [
         new Date(log.created_at).toLocaleString(),
         log.action_performed,
-        log.user_fullname || 'N/A',
+        log.user_name || log.user_fullname || 'N/A',  // Prioritize user_name
         log.admin_fullname || 'N/A'
       ]);
 
@@ -346,9 +348,10 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
+    const userName = formData.get('userName') as string;  // Added userName support
     
     try {
-      await createAuditLog('Created new user account', userId, adminId);
+      await createAuditLog('Created new user account', userId, adminId, userName);
       return { success: true };
     } catch (err) {
       console.error('Error logging user creation:', err);
@@ -360,9 +363,10 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
+    const userName = formData.get('userName') as string;  // Added userName support
     
     try {
-      await createAuditLog('Updated user profile', userId, adminId);
+      await createAuditLog('Updated user profile', userId, adminId, userName);
       return { success: true };
     } catch (err) {
       console.error('Error logging user update:', err);
@@ -374,9 +378,10 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
+    const userName = formData.get('userName') as string;  // Added userName support
     
     try {
-      await createAuditLog('Deleted user account', userId, adminId);
+      await createAuditLog('Deleted user account', userId, adminId, userName);
       return { success: true };
     } catch (err) {
       console.error('Error logging user deletion:', err);
@@ -388,9 +393,10 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
+    const userName = formData.get('userName') as string;  // Added userName support
     
     try {
-      await createAuditLog('Changed user permissions', userId, adminId);
+      await createAuditLog('Changed user permissions', userId, adminId, userName);
       return { success: true };
     } catch (err) {
       console.error('Error logging permission change:', err);
@@ -402,9 +408,10 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
+    const userName = formData.get('userName') as string;  // Added userName support
     
     try {
-      await createAuditLog('Changed user role', userId, adminId);
+      await createAuditLog('Changed user role', userId, adminId, userName);
       return { success: true };
     } catch (err) {
       console.error('Error logging role change:', err);
@@ -416,9 +423,10 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
+    const userName = formData.get('userName') as string;  // Added userName support
     
     try {
-      await createAuditLog('Reset user password', userId, adminId);
+      await createAuditLog('Reset user password', userId, adminId, userName);
       return { success: true };
     } catch (err) {
       console.error('Error logging password reset:', err);
@@ -430,9 +438,10 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
+    const userName = formData.get('userName') as string;  // Added userName support
     
     try {
-      await createAuditLog('Viewed user profile', userId, adminId);
+      await createAuditLog('Viewed user profile', userId, adminId, userName);
       return { success: true };
     } catch (err) {
       console.error('Error logging user view:', err);

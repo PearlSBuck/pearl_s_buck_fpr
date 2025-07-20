@@ -44,16 +44,17 @@
   
   // Transform server data to match frontend expectations
   $: transformedLogs = auditLogs.logs.map(log => ({
-    id: log.log_id,
-    action: log.action_performed,
-    type: getActionType(log.action_performed),
-    color: getActionColor(log.action_performed),
-    bgColor: getActionBgColor(log.action_performed),
-    icon: getActionIcon(log.action_performed),
-    user: log.user_fullname || log.admin_fullname || 'Unknown User',
-    date: new Date(log.created_at),
-    details: `${log.action_performed} - User ID: ${log.user_id || log.admin_id || 'N/A'}`
-  }));
+  id: log.log_id,
+  action: log.action_performed,
+  type: getActionType(log.action_performed),
+  color: getActionColor(log.action_performed),
+  bgColor: getActionBgColor(log.action_performed),
+  icon: getActionIcon(log.action_performed),
+  // Updated user logic: prioritize user_name when user_id is null
+  user: log.user_name || log.user_fullname || log.admin_fullname || 'Unknown User',
+  date: new Date(log.created_at),
+  details: `${log.action_performed} - ${log.user_id ? `User ID: ${log.user_id}` : log.user_name ? `Username: ${log.user_name}` : `Admin ID: ${log.admin_id || 'N/A'}`}`
+}));
   
   // Helper functions to determine action styling
   const getActionType = (action: string) => {

@@ -104,6 +104,25 @@
         residence = ''
     }
 
+    // Function to log audit entry
+    async function logAuditEntry(actionPerformed: string, userId: string, userFullName: string, adminId?: string) {
+        try {
+            const { error } = await supabase.from('audit_log').insert([{
+                action_performed: actionPerformed,
+                user_id: userId,
+                user_name: userFullName,
+                admin_id: adminId || userId // Use provided admin_id or default to the user's id
+            }]);
+            
+            if (error) {
+                console.error('Failed to log audit entry:', error);
+                // Don't throw error here to prevent user creation from failing
+            }
+        } catch (error) {
+            console.error('Error logging audit entry:', error);
+        }
+    }
+
     async function createUser() {
 
         if (!username.trim()) {
@@ -187,6 +206,10 @@
         }
 
         try {
+            // Get current user (admin) who is creating this user
+            const { data: currentUser } = await supabase.auth.getUser();
+            const currentAdminId = currentUser?.user?.id;
+
             // Step 1: Register the user with Supabase Auth
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
@@ -220,9 +243,12 @@
                 throw userError;
             }
             
+            // Step 3: Log the audit entry
+            await logAuditEntry('created', authData.user.id, fullname, currentAdminId);
+            
             alert('User created successfully!');
             clearForm();
-            goto('/admin/manage');
+            goto('/users/edit');
             
         } catch (error: any) {
             console.error('Error creating user:', error);
