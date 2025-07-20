@@ -1,23 +1,34 @@
 <script lang='ts'>
+import DataInput from "./DataInput.svelte";
+import { formDelta } from '$lib/stores/formEditor';
+import { handleSectionChanges } from '$lib/stores/formEditor'
+import type { Field } from '$lib/stores/formEditor';
+import type { Section } from '$lib/stores/formEditor';
+import { dndzone } from 'svelte-dnd-action';
+
 export let openEditPopup: boolean;
 export let openDeletePopup: boolean;
 export let openAddPopup: boolean;
 export let openAddSectionPopup: boolean;
 export let openDeleteSectionPopup: boolean;
 export let openEditSectionPopup: boolean;
+export let openEditOrderPopup: boolean;
 
 export let displayedFormData: any;
-
 export let field: any;
 export let section:any;
 export let fieldId: string;
 export let sectionId: any;
 export let formId: string;
-import DataInput from "./DataInput.svelte";
-import { formDelta } from '$lib/stores/formEditor';
-import { handleSectionChanges } from '$lib/stores/formEditor'
-import type { Field } from '$lib/stores/formEditor';
-import type { Section } from '$lib/stores/formEditor';
+export let items: { 
+    id: string;
+    title: string;
+    orderIndex: number;
+    formId: string;
+    fields:[]
+}[] = [];
+
+
 
 
 let addOthersOption:boolean;
@@ -204,8 +215,16 @@ function handleKeydown(event: KeyboardEvent) {
         newOption='';
 
     }
+}
 
-  }
+
+function handleDndConsider(e:any){
+    items = e.detail.items;
+};
+function handleDndFinalize(e:any){
+    items = e.detail.items;
+};
+
 
 // makes sure field being updatd is correct
 $: if(openEditPopup && field){
@@ -607,6 +626,49 @@ $: if((openEditPopup||openAddPopup) && field){
 
         </div>
     </div>
+</div>
+
+{:else if openEditOrderPopup}
+<div class="fixed inset-0 bg-gray-950/70 z-60 flex items-start justify-center overflow-y-auto p-6">
+    <div class="rounded shadow-lg w-full max-w-md mt-20 mb-20">
+        <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
+            <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">Drag and drop to reorder sections</h1><br>
+            <!-- Draggable List (Step 1) -->
+            <div
+                use:dndzone={{ items }}
+                on:consider="{handleDndConsider}"
+                on:finalize="{handleDndFinalize}"
+                class="space-y-2"
+                >
+                {#each items as item (item.id)}
+                    <div
+                    class="p-3 bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition cursor-move"
+                    >
+                    <span class="font-medium text-gray-800">{item.title}</span>
+                    </div>
+                {/each}
+            </div>
+
+            <br>
+            <!-- Action buttons -->
+            <button class="m-1 p-1 bg-zinc-50 outline-1 text-black rounded hover:bg-zinc-200 transition" on:click={() => openEditOrderPopup = false}>Cancel</button>
+            <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => {
+                const newOrder = items.map((item, index) => ({
+                    id: item.id,
+                    title: item.title,
+                    orderindex: index
+                    }));
+                console.log('newOrder check:');
+                console.log(newOrder);
+                console.log(formId);
+                newOrder.forEach((section) => {
+                    handleSectionChanges(section, 'update', formId);
+                });
+                openEditOrderPopup = false;
+            }}>Save</button>
+            
+        </div>
+  </div>
 </div>
 
 {/if}

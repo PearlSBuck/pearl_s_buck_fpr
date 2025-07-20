@@ -48,6 +48,7 @@
     "clonedeep": "^2.0.0",
     "lightningcss": "^1.21.0",
     "lodash": "^4.17.21",
-    "signature_pad": "^5.0.10"
+    "signature_pad": "^5.0.10",
+    "svelte-dnd-action": "^0.9.64"
   }
 }

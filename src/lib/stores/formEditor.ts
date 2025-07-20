@@ -179,7 +179,7 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
               }
           });
 
-          // for making UI reactive
+        // for making UI reactive
           if(changeType=='delete')
             displayedData.update(data => {
               if (data?.form) {
@@ -202,6 +202,7 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
                   for (let sIdx = 0; sIdx < data.form.sections.length; sIdx++){
                     if(data.form.sections[sIdx].id == updatedSection.id){
                       data.form.sections[sIdx].title = updatedSection.title;
+                      data.form.sections[sIdx].orderIndex = updatedSection.orderindex;
                       break;
                     }
                   }
@@ -209,6 +210,9 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
                   console.error('Failed to edit section', error);
                 }
               }
+              data.form.sections = [...data.form.sections].sort((a, b) => a.orderIndex - b.orderIndex);
+              console.log(data.form.sections);
+
               return data;
             });
           }

@@ -21,11 +21,13 @@
     let showAddSectionPopup = false;
     let showDeleteSectionPopup = false;
     let showEditSectionPopup = false;
+    let showEditOrderPopup = false;
     let selectedField:any;
     let selectedFieldId:any;
     let selectedSection:any;
     let selectedSectionId: any;
     let selectedForm: any;
+    let toReorder: any;
     // handles popup visibility
 
     
@@ -53,7 +55,7 @@
     $: show = $notification.type !== null;
 
 
-    function togglePopup(type:string, id?:string, component?: any) {
+    function togglePopup(type:string, id?:string, component?: any, items?: []) {
         switch(type){
             case 'editField':
                 showEditPopUp = !showEditPopUp;
@@ -83,6 +85,12 @@
                 selectedSectionId = id;
                 selectedSection = component;
                 break;
+            case 'editOrder':
+                showEditOrderPopup = !showEditOrderPopup;
+                toReorder = items;
+                selectedForm = id;
+                console.log("editOrder test:");
+                console.log(toReorder);
         }
         
     }
@@ -328,6 +336,11 @@
                                 <button type="button" class="bg-red-600 text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-red-700" on:click={toggleEditMode}>
                                     Cancel
                                 </button>
+                                <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" 
+                                    on:click={() => {togglePopup('editOrder', data.form.id, undefined, data.form.sections)}}
+                                >
+                                    Reorder Sections
+                                </button>
                                 <button class="m-1 p-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition" on:click={() => call_confirm_edits(data.form.id)}>
                                     Confirm All Changes
                                 </button>
@@ -359,7 +372,7 @@
                 {#if data.form.sections && data.form.sections.length > 0}
                     <div class="p-6 space-y-8">
                         {#if $displayedData?.form}
-                        {#each $displayedData.form.sections as section, sectionIndex}
+                            {#each $displayedData.form.sections.slice().sort((a, b) => a.orderindex - b.orderindex) as section, sectionIndex (section.id)}
                             <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
                                 <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
@@ -595,7 +608,9 @@
     bind:openAddSectionPopup = {showAddSectionPopup}
     bind:openDeleteSectionPopup = {showDeleteSectionPopup}
     bind:openEditSectionPopup = {showEditSectionPopup}
+    bind:openEditOrderPopup = {showEditOrderPopup}
     bind:displayedFormData = {$displayedData.form}
+    bind:items = {toReorder}
 />
 {#if editMode}
     <div class='flex justify-end'>
