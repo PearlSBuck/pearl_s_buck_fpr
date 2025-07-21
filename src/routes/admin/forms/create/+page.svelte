@@ -57,6 +57,7 @@
         if (!form) return alert("No form to save!");
         if (form.title === "") return alert("Title cannot be empty!")
         if (form.version === "") return alert("Version cannot be empty!");
+        if (formSections.length === 0) return alert("Forms must have at least one section!")
 
         form.dateCreated = new Date();
 
