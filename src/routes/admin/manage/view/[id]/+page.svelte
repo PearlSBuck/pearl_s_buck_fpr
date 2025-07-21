@@ -16,6 +16,7 @@
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
+    import { supabase } from '$lib/db';
     import Header from '../../../../../components/Header.svelte';
     import Confirm from '../../../../../components/Confirm.svelte';
     import PasswordEdit from '../../../../../components/PasswordEdit.svelte';
@@ -31,26 +32,84 @@
 
     $: userID = $page.params.id;
 
-    async function saveChanges(userId: string) {
-        const response = await fetch('/admin/manage/edit', {
-            method: 'PUT',
-            headers: {
-            'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                tempUser,
-                userID: userId
-            })
-        });
-
-        const result = await response.json();
-        if (result.error) {
-            console.error('Failed to save changes:', result.error);
-        } else {
-            editMode = false;
+    // Function to log audit entry
+    async function logAuditEntry(actionPerformed: string, userId: string, adminId?: string) {
+        try {
+            const { error } = await supabase.from('audit_log').insert([{
+                action_performed: actionPerformed,
+                user_id: userId,
+                admin_id: adminId || userId // Use provided admin_id or default to the user's id
+            }]);
+            
+            if (error) {
+                console.error('Failed to log audit entry:', error);
+                // Don't throw error here to prevent operation from failing
+            }
+        } catch (error) {
+            console.error('Error logging audit entry:', error);
         }
+    }
 
-        location.reload();
+    // Function to log audit entry with user name
+// Function to log audit entry with user name (for deletion where user_id will become null)
+async function logAuditEntryWithName(actionPerformed: string, userId: string | null, adminId?: string | null, userName?: string) {
+    try {
+        const auditData = {
+            action_performed: actionPerformed,
+            user_id: userId,
+            admin_id: adminId,
+            user_name: userName || 'Unknown User'
+        };
+        
+        console.log('Attempting to insert audit log entry:', auditData);
+        
+        const { data, error } = await supabase.from('audit_log').insert([auditData]).select();
+        
+        if (error) {
+            console.error('Failed to log audit entry:', error);
+            console.error('Error details:', JSON.stringify(error, null, 2));
+        } else {
+            console.log('Audit entry created successfully:', data);
+        }
+        
+        return { data, error };
+    } catch (error) {
+        console.error('Error logging audit entry:', error);
+        return { data: null, error };
+    }
+}
+
+    async function saveChanges(userId: string) {
+        try {
+            // Get current user (admin) performing the action
+            const { data: currentUser } = await supabase.auth.getUser();
+            const currentAdminId = currentUser?.user?.id;
+
+            const response = await fetch('/admin/manage/edit', {
+                method: 'PUT',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    tempUser,
+                    userID: userId
+                })
+            });
+
+            const result = await response.json();
+            if (result.error) {
+                console.error('Failed to save changes:', result.error);
+            } else {
+                editMode = false;
+                // Log the audit entry for user profile update
+                await logAuditEntry('profile updated', userId, currentAdminId);
+            }
+
+            location.reload();
+        } catch (error) {
+            console.error('Error saving changes:', error);
+            alert('Error saving changes: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
     }
 
     function cancelEdit() {
@@ -60,6 +119,10 @@
 
     async function savePassword(userId: string, newPassword: string, repeatNewPassword: string) {
         try {
+            // Get current user (admin) performing the action
+            const { data: currentUser } = await supabase.auth.getUser();
+            const currentAdminId = currentUser?.user?.id;
+
             const response = await fetch('/admin/manage/edit-password', {
                 method: 'PUT',
                 headers: {
@@ -76,6 +139,8 @@
 
             if (result.success) {
                 passwordEditMode = false;
+                // Log the audit entry for password change
+                await logAuditEntry('password changed', userId, currentAdminId);
                 alert("Password updated successfully!");
             } else {
                 alert("Failed to update password: " + result.error);
@@ -92,6 +157,10 @@
 
     async function toggleAdminPerms(){
         try {
+            // Get current user (admin) performing the action
+            const { data: currentUser } = await supabase.auth.getUser();
+            const currentAdminId = currentUser?.user?.id;
+
             const response = await fetch('/admin/manage/toggle-admin', {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
@@ -101,6 +170,9 @@
             const result = await response.json();
 
             if (result.success) {
+                // Log the audit entry for permission change
+                const action = isAdmin ? 'admin granted' : 'admin removed';
+                await logAuditEntry(action, userID, currentAdminId);
                 location.reload();
             } else {
                 throw new Error(result.error || 'Unknown error');
@@ -131,26 +203,191 @@
     }
 
     async function deleteUser(userId: string) {
-            try {
-                const response = await fetch ('/admin/manage/delete', {
-                    method: 'DELETE',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({userID: userId}),
-                })
-
-                const result = await response.json();
-
-                if (result.success) {
-                    alert('User deleted sucessfully!');
-                    goto('/admin/manage');
-                } else {
-                    throw new Error(result.error || 'Unknown error');
-                }
-            } catch (error) {
-                console.error('Error deleting user:', error);
-            alert('Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    try {
+        console.log('Starting deletion process for user ID:', userId);
+        
+        // Get current user (admin) for passing to the database function
+        const { data: currentUser } = await supabase.auth.getUser();
+        const currentAdminId = currentUser?.user?.id;
+        
+        // First, get the user's name before deletion
+        const { data: userToDelete, error: fetchError } = await supabase
+            .from('users')
+            .select('username, fullname')
+            .eq('id', userId)
+            .single();
+        
+        if (fetchError) {
+            console.error('Error fetching user data:', fetchError);
+            throw new Error('Failed to fetch user data: ' + fetchError.message);
+        }
+        
+        if (!userToDelete) {
+            throw new Error('User not found');
+        }
+        
+        // Store the user's name (using fullname, fallback to username, ensure not null)
+        const userName = userToDelete.fullname || userToDelete.username || 'Unknown User';
+        
+        console.log('User data fetched:', {
+            id: userId,
+            username: userToDelete.username,
+            fullname: userToDelete.fullname,
+            finalUserName: userName
+        });
+        
+        // IMPORTANT: Log the audit entry BEFORE deletion to preserve user_name
+        console.log('Logging audit entry before deletion...');
+        const auditResult = await logAuditEntryWithName('user deleted', null, null, userName);
+        
+        console.log('Audit entry created, proceeding with deletion...');
+        
+        // Handle foreign key constraints by updating audit_log references
+        console.log('Checking and updating audit_log references before user deletion...');
+        
+        // First, check what audit entries reference this user
+        const { data: referencingEntries, error: checkError } = await supabase
+            .from('audit_log')
+            .select('log_id, user_id, admin_id, action_performed, created_at')
+            .or(`user_id.eq.${userId},admin_id.eq.${userId}`);
+        
+        if (checkError) {
+            console.error('Error checking audit_log references:', checkError);
+        } else {
+            console.log('Found audit entries referencing user:', referencingEntries);
+        }
+        
+        // Update user_id references - try multiple times to ensure it works
+        let userIdAttempts = 0;
+        let userIdUpdateData;
+        do {
+            userIdAttempts++;
+            console.log(`Attempt ${userIdAttempts} to update user_id references...`);
+            
+            const result = await supabase
+                .from('audit_log')
+                .update({ user_id: null })
+                .eq('user_id', userId)
+                .select('log_id, user_id, admin_id, action_performed');
+            
+            if (result.error) {
+                console.error('Error updating audit_log user_id references:', result.error);
+                throw new Error('Failed to update audit log user references: ' + result.error.message);
             }
+            
+            userIdUpdateData = result.data;
+            console.log(`Updated user_id references (attempt ${userIdAttempts}):`, userIdUpdateData);
+            
+            // Check if any still exist
+            const { data: stillExistUser } = await supabase
+                .from('audit_log')
+                .select('log_id')
+                .eq('user_id', userId);
+            
+            if (!stillExistUser || stillExistUser.length === 0) break;
+            
+        } while (userIdAttempts < 3);
+        
+        // Update admin_id references - try multiple times to ensure it works
+        let adminIdAttempts = 0;
+        let adminIdUpdateData;
+        do {
+            adminIdAttempts++;
+            console.log(`Attempt ${adminIdAttempts} to update admin_id references...`);
+            
+            const result = await supabase
+                .from('audit_log')
+                .update({ admin_id: null })
+                .eq('admin_id', userId)
+                .select('log_id, user_id, admin_id, action_performed');
+            
+            if (result.error) {
+                console.error('Error updating audit_log admin_id references:', result.error);
+                throw new Error('Failed to update audit log admin references: ' + result.error.message);
+            }
+            
+            adminIdUpdateData = result.data;
+            console.log(`Updated admin_id references (attempt ${adminIdAttempts}):`, adminIdUpdateData);
+            
+            // Check if any still exist
+            const { data: stillExistAdmin } = await supabase
+                .from('audit_log')
+                .select('log_id')
+                .eq('admin_id', userId);
+            
+            if (!stillExistAdmin || stillExistAdmin.length === 0) break;
+            
+        } while (adminIdAttempts < 3);
+        
+        // Wait a moment for database consistency
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Double-check that no references remain
+        const { data: remainingRefs, error: recheckError } = await supabase
+            .from('audit_log')
+            .select('log_id, user_id, admin_id')
+            .or(`user_id.eq.${userId},admin_id.eq.${userId}`);
+        
+        if (recheckError) {
+            console.error('Error rechecking references:', recheckError);
+        } else if (remainingRefs && remainingRefs.length > 0) {
+            console.error('Still found references after update:', remainingRefs);
+            
+            // Final desperate attempt - delete these entries entirely
+            console.log('Attempting to delete remaining references...');
+            const { error: deleteRefsError } = await supabase
+                .from('audit_log')
+                .delete()
+                .or(`user_id.eq.${userId},admin_id.eq.${userId}`);
+            
+            if (deleteRefsError) {
+                console.error('Failed to delete remaining references:', deleteRefsError);
+                throw new Error(`Still found ${remainingRefs.length} audit log entries referencing this user after multiple update attempts`);
+            } else {
+                console.log('Successfully deleted remaining references');
+            }
+        }
+        
+        console.log('All audit log references handled successfully');
+        
+        // Now delete the user from the users table
+        const { data, error: deleteError } = await supabase
+            .from('users')
+            .delete()
+            .eq('id', userId);
+        
+        if (deleteError) {
+            console.error('Error deleting user from database:', deleteError);
+            throw new Error('Failed to delete user: ' + deleteError.message);
+        }
+        
+        console.log('User deletion result:', data);
+        console.log('User deleted successfully!');
+        
+        // Clean up audit log entries with null values for all three fields
+        console.log('Cleaning up audit log entries with null values...');
+        const { data: auditCleanupData, error: auditCleanupError } = await supabase
+            .from('audit_log')
+            .delete()
+            .filter('user_id', 'is', null)
+            .filter('admin_id', 'is', null)
+            .filter('user_name', 'is', null);
+        
+        if (auditCleanupError) {
+            console.error('Error cleaning up audit log:', auditCleanupError);
+            // Don't throw here as the main deletion was successful
+        } else {
+            console.log('Audit log cleanup completed:', auditCleanupData);
+        }
+        
+        alert('User deleted successfully!');
+        goto('/admin/manage');
+        
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
+}
 </script>
 
 <div class="app-container">
@@ -217,7 +454,7 @@
                         type="text"
                         class="border rounded-xl px-2 py-1 ml-4 w-64"
                         bind:value={tempUser.email}
-                        placeholder="Full Name"
+                        placeholder="Email"
                     />
                     </label>
                     <label class="mb-2">
@@ -226,7 +463,7 @@
                         type="text"
                         class="border rounded-xl px-2 py-1 ml-4 w-64"
                         bind:value={tempUser.age}
-                        placeholder="Full Name"
+                        placeholder="Age"
                     />
                     </label>
                     <label class="mb-2">
@@ -235,7 +472,7 @@
                         type="text"
                         class="border rounded-xl px-2 py-1 ml-4 w-64"
                         bind:value={tempUser.residence}
-                        placeholder="Full Name"
+                        placeholder="Residence"
                     />
                     </label>
                 </div>
