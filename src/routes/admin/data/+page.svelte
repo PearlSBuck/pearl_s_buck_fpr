@@ -1,9 +1,10 @@
 <!--+page.svelte-->
 <script lang="ts">
   import Header from '../../../components/Header.svelte';
-  import Record from '../../../components/Record.svelte'; 
+  import RecordComponent from '../../../components/RecordComponent.svelte'; 
   import Confirm from '../../../components/Confirm.svelte';
   import { deleteSCRecords } from './recordQuery';
+  import * as XLSX from 'xlsx';
   import { get } from 'svelte/store';  
   import { goto } from '$app/navigation';
   import { selectedRecords } from './selectRecord';
@@ -81,43 +82,121 @@
     $selectedRecords.has(record.sc_id)
   );
 
-  function exportFullCSV(fullData: any[]) {
-    const header = Object.keys(fullData[0]).join(',') + '\n';
-    const rows = fullData
-      .map((row) =>
-        Object.values(row)
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+  function flattenObject(obj: any, prefix = ''): Record<string, any> {
+    return Object.keys(obj).reduce((acc: any, key) => {
+      const value = obj[key];
+      const prefixedKey = prefix ? `${prefix}.${key}` : key;
+
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        Object.assign(acc, flattenObject(value, prefixedKey));
+      } else if (Array.isArray(value)) {
+        acc[prefixedKey] = value
+          .map((item, index) => {
+            if (typeof item === 'object') {
+              return JSON.stringify(item);
+            } else {
+              return String(item);
+            }
+          })
+          .join('; ');
+      } else {
+        acc[prefixedKey] = value;
+      }
+
+      return acc;
+    }, {});
+  }
+
+  function exportFullCSV(data: any[]) {
+    const explodedRows: any[] = [];
+
+    data.forEach(entry => {
+      const { fis_answers_list, ...rest } = entry;
+
+      (fis_answers_list || []).forEach((answerItem: any) => {
+        const base = flattenObject(rest);
+        const answerFlattened = flattenObject(answerItem, 'fis_answers_list');
+
+        explodedRows.push({ ...base, ...answerFlattened });
+      });
+    });
+
+    const headersSet = new Set<string>();
+    explodedRows.forEach(row => {
+      Object.keys(row).forEach(key => headersSet.add(key));
+    });
+    const headers = Array.from(headersSet);
+
+    const headerLine = headers.join(',') + '\n';
+    const rows = explodedRows
+      .map(row =>
+        headers
+          .map(key =>
+            `"${String(row[key] ?? '').replace(/"/g, '""')}"`
+          )
           .join(',')
       )
       .join('\n');
 
-    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const blob = new Blob([headerLine + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
 
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'full-records.csv';
+    link.download = 'records.csv';
     link.click();
-}
+  }
+
+  function exportJSONToExcel<T extends object>(
+    jsonData: T[],
+    fileName: string = 'data.xlsx',
+    sheetName: string = 'Sheet1'
+  ): void {
+    if (!Array.isArray(jsonData) || jsonData.length === 0) {
+      console.error('Invalid or empty JSON data');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(jsonData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    XLSX.writeFile(workbook, fileName);
+  }
 
 
   async function handleExport() {
     const selectedIds = Array.from($selectedRecords);
 
-    const res = await fetch('/admin/data/export', {
+    if(selected === 'intro_sheet'){
+      const res = await fetch('/admin/data/export-fis', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: selectedIds })
-    });
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      alert('Failed to fetch export data');
-      return;
+      if (!res.ok) {
+        alert('Failed to fetch export data');
+        return;
+      }
+      exportFullCSV(data);
     }
+    else if(selected === 'progress_report'){
+        const res = await fetch('/admin/data/export-fpr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds })
+        });
 
-    exportFullCSV(data);
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert('Failed to fetch export data');
+          return;
+        }
+        exportFullCSV(data);
+    }
   }
 </script>
 
@@ -279,12 +358,12 @@
       <div class="flex flex-col items-center justify-center gap-4 mt-16">
         {#if selected === 'progress_report'}
             {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
+              <RecordComponent name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
             {/each}
             
         {:else if selected === 'intro_sheet'}
             {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
+              <RecordComponent name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
             {/each}
         {/if}
       </div>
