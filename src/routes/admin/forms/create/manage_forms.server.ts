@@ -17,7 +17,7 @@ export async function createForm(data: IForms): Promise<string> {
 
 export async function createFormSection(
   formId: string,
-  data: Omit<IFormSections, "id" | "formid">
+  data: IFormSections
 ): Promise<string> {
   const values = await pgDb.query(
     "INSERT INTO public.form_sections (title, formId, orderIndex)VALUES ($1, $2, $3) RETURNING id",
@@ -28,7 +28,7 @@ export async function createFormSection(
 }
 
 export async function createFormFieldsPerSection(
-  formFields: Omit<IFormFields, "id" | "sectionid" | "formid">[],
+  formFields: IFormFields[],
   formId: string,
   sectionId: string
 ) {
@@ -50,31 +50,4 @@ export async function createFormFieldsPerSection(
       ]
     );
   }
-}
-
-export async function updateFormTitle(data: IForms) {
-  await pgDb.query(
-    `UPDATE public.forms SET title = $1 WHERE id = $2`,
-    [data.title, data.id]
-  );
-}
-
-export async function updateFormSectionTitle(data: IFormSections) {
-  await pgDb.query(
-    `UPDATE public.form_sections SET title = $1 WHERE id = $2`,
-    [data.title, data.id]
-  );
-}
-
-export async function updateFormSectionIndex(data: IFormSections, index: number) {
-  await pgDb.query(
-    `UPDATE public.form_sections SET orderIndex = $1 WHERE id = $2`,
-    [index, data.id]
-  );
-}
-
-export async function updateField(data: IFormFields) {
-  await pgDb.query(
-    `UPDATE public.form_fields SET `
-  )
 }

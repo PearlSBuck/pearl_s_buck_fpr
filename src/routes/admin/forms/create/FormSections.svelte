@@ -1,8 +1,7 @@
 <svelte:options runes={true} />
 <script lang='ts'>
     import type { IFormSections, IFormFields, Options } from "./model.js";
-    let {id,
-         formId,
+    let {
          title,
          orderIndex,
          onFieldsChange = () => {}
@@ -33,9 +32,6 @@
     // initializing the form field
     function createFieldHandler() {
         currentField = {
-            id: "", // placeholder
-            formid: formId,
-            sectionid: id,
             label: "",
             name: "",
             placeholder: undefined,
@@ -43,7 +39,7 @@
             value: "",
             options: undefined,
             type: "",
-            orderindex: 0
+            orderindex: formFields.length,
         };
         showFieldModal = true;
     }
@@ -164,35 +160,37 @@
 </div>
 <div>
     {#each formFields as field, index}
-        <div class="flex pt-1">
-            <!-- svelte-ignore a11y_consider_explicit_label -->
-            <button onclick={() => editFieldHandler(index)} class="pt-1 cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 30 30" stroke-width="1.5" stroke="currentColor" class="size-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                </svg>
-            </button> 
-            <div class="bg-[#1A5A9E] text-white rounded-lg w-[80px] text-center">
-                {#if field.type === "text"}
-                    Text
-                {:else if field.type === "number"}
-                    Number
-                {:else if field.type === "date"}
-                    Date
-                {:else if field.type === "multiple_choice"}
-                    <p class="text-xs">Multiple Choice</p>
-                {:else if field.type === "checkbox"}
-                    Checkbox
-                {:else}
-                    NaN
-                {/if}
+        <div class="flex flex-col md:flex-row pt-1">
+            <div class="flex">
+                <!-- svelte-ignore a11y_consider_explicit_label -->
+                <button onclick={() => editFieldHandler(index)} class="pt-1 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 30 30" stroke-width="1.5" stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                    </svg>
+                </button> 
+                <div class="bg-[#1A5A9E] text-white rounded-lg w-[80px] text-center">
+                    {#if field.type === "text"}
+                        Text
+                    {:else if field.type === "number"}
+                        Number
+                    {:else if field.type === "date"}
+                        Date
+                    {:else if field.type === "multiple_choice"}
+                        <p class="text-xs">Multiple Choice</p>
+                    {:else if field.type === "checkbox"}
+                        Checkbox
+                    {:else}
+                        NaN
+                    {/if}
+                </div>
             </div>
-            <p class="text-[#697077] px-2">{field.label}:</p>
+            <p class="text-[#697077] md:px-2">{field.label}:</p>
         </div>
         {#if field.options}
             <div class="pb-1">
                 {#each field.options as option}
                     <div>
-                        <label class="ml-28">
+                        <label class="ml-2 md:ml-28">
                             {#if field.type === "multiple_choice"}
                                 <input type="radio" id="option" name="option" disabled />
                             {:else if field.type === "checkbox"}
@@ -213,7 +211,7 @@
 <!-- modal for fields -->
 {#if showFieldModal && (currentField || editField)}
     <div class="fixed top-0 left-0 h-full w-full flex justify-center items-center bg-black/25">      
-        <div class="absolute w-2/7 shadow-xl/10 rounded-lg bg-white p-7">
+        <div class="absolute w-full md:w-2/7 shadow-md/20 rounded-lg bg-white p-7">
             {#if !edit && currentField}
                 <div class="flex justify-center">
                     <select id="type" name="type" bind:value={currentField.type} >
