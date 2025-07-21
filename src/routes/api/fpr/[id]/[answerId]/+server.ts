@@ -1,34 +1,34 @@
 import { json } from '@sveltejs/kit';
-import { supabaseAdmin } from '$lib/db'; 
+import { supabaseAdmin } from '$lib/db';
 import type { RequestHandler } from './$types';
 
 // Add logging to debug
-console.log('API endpoint registered at /api/fis/[id]');
+console.log('API endpoint registered for FPR at /api/fpr/[id]/[answerId]');
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
-    console.log('PATCH request received with params:', params);
+    console.log('PATCH request received for FPR with params:', params);
 
     const childId = parseInt(params.id);
+    const answerId = params.answerId;
     
-    if (!childId || isNaN(childId)) {
-        return json({ error: 'Invalid child ID' }, { status: 400 });
+    if (!childId || isNaN(childId) || !answerId) {
+        return json({ error: 'Invalid parameters' }, { status: 400 });
     }
     
     try {
-        const { answerId, answers } = await request.json() as { 
-            answerId: string; 
+        const { answers } = await request.json() as { 
             answers: Record<string, string | string[]> 
         };
         
-        if (!answerId || !answers) {
+        if (!answers) {
             return json({ error: 'Missing required fields' }, { status: 400 });
         }
         
-        console.log('Looking for record with sc_id:', childId, 'and answer_id:', answerId);
+        console.log('Looking for FPR record with sc_id:', childId, 'and answer_id:', answerId);
         
-        // Get existing FIS record to verify it exists
+        // Get existing FPR record to verify it exists
         const { data: existingRecord, error: recordError } = await supabaseAdmin
-            .from('fis_answers')
+            .from('fpr_answers')
             .select('*')
             .eq('sc_id', childId)
             .eq('answer_id', answerId)
@@ -44,7 +44,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
             return json({ error: 'Record not found' }, { status: 404 });
         }
         
-        console.log('Found record:', existingRecord);
+        console.log('Found FPR record:', existingRecord);
         console.log('Updating with answers:', Object.keys(answers).length);
         
         // Track successful updates
@@ -59,7 +59,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
             
             // First check if the row exists
             const { data: existingAnswer, error: checkError } = await supabaseAdmin
-                .from('fis_answers_list')
+                .from('fpr_answers_list')
                 .select('*')
                 .eq('answer_id', answerId)
                 .eq('question_id', questionId)
@@ -70,7 +70,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
                 
                 // Row doesn't exist, so INSERT instead of UPDATE
                 const { data: insertData, error: insertError } = await supabaseAdmin
-                    .from('fis_answers_list')
+                    .from('fpr_answers_list')
                     .insert({
                         answer_id: answerId,
                         question_id: questionId,
@@ -87,7 +87,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
             } else {
                 // Row exists, proceed with UPDATE
                 const { data, error: updateError } = await supabaseAdmin
-                    .from('fis_answers_list')
+                    .from('fpr_answers_list')
                     .update({ answer: formattedAnswer })
                     .eq('answer_id', answerId)
                     .eq('question_id', questionId)
@@ -115,12 +115,12 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
         
         return json({
             success: true,
-            message: `FIS record updated successfully (${successCount} fields)`,
+            message: `FPR record updated successfully (${successCount} fields)`,
             updatedCount: successCount
         });
         
     } catch (err) {
-        console.error('Error updating FIS record:', err);
+        console.error('Error updating FPR record:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         return json({ 
             error: 'Failed to update record',
@@ -129,22 +129,24 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
     }
 }
 
-// Add DELETE handler for FIS records
+// Add DELETE handler for FPR records
 export const DELETE: RequestHandler = async ({ params }) => {
-    console.log('DELETE request received for FIS with params:', params);
+    console.log('DELETE request received for FPR with params:', params);
 
     const childId = parseInt(params.id);
+    const answerId = params.answerId;
     
-    if (!childId || isNaN(childId)) {
-        return json({ error: 'Invalid child ID' }, { status: 400 });
+    if (!childId || isNaN(childId) || !answerId) {
+        return json({ error: 'Invalid parameters' }, { status: 400 });
     }
     
     try {
         // First verify the record exists
         const { data: existingRecord, error: recordError } = await supabaseAdmin
-            .from('fis_answers')
-            .select('answer_id')
+            .from('fpr_answers')
+            .select('*')
             .eq('sc_id', childId)
+            .eq('answer_id', answerId)
             .single();
             
         if (recordError) {
@@ -153,35 +155,35 @@ export const DELETE: RequestHandler = async ({ params }) => {
         }
         
         if (!existingRecord) {
-            console.error('No record found for sc_id:', childId);
+            console.error('No record found for sc_id:', childId, 'and answer_id:', answerId);
             return json({ error: 'Record not found' }, { status: 404 });
         }
         
-        console.log('Found record to delete, answer_id:', existingRecord.answer_id);
+        console.log('Found record to delete:', existingRecord);
         
         // Due to foreign key constraints, we need to delete in this order:
-        // 1. First delete all answers in fis_answers_list
+        // 1. First delete all answers in fpr_answers_list
         const { error: answersError } = await supabaseAdmin
-            .from('fis_answers_list')
+            .from('fpr_answers_list')
             .delete()
-            .eq('answer_id', existingRecord.answer_id);
+            .eq('answer_id', answerId);
             
         if (answersError) {
-            console.error('Error deleting FIS answers:', answersError);
+            console.error('Error deleting FPR answers:', answersError);
             return json({ 
                 error: 'Failed to delete answers', 
                 details: answersError.message 
             }, { status: 500 });
         }
         
-        // 2. Then delete the main FIS record
+        // 2. Then delete the main FPR record
         const { error: recordDeleteError } = await supabaseAdmin
-            .from('fis_answers')
+            .from('fpr_answers')
             .delete()
-            .eq('sc_id', childId);
+            .eq('answer_id', answerId);
             
         if (recordDeleteError) {
-            console.error('Error deleting FIS record:', recordDeleteError);
+            console.error('Error deleting FPR record:', recordDeleteError);
             return json({ 
                 error: 'Failed to delete record', 
                 details: recordDeleteError.message 
@@ -190,11 +192,11 @@ export const DELETE: RequestHandler = async ({ params }) => {
         
         return json({
             success: true,
-            message: 'FIS record deleted successfully'
+            message: 'FPR record deleted successfully'
         });
         
     } catch (err) {
-        console.error('Error deleting FIS record:', err);
+        console.error('Error deleting FPR record:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         return json({ 
             error: 'Failed to delete record',

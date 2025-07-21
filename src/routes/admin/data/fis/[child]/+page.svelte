@@ -100,11 +100,28 @@
     }
 
     // Handle Delete button click
-    function handleDelete() {
-        if (confirm(`Are you sure you want to delete the record for ${record.sc_name}?`)) {
-            // This will be implemented with backend functionality later
-            // For now, just log the action
-            console.log('Delete record:', record.sc_id);
+    async function handleDelete() {
+        if (confirm(`Are you sure you want to delete the record for ${record.sc_name}?\nThis action cannot be undone.`)) {
+            try {
+                const response = await fetch(`/api/fis/${record.sc_id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to delete record');
+                }
+                
+                alert('Record deleted successfully');
+                
+                // Navigate back to the data page
+                goto('/admin/data');
+                
+            } catch (err) {
+                console.error('Delete error:', err);
+                alert(err instanceof Error ? err.message : 'An error occurred during deletion');
+            }
         }
     }
 

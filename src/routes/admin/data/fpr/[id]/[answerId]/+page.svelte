@@ -60,14 +60,32 @@
     // Handle Edit button click
     function handleEdit() {
         console.log('Edit record:', record.answer_id);
-        // Uncomment when ready to implement:
-        // goto(`/admin/data/fpr/${record.sc_id}/${record.answer_id}/edit`);
+        goto(`/admin/data/fpr/${record.sc_id}/${record.answer_id}/edit`);
     }
     
     // Handle Delete button click
-    function handleDelete() {
-        if (confirm(`Are you sure you want to delete this progress report for ${record.sc_name}?`)) {
-            console.log('Delete record:', record.answer_id);
+    async function handleDelete() {
+        if (confirm(`Are you sure you want to delete this progress report for ${record.sc_name}?\nThis action cannot be undone.`)) {
+            try {
+                const response = await fetch(`/api/fpr/${record.sc_id}/${record.answer_id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to delete record');
+                }
+                
+                alert('Record deleted successfully');
+                
+                // Navigate back to the child's FPR listing page
+                goto(`/admin/data/fpr/${record.sc_id}`);
+                
+            } catch (err) {
+                console.error('Delete error:', err);
+                alert(err instanceof Error ? err.message : 'An error occurred during deletion');
+            }
         }
     }
     
