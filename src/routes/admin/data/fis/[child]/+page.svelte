@@ -45,6 +45,7 @@
 
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
     import Header from '../../../../../components/Header.svelte';
 
     // Get data from the server load function
@@ -94,11 +95,8 @@
     }
     // Handle Edit button click
     function handleEdit() {
-        // This will be implemented with backend functionality later
-        // For now, just log the action
         console.log('Edit record:', record.sc_id);
-        // Uncomment when ready to implement:
-        // goto(`/admin/data/fis/${record.sc_id}/edit`);
+        goto(`/admin/data/fis/${record.sc_id}/edit`);
     }
 
     // Handle Delete button click
