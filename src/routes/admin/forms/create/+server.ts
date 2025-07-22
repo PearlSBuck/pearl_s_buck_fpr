@@ -27,7 +27,7 @@ export const POST = async ({ request }) => {
         const sectionId = await createFormSection(formId, section);
 
         // 3. For each field in this section, save fields
-        const fields = sectionFields[section.id] || [];
+        const fields = sectionFields[section.orderIndex] || [];
         if (fields.length > 0) {
             await createFormFieldsPerSection(fields, formId, sectionId);
         }
