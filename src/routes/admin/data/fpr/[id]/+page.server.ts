@@ -14,6 +14,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
     .from("fpr_answers")
     .select(
       `
+        answer_id,
         created_at,
         forms (
           title

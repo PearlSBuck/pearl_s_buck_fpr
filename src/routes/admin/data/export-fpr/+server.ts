@@ -1,6 +1,16 @@
 import { json } from "@sveltejs/kit";
 import { supabaseAdmin } from "$lib/db";
 
+type FPRRow = {
+  Assisted_By: string;
+  SC_ID: number;
+  fis_answers: { SC_Name: string }[] | null;
+  fpr_answers_list: {
+    Question: string;
+    Answer: string;
+  }[];
+};
+
 export async function POST({ request }) {
   const { ids } = await request.json();
 
@@ -23,24 +33,13 @@ export async function POST({ request }) {
         Answer:answer
       )
     `)
-    .in("sc_id", ids);
+    .in("answer_id", ids);
 
-    const reorderedData = data?.map(row => ({
-      Assisted_By: row.Assisted_By,
-      SC_ID: row.SC_ID,
-      SC_Name: row.fis_answers?.[0]?.SC_Name,
-      fpr_answers_list: row.fpr_answers_list?.map(answer => ({
-        Question: answer.Question, 
-        Answer: answer.Answer
-      }))
-    }));
-
-
-    console.log(reorderedData);
+    console.log("Data", data);
 
   if (error) {
     return json({ error: error.message }, { status: 500 });
   }
 
-  return json(reorderedData);
+  return json(data);
 }

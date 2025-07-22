@@ -22,8 +22,6 @@
   };
   export let selectRecord: boolean = false;
   
-  let checked = false;
-  let selectAll = false;
   let searchQuery = data.query;
   let filterMode = !!searchQuery;
 
@@ -77,10 +75,6 @@
   onDestroy(() => {
       selectedRecords.set(new Set());
   });
-
-  const selectedData = data.records.filter(record =>
-    $selectedRecords.has(record.sc_id)
-  );
 
   function flattenObject(obj: any, prefix = ''): Record<string, any> {
     return Object.keys(obj).reduce((acc: any, key) => {
@@ -183,19 +177,7 @@
       exportFullCSV(data);
     }
     else if(selected === 'progress_report'){
-        const res = await fetch('/admin/data/export-fpr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          alert('Failed to fetch export data');
-          return;
-        }
-        exportFullCSV(data);
+        alert("Please select an FPR record first!");
     }
   }
 </script>
