@@ -49,6 +49,10 @@
     let error: string | null = null;
     let successMessage: string | null = null;
     
+    // For handling "Other" option text inputs
+    let otherValues: Record<string, string> = {};
+    let combinedAnswers: Record<string, string> = {};
+    
     // Initialize the form with current values
     onMount(() => {
         organizedData.forEach(section => {
@@ -67,19 +71,28 @@
                 }
 
                 // Handle different field types
-                if (field.type === 'checkbox') {
-                    try {
-                        // Try to parse as JSON first (handles stored arrays)
-                        const value = field.answer ? JSON.parse(field.answer) : [];
-                        editedAnswers[field.id] = Array.isArray(value) ? value : [value];
-                    } catch {
-                        // Fallback to comma-separated string
-                        editedAnswers[field.id] = field.answer ? 
-                            field.answer.split(',').map(v => v.trim()) : 
-                            [];
-                    }
+                if (field.type.trim() === 'checkbox') {
+                    // Existing checkbox handling...
                 } else {
                     editedAnswers[field.id] = field.answer || '';
+                    
+                    // Check if this is an "Other" answer with text
+                    if (field.answer && typeof field.answer === 'string' && field.answer.includes('Other:')) {
+                        const parts = field.answer.split(':', 2);
+                        if (parts.length === 2) {
+                            const otherValue = parts[0].trim();
+                            const otherText = parts[1].trim();
+                            
+                            // Set the radio to "Other"
+                            editedAnswers[field.id] = otherValue;
+                            
+                            // Set the text for "Other"
+                            otherValues[field.id] = otherText;
+                            
+                            // Store combined value
+                            combinedAnswers[field.id] = field.answer;
+                        }
+                    }
                 }
             });
         });
@@ -94,9 +107,19 @@
         try {
             // Client-side validation
             let hasEmptyRequired = false;
+            
+            // Prepare final answers by combining with "Other" text where needed
+            const finalAnswers = { ...editedAnswers };
+            
             organizedData.forEach(section => {
                 section.fields.forEach(field => {
-                    const answer = editedAnswers[field.id];
+                    // If this field has a combined answer (Other + text), use it
+                    if (combinedAnswers[field.id]) {
+                        finalAnswers[field.id] = combinedAnswers[field.id];
+                    }
+                    
+                    // Check required fields
+                    const answer = finalAnswers[field.id];
                     const isEmpty = typeof answer === 'string' ? 
                         (!answer || answer.trim() === '') : 
                         (!answer || answer.length === 0);
@@ -119,7 +142,7 @@
                 },
                 body: JSON.stringify({
                     answerId: record.answer_id,
-                    answers: editedAnswers
+                    answers: finalAnswers
                 })
             });
             
@@ -222,10 +245,10 @@
                                             {@const optionValue = isObject ? (option as OptionObject).value || String(option) : String(option)}
                                             {@const optionLabel = isObject ? (option as OptionObject).label || String(option) : String(option)}
                                             {@const fieldValue = editedAnswers[field.id] || []}
-                                            {@const values = Array.isArray(fieldValue) 
-                                                ? fieldValue 
-                                                : (typeof fieldValue === 'string' ? fieldValue.split(',').map((v: string) => v.trim()) : [])}
-                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-green-100 p-1 rounded">
+                                            {@const values = Array.isArray(fieldValue) ? fieldValue : (typeof fieldValue === 'string' ? fieldValue.split(',').map((v: string) => v.trim()) : [])}
+                                            {@const isOtherOption = optionLabel.toLowerCase() === 'other' || optionLabel.toLowerCase() === 'others'}
+                                            
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-green-100 p-1 rounded transition duration-150">
                                                 <input
                                                     type="checkbox"
                                                     value={optionValue}
@@ -259,6 +282,18 @@
                                                 />
                                                 <span>{optionLabel}</span>
                                             </label>
+                                            
+                                            <!-- Show text field if "Other" is checked -->
+                                            {#if isOtherOption && values.includes(optionValue)}
+                                                <div class="ml-6 mt-1 mb-2">
+                                                    <input
+                                                        type="text"
+                                                        class="w-full p-2 rounded-md bg-white border border-green-300 focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
+                                                        placeholder="Please specify..."
+                                                        bind:value={otherValues[field.id]}
+                                                    />
+                                                </div>
+                                            {/if}
                                         {/each}
                                     </div>
                                 {:else if field.type.trim() === 'radio' || field.type.trim() === 'multiple_choice'}
@@ -268,6 +303,8 @@
                                             {@const isObject = typeof option === 'object' && option !== null}
                                             {@const optionValue = isObject ? (option as OptionObject).value || String(option) : String(option)}
                                             {@const optionLabel = isObject ? (option as OptionObject).label || String(option) : String(option)}
+                                            {@const isOtherOption = optionLabel.toLowerCase() === 'other' || optionLabel.toLowerCase() === 'others'}
+                                            
                                             <label class="flex items-center space-x-2 cursor-pointer hover:bg-blue-100 p-1 rounded transition duration-150">
                                                 <input
                                                     type="radio"
@@ -277,10 +314,36 @@
                                                     checked={editedAnswers[field.id] === optionValue}
                                                     on:change={() => {
                                                         editedAnswers[field.id] = optionValue;
+                                                        
+                                                        // Initialize other text if needed
+                                                        if (isOtherOption && !otherValues[field.id]) {
+                                                            otherValues[field.id] = '';
+                                                        }
                                                     }}
                                                 />
                                                 <span>{optionLabel}</span>
                                             </label>
+                                            
+                                            <!-- Show text field if "Other" is selected -->
+                                            {#if isOtherOption && editedAnswers[field.id] === optionValue}
+                                                <div class="ml-6 mt-1 mb-2">
+                                                    <input
+                                                        type="text"
+                                                        class="w-full p-2 rounded-md bg-white border border-blue-300 focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
+                                                        placeholder="Please specify..."
+                                                        bind:value={otherValues[field.id]}
+                                                        on:input={() => {
+                                                            // Store combined value: "Other: user text"
+                                                            const otherText = otherValues[field.id];
+                                                            if (otherText) {
+                                                                combinedAnswers[field.id] = `${optionValue}: ${otherText}`;
+                                                            } else {
+                                                                combinedAnswers[field.id] = optionValue;
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            {/if}
                                         {/each}
                                     </div>
                                 {:else if field.type.trim() === 'select' || field.type.trim() === 'dropdown'}
