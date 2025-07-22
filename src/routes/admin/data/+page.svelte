@@ -1,4 +1,20 @@
 <!--+page.svelte-->
+<style>
+  /* Remove default arrow from select boxes */
+  select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: none;
+    padding-right: 1rem;
+  }
+  
+  /* For IE 10 and 11 */
+  select::-ms-expand {
+    display: none;
+  }
+</style>
+
 <script lang="ts">
   import Header from '../../../components/Header.svelte';
   import Record from '../../../components/Record.svelte'; 
@@ -26,6 +42,12 @@
   let searchQuery = data.query;
   let filterMode = !!searchQuery;
 
+  // Add export format selection
+  let exportFormat: 'csv' | 'pdf' = 'csv';
+
+  // Track whether an export is in progress
+  let isExporting = false;
+  
   function onDeleteConfirmed() {
     console.log("Deleted:", Array.from(get(selectedRecords)));
     selectedRecords.set(new Set()); // clear selection
@@ -101,23 +123,95 @@
 }
 
 
+  // Update the export function to handle individual PDF exports
   async function handleExport() {
+    // Prevent multiple exports at once
+    if (isExporting) return;
+    
+    // Ensure records are selected
     const selectedIds = Array.from($selectedRecords);
-
-    const res = await fetch('/admin/data/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: selectedIds })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert('Failed to fetch export data');
+    if (selectedIds.length === 0) {
+      alert('Please select at least one record to export');
       return;
     }
-
-    exportFullCSV(data);
+    
+    try {
+      isExporting = true;
+      
+      if (exportFormat === 'csv') {
+        // CSV export - continue using bulk export
+        const res = await fetch('/admin/data/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            ids: selectedIds,
+            format: 'csv' 
+          })
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to export data');
+        }
+        
+        const data = await res.json();
+        if (data && data.length > 0) {
+          exportFullCSV(data);
+        } else {
+          alert('No data to export');
+        }
+      } else if (exportFormat === 'pdf') {
+        // PDF export - process each record individually
+        // Show progress indicator for multiple records
+        if (selectedIds.length > 1) {
+          alert(`Exporting ${selectedIds.length} files. Please wait...`);
+        }
+        
+        // Process each record individually
+        for (const id of selectedIds) {
+          // Get record info for filename
+          const record = data.records.find(r => r.sc_id == id);
+          if (!record) continue;
+          
+          const res = await fetch('/admin/data/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              ids: [id], // Send just one ID
+              format: 'pdf' 
+            })
+          });
+          
+          if (!res.ok) {
+            console.error(`Failed to export record ${id}`);
+            continue;
+          }
+          
+          // Download the PDF file
+          const blob = await res.blob();
+          const cleanName = record.sc_name.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+          const filename = `${record.sc_id}_${cleanName}.pdf`;
+          
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          link.click();
+          URL.revokeObjectURL(url);
+          
+          // Add a small delay between downloads to avoid overwhelming the browser
+          if (selectedIds.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to export data: ${errorMessage}`);
+    } finally {
+      isExporting = false;
+    }
   }
 </script>
 
@@ -229,12 +323,23 @@
           />
           <!-- Select Records -->
             <button class="text-[#1A5A9E] font-bold text-lg cursor-pointer" on:click={() => selectRecord = !selectRecord}>Select</button>
-              <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
-                </svg>
-                <span>Export</span>
-              </button>
+              <!-- Mobile export -->
+              <div class="flex items-center gap-2">
+                <select 
+                  bind:value={exportFormat}
+                  class="bg-white text-[#1A5A9E] border border-[#1A5A9E] rounded-md p-1 outline-none cursor-pointer text-sm"
+                >
+                  <option value="csv">CSV</option>
+                  <option value="pdf">PDF</option>
+                </select>
+                
+                <button 
+                  class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer"
+                  on:click={handleExport}
+                >
+                  <span>Export</span>
+                </button>
+              </div>
         </div>
         <!-- Desktop-->
         <div class="absolute lg:top-8 lg:right-5 sm:top-6 sm:right-5 top-4 right-5 flex items-center gap-2 p-2">
@@ -253,12 +358,28 @@
                 deleteMessage="Are you sure you want to delete the selected records?"
               />
               <button class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectRecord ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`} on:click={() => selectRecord = !selectRecord}>Select</button>
-              <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" on:click={handleExport} aria-label="Export Selected Records">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
-                </svg>
-                <span>Export</span>
-              </button>
+              
+              <div class="hidden md:flex items-center gap-4">
+                <!-- Format selection dropdown -->
+                <div class="relative">
+                  <select 
+                    bind:value={exportFormat}
+                    class="text-[#1A5A9E] border border-[#1A5A9E] rounded-md p-1 px-3 outline-none cursor-pointer"
+                  >
+                    <option value="csv">CSV Format</option>
+                    <option value="pdf">PDF Format</option>
+                  </select>
+                </div>
+                
+                <!-- Export button -->
+                <button 
+                  class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" 
+                  on:click={handleExport}
+                  aria-label="Export Selected Records"
+                >
+                  <span>Export</span>
+                </button>
+              </div>
             </div>
             <div class="flex justify-between items-center gap-2 lg:top-8 lg:right-4 top-4 right-2">
               <span class="text-xs lg:text-lg md:text-md sm:text-sm whitespace-nowrap">{data.currentPage} of {data.totalPages}</span>
