@@ -35,11 +35,30 @@ export async function POST({ request }) {
     `)
     .in("answer_id", ids);
 
-    console.log("Data", data);
+    const transformed = data?.map((row) => {
+      const base = {
+        SC_ID: row.SC_ID,
+        SC_Name: row.fis_answers?.SC_Name ?? "",
+        Filled_out_by: row.Assisted_By,
+      };
+
+      const qas: Record<string, string> = {};
+      row.fpr_answers_list.forEach((item, index) => {
+        qas[`Question${index + 1}`] = Array.isArray(item.Question)
+          ? item.Question.map((q: { Name: string }) => q.Name).join(", ")
+          : item.Question;
+        qas[`Answer${index + 1}`] = item.Answer;
+      });
+
+      return {
+        ...base,
+        ...qas,
+      };
+  });
 
   if (error) {
     return json({ error: error.message }, { status: 500 });
   }
 
-  return json(data);
+  return json(transformed);
 }

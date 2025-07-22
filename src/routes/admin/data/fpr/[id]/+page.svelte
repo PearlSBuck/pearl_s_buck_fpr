@@ -1,7 +1,6 @@
 <script lang="ts">
   import Header from '../../../../../components/Header.svelte'; // adjust the paths as needed
-  import Record from '../../../../../components/RecordComponent.svelte'; 
-  import Year from '../../../../../components/Year.svelte';   
+    import Year from '../../../../../components/Year.svelte';   
   import Confirm from '../../../../../components/Confirm.svelte';   
   import { goto } from '$app/navigation';
   import { selectedRecords } from '../../selectFPRRecord';
@@ -61,33 +60,49 @@
     }, {});
   }
 
-  function exportFullCSV(data: any[]) {
-    const explodedRows: any[] = [];
+  function sanitizeData(data: any[]) {
+    return data.map(entry => {
+      const newEntry: Record<string, any> = {};
 
-    data.forEach(entry => {
-      const { fpr_answers_list, ...rest } = entry;
+      for (const key in entry) {
+        if (!Object.prototype.hasOwnProperty.call(entry, key)) continue;
 
-      (fpr_answers_list || []).forEach((answerItem: any) => {
-        const base = flattenObject(rest);
-        const answerFlattened = flattenObject(answerItem, 'fpr_answers_list');
+        const value = entry[key];
 
-        explodedRows.push({ ...base, ...answerFlattened });
-      });
+        // If value is object and has Name property (e.g., Question1)
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          'Name' in value
+        ) {
+          newEntry[key] = value.Name;
+        } else {
+          newEntry[key] = value;
+        }
+      }
+
+      return newEntry;
     });
+  }
 
+
+  function exportFullCSV(data: any[]) {
     const headersSet = new Set<string>();
-    explodedRows.forEach(row => {
+
+    data.forEach(row => {
       Object.keys(row).forEach(key => headersSet.add(key));
     });
-    const headers = Array.from(headersSet);
 
+    const headers = Array.from(headersSet);
     const headerLine = headers.join(',') + '\n';
-    const rows = explodedRows
+
+    const rows = data
       .map(row =>
         headers
-          .map(key =>
-            `"${String(row[key] ?? '').replace(/"/g, '""')}"`
-          )
+          .map(key => {
+            const value = row[key];
+            return `"${String(value ?? '').replace(/"/g, '""')}"`;
+          })
           .join(',')
       )
       .join('\n');
@@ -101,6 +116,7 @@
     link.click();
   }
 
+
   async function handleExport() {
     const selectedIds = Array.from($selectedRecords);
 
@@ -112,6 +128,8 @@
 
         const data = await res.json();
 
+        console.log("Received data", data);
+
         if (!res.ok) {
           alert('Failed to fetch export data');
           return;
@@ -119,7 +137,8 @@
         else{
           console.log("Exported successfully");
         }
-        exportFullCSV(data);
+        const cleaned = sanitizeData(data);
+        exportFullCSV(cleaned);
   }
 
 
