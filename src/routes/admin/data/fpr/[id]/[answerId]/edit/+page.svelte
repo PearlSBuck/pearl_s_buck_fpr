@@ -4,12 +4,17 @@
     import { onMount } from 'svelte';
     
     // Define proper types
+    interface OptionObject {
+        value: string;
+        label: string;
+    }
+
     interface FormField {
         id: string;
         label: string;
         type: string;
         orderindex: number;
-        options: string[] | null;
+        options: (string | OptionObject)[] | null;
         answer: string | null;
         placeholder?: string;
         required?: boolean;
@@ -53,7 +58,30 @@
         // Create an object with all current answers
         organizedData.forEach(section => {
             section.fields.forEach(field => {
-                editedAnswers[field.id] = field.answer || '';
+                // Parse options if they're stored as a string
+                if (field.options && typeof field.options === 'string') {
+                    try {
+                        field.options = JSON.parse(field.options as unknown as string) as (string | OptionObject)[];
+                    } catch {
+                        field.options = [field.options as unknown as string];
+                    }
+                }
+                
+                // Handle different field types
+                if (field.type.trim() === 'checkbox') {
+                    try {
+                        // Try to parse as JSON first (handles stored arrays)
+                        const value = field.answer ? JSON.parse(field.answer) : [];
+                        editedAnswers[field.id] = Array.isArray(value) ? value : [value];
+                    } catch {
+                        // Fallback to comma-separated string
+                        editedAnswers[field.id] = field.answer ? 
+                            field.answer.split(',').map(v => v.trim()) : 
+                            [];
+                    }
+                } else {
+                    editedAnswers[field.id] = field.answer || '';
+                }
             });
         });
     });
@@ -174,7 +202,7 @@
                                 </label>
                                 
                                 <!-- Dynamic Input Field -->
-                                {#if field.type === 'text' || field.type === 'email' || field.type === 'number' || field.type === 'date'}
+                                {#if field.type.trim() === 'text' || field.type.trim() === 'email' || field.type.trim() === 'number' || field.type.trim() === 'date'}
                                     <input
                                         type={field.type}
                                         id={`field-${field.id}`}
@@ -183,7 +211,7 @@
                                         placeholder={field.placeholder || ''}
                                         required={field.required || false}
                                     />
-                                {:else if field.type === 'textarea'}
+                                {:else if field.type.trim() === 'textarea'}
                                     <textarea
                                         id={`field-${field.id}`}
                                         class="w-full p-3 rounded-md bg-white border border-gray-300 focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
@@ -192,18 +220,22 @@
                                         required={field.required || false}
                                         rows="4"
                                     ></textarea>
-                                {:else if field.type === 'checkbox'}
-                                    <div class="space-y-2">
+                                {:else if field.type.trim() === 'checkbox'}
+                                    <div class="space-y-2 bg-green-50 p-3 rounded-md">
+                                        <p class="text-sm text-green-700 mb-2">Select all that apply:</p>
                                         {#each field.options || [] as option}
+                                            {@const isObject = typeof option === 'object' && option !== null}
+                                            {@const optionValue = isObject ? (option as OptionObject).value || String(option) : String(option)}
+                                            {@const optionLabel = isObject ? (option as OptionObject).label || String(option) : String(option)}
                                             {@const fieldValue = editedAnswers[field.id] || []}
                                             {@const values = Array.isArray(fieldValue) 
                                                 ? fieldValue 
                                                 : (typeof fieldValue === 'string' ? fieldValue.split(',').map((v: string) => v.trim()) : [])}
-                                            <label class="flex items-center space-x-2">
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-green-100 p-1 rounded transition duration-150">
                                                 <input
                                                     type="checkbox"
-                                                    value={option}
-                                                    checked={values.includes(option)}
+                                                    value={optionValue}
+                                                    checked={values.includes(optionValue)}
                                                     on:change={(e) => {
                                                         const target = e.target as HTMLInputElement;
                                                         let currentValues = editedAnswers[field.id] || [];
@@ -213,7 +245,6 @@
                                                             try {
                                                                 currentValues = JSON.parse(currentValues);
                                                             } catch {
-                                                                // Create a temporary string variable to handle the split safely
                                                                 const currentValuesStr = currentValues as string;
                                                                 currentValues = currentValuesStr.split(',').map((v: string) => v.trim());
                                                             }
@@ -223,33 +254,57 @@
                                                         const valueArray = Array.isArray(currentValues) ? currentValues : [currentValues];
                                                         
                                                         if (target.checked) {
-                                                            if (!valueArray.includes(option)) {
-                                                                editedAnswers[field.id] = [...valueArray, option];
+                                                            if (!valueArray.includes(optionValue)) {
+                                                                editedAnswers[field.id] = [...valueArray, optionValue];
                                                             }
                                                         } else {
-                                                            editedAnswers[field.id] = valueArray.filter((v: string) => v !== option);
+                                                            editedAnswers[field.id] = valueArray.filter((v: string) => v !== optionValue);
                                                         }
                                                     }}
                                                 />
-                                                <span>{option}</span>
+                                                <span>{optionLabel}</span>
                                             </label>
                                         {/each}
                                     </div>
-                                {:else if field.type === 'radio' || field.type === 'multiple_choice'}
-                                    <div class="space-y-2">
+                                {:else if field.type.trim() === 'radio' || field.type.trim() === 'multiple_choice'}
+                                    <div class="space-y-2 bg-blue-50 p-3 rounded-md">
+                                        <p class="text-sm text-blue-700 mb-2">Select one option:</p>
                                         {#each field.options || [] as option}
-                                            <label class="flex items-center space-x-2">
+                                            {@const isObject = typeof option === 'object' && option !== null}
+                                            {@const optionValue = isObject ? (option as OptionObject).value || String(option) : String(option)}
+                                            {@const optionLabel = isObject ? (option as OptionObject).label || String(option) : String(option)}
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-blue-100 p-1 rounded transition duration-150">
                                                 <input
                                                     type="radio"
-                                                    id={`field-${field.id}-${option.replace(/\s+/g, '-')}`}
+                                                    id={`field-${field.id}-${typeof optionValue === 'string' ? optionValue.replace(/\s+/g, '-') : ''}`}
                                                     name={`field-${field.id}`}
-                                                    value={option}
-                                                    checked={editedAnswers[field.id] === option}
-                                                    on:change={() => editedAnswers[field.id] = option}
+                                                    value={optionValue}
+                                                    checked={editedAnswers[field.id] === optionValue}
+                                                    on:change={() => {
+                                                        editedAnswers[field.id] = optionValue;
+                                                    }}
                                                 />
-                                                <span>{option}</span>
+                                                <span>{optionLabel}</span>
                                             </label>
                                         {/each}
+                                    </div>
+                                {:else if field.type.trim() === 'select' || field.type.trim() === 'dropdown'}
+                                    <div class="bg-purple-50 p-3 rounded-md">
+                                        <select
+                                            id={`field-${field.id}`}
+                                            class="w-full p-3 rounded-md bg-white border border-gray-300 focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
+                                            bind:value={editedAnswers[field.id] as string}
+                                        >
+                                            <option value="">-- Select an option --</option>
+                                            {#each field.options || [] as option}
+                                                {@const isObject = typeof option === 'object' && option !== null}
+                                                {@const optionValue = isObject ? (option as OptionObject).value || String(option) : String(option)}
+                                                {@const optionLabel = isObject ? (option as OptionObject).label || String(option) : String(option)}
+                                                <option value={optionValue} selected={editedAnswers[field.id] === optionValue}>
+                                                    {optionLabel}
+                                                </option>
+                                            {/each}
+                                        </select>
                                     </div>
                                 {:else}
                                     <input
