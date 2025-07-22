@@ -257,8 +257,10 @@
                                         <p class="text-sm text-green-700 mb-2">Select all that apply:</p>
                                         {#each field.options || [] as option}
                                             {@const isObject = typeof option === 'object' && option !== null}
-                                            {@const optionValue = isObject ? (option as OptionObject).value || String(option) : String(option)}
                                             {@const optionLabel = isObject ? (option as OptionObject).label || String(option) : String(option)}
+                                            {@const optionValue = isObject ? 
+                                                ((option as OptionObject).value || optionLabel) : 
+                                                String(option)}
                                             {@const fieldValue = editedAnswers[field.id] || []}
                                             {@const values = Array.isArray(fieldValue) 
                                                 ? fieldValue 
@@ -326,8 +328,10 @@
                                         <p class="text-sm text-blue-700 mb-2">Select one option:</p>
                                         {#each field.options || [] as option}
                                             {@const isObject = typeof option === 'object' && option !== null}
-                                            {@const optionValue = isObject ? (option as OptionObject).value || String(option) : String(option)}
                                             {@const optionLabel = isObject ? (option as OptionObject).label || String(option) : String(option)}
+                                            {@const optionValue = isObject ? 
+                                                ((option as OptionObject).value || optionLabel) : 
+                                                String(option)}
                                             {@const isOtherOption = optionLabel.toLowerCase() === 'other' || optionLabel.toLowerCase() === 'others'}
                                             
                                             <label class="flex items-center space-x-2 cursor-pointer hover:bg-blue-100 p-1 rounded transition duration-150">
