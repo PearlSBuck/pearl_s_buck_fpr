@@ -21,13 +21,11 @@
     let sectionIndex: number = $state(-1);
 
     // adding a new section
-    function AddSectionHandler() {
-        if (form) {
-            formSections.push({
-                title: "New Section",
-                orderIndex: formSections.length,
-            });
-        }
+    function addSectionHandler() {
+        formSections.push({
+            title: "New Section",
+            orderIndex: formSections.length,
+        });
     }
 
     function deleteSectionHandler(index: number) {
@@ -51,6 +49,13 @@
         formSections = [];
         sectionFields = {};
         sectionIndex = -1;
+    }
+    
+    function createFormHandler() {
+        if (formSections.length === 0) {
+            addSectionHandler();
+        }
+        showForm = true;
     }
 
     async function saveFormHandler() {
@@ -100,19 +105,16 @@
                     </label>
                 </div>
                 <div class="flex justify-center pt-2">
-                    <button onclick={() => showForm = true} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Create</button>
+                    <button onclick={createFormHandler} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Create</button>
                 </div>
             </div>
         </div> 
         {#if showForm}
-            {#if form}
-                <div class="flex justify-center pt-3">
-                    <div class="flex justify-end w-full md:w-3/5">
-                        <button onclick={AddSectionHandler} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Add Section</button>
-                        <button onclick={saveFormHandler} class="bg-green-600 text-white rounded-lg px-5 ml-2 cursor-pointer">Save Form</button>            
-                    </div>
+            <div class="flex justify-center pt-3">
+                <div class="flex justify-end w-full md:w-3/5">
+                    <button onclick={saveFormHandler} class="bg-green-600 text-white rounded-lg px-5 ml-2 cursor-pointer">Save Form</button>            
                 </div>
-            {/if}
+            </div>
             <div>
                 {#each formSections as section, index}
                     <div class="flex justify-center py-3">
@@ -151,6 +153,11 @@
                         </div>
                     </div>
                 {/each}
+            </div>
+            <div class="flex justify-center">
+                <div class="flex justify-end w-full md:w-3/5">
+                    <button onclick={addSectionHandler} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Add Section</button>
+                </div>
             </div>
         {/if}
     </div>
