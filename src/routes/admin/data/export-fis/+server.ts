@@ -43,11 +43,15 @@ export async function POST({ request }) {
 
       const qas: Record<string, string> = {};
       row.fis_answers_list.forEach((item, index) => {
-        qas[`Question${index + 1}`] =
-          typeof item.Question === "object" && item.Question !== null
-            ? item.Question.Name
-            : String(item.Question);
-
+        let questionText = "";
+        if (Array.isArray(item.Question) && item.Question.length > 0 && "Name" in item.Question[0]) {
+          questionText = item.Question.map(q => q.Name).join(", ");
+        } else if (item.Question && typeof item.Question === "object" && "Name" in item.Question) {
+          questionText = (item.Question as any).Name;
+        } else {
+          questionText = String(item.Question);
+        }
+        qas[`Question${index + 1}`] = questionText;
         qas[`Answer${index + 1}`] = item.Answer ?? "";
       });
 

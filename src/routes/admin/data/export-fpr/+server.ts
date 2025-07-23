@@ -38,7 +38,9 @@ export async function POST({ request }) {
     const transformed = data?.map((row) => {
       const base = {
         SC_ID: row.SC_ID,
-        SC_Name: row.fis_answers?.SC_Name ?? "",
+        SC_Name: Array.isArray(row.fis_answers) && row.fis_answers.length > 0
+          ? row.fis_answers[0].SC_Name
+          : "",
         Filled_out_by: row.Assisted_By,
       };
 
