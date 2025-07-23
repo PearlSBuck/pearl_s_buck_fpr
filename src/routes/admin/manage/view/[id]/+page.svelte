@@ -16,6 +16,7 @@
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
+    import { supabase } from '$lib/db';
     import Header from '../../../../../components/Header.svelte';
     import Confirm from '../../../../../components/Confirm.svelte';
     import PasswordEdit from '../../../../../components/PasswordEdit.svelte';
@@ -31,26 +32,84 @@
 
     $: userID = $page.params.id;
 
-    async function saveChanges(userId: string) {
-        const response = await fetch('/admin/manage/edit', {
-            method: 'PUT',
-            headers: {
-            'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                tempUser,
-                userID: userId
-            })
-        });
-
-        const result = await response.json();
-        if (result.error) {
-            console.error('Failed to save changes:', result.error);
-        } else {
-            editMode = false;
+    // Function to log audit entry
+    async function logAuditEntry(actionPerformed: string, userId: string, adminId?: string) {
+        try {
+            const { error } = await supabase.from('audit_log').insert([{
+                action_performed: actionPerformed,
+                user_id: userId,
+                admin_id: adminId || userId // Use provided admin_id or default to the user's id
+            }]);
+            
+            if (error) {
+                console.error('Failed to log audit entry:', error);
+                // Don't throw error here to prevent operation from failing
+            }
+        } catch (error) {
+            console.error('Error logging audit entry:', error);
         }
+    }
 
-        location.reload();
+    // Function to log audit entry with user name
+// Function to log audit entry with user name (for deletion where user_id will become null)
+async function logAuditEntryWithName(actionPerformed: string, userId: string | null, adminId?: string | null, userName?: string) {
+    try {
+        const auditData = {
+            action_performed: actionPerformed,
+            user_id: userId,
+            admin_id: adminId,
+            user_name: userName || 'Unknown User'
+        };
+        
+        console.log('Attempting to insert audit log entry:', auditData);
+        
+        const { data, error } = await supabase.from('audit_log').insert([auditData]).select();
+        
+        if (error) {
+            console.error('Failed to log audit entry:', error);
+            console.error('Error details:', JSON.stringify(error, null, 2));
+        } else {
+            console.log('Audit entry created successfully:', data);
+        }
+        
+        return { data, error };
+    } catch (error) {
+        console.error('Error logging audit entry:', error);
+        return { data: null, error };
+    }
+}
+
+    async function saveChanges(userId: string) {
+        try {
+            // Get current user (admin) performing the action
+            const { data: currentUser } = await supabase.auth.getUser();
+            const currentAdminId = currentUser?.user?.id;
+
+            const response = await fetch('/admin/manage/edit', {
+                method: 'PUT',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    tempUser,
+                    userID: userId
+                })
+            });
+
+            const result = await response.json();
+            if (result.error) {
+                console.error('Failed to save changes:', result.error);
+            } else {
+                editMode = false;
+                // Log the audit entry for user profile update
+                await logAuditEntry('profile updated', userId, currentAdminId);
+            }
+
+            location.reload();
+        } catch (error) {
+            console.error('Error saving changes:', error);
+            alert('Error saving changes: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
     }
 
     function cancelEdit() {
@@ -60,6 +119,10 @@
 
     async function savePassword(userId: string, newPassword: string, repeatNewPassword: string) {
         try {
+            // Get current user (admin) performing the action
+            const { data: currentUser } = await supabase.auth.getUser();
+            const currentAdminId = currentUser?.user?.id;
+
             const response = await fetch('/admin/manage/edit-password', {
                 method: 'PUT',
                 headers: {
@@ -76,6 +139,8 @@
 
             if (result.success) {
                 passwordEditMode = false;
+                // Log the audit entry for password change
+                await logAuditEntry('password changed', userId, currentAdminId);
                 alert("Password updated successfully!");
             } else {
                 alert("Failed to update password: " + result.error);
@@ -92,6 +157,10 @@
 
     async function toggleAdminPerms(){
         try {
+            // Get current user (admin) performing the action
+            const { data: currentUser } = await supabase.auth.getUser();
+            const currentAdminId = currentUser?.user?.id;
+
             const response = await fetch('/admin/manage/toggle-admin', {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
@@ -101,6 +170,9 @@
             const result = await response.json();
 
             if (result.success) {
+                // Log the audit entry for permission change
+                const action = isAdmin ? 'admin granted' : 'admin removed';
+                await logAuditEntry(action, userID, currentAdminId);
                 location.reload();
             } else {
                 throw new Error(result.error || 'Unknown error');
@@ -130,27 +202,36 @@
         passwordEditMode = !passwordEditMode;
     }
 
-    async function deleteUser(userId: string) {
-            try {
-                const response = await fetch ('/admin/manage/delete', {
-                    method: 'DELETE',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({userID: userId}),
-                })
+async function deleteUser(userId: string) {
+    try {
+        // Show confirmation dialog first
+        const confirmDelete = confirm(
+            'This will permanently delete the user and all their associated data (forms, answers, etc.). This action cannot be undone. Are you sure?'
+        );
+        
+        if (!confirmDelete) {
+            return;
+        }
 
-                const result = await response.json();
+        const response = await fetch('/admin/manage/delete', {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({userID: userId}),
+        });
 
-                if (result.success) {
-                    alert('User deleted sucessfully!');
-                    goto('/admin/manage');
-                } else {
-                    throw new Error(result.error || 'Unknown error');
-                }
-            } catch (error) {
-                console.error('Error deleting user:', error);
-            alert('Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'));
-            }
+        const result = await response.json();
+
+        if (result.success) {
+            alert('User and all associated data deleted successfully!');
+            goto('/admin/manage');
+        } else {
+            throw new Error(result.error || 'Unknown error');
+        }
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
+}
 </script>
 
 <div class="app-container">
@@ -217,7 +298,7 @@
                         type="text"
                         class="border rounded-xl px-2 py-1 ml-4 w-64"
                         bind:value={tempUser.email}
-                        placeholder="Full Name"
+                        placeholder="Email"
                     />
                     </label>
                     <label class="mb-2">
@@ -226,7 +307,7 @@
                         type="text"
                         class="border rounded-xl px-2 py-1 ml-4 w-64"
                         bind:value={tempUser.age}
-                        placeholder="Full Name"
+                        placeholder="Age"
                     />
                     </label>
                     <label class="mb-2">
@@ -235,7 +316,7 @@
                         type="text"
                         class="border rounded-xl px-2 py-1 ml-4 w-64"
                         bind:value={tempUser.residence}
-                        placeholder="Full Name"
+                        placeholder="Residence"
                     />
                     </label>
                 </div>

@@ -242,8 +242,13 @@
                                         <p class="text-sm text-green-700 mb-2">Select all that apply:</p>
                                         {#each field.options || [] as option}
                                             {@const isObject = typeof option === 'object' && option !== null}
-                                            {@const optionValue = isObject ? (option as OptionObject).value || String(option) : String(option)}
                                             {@const optionLabel = isObject ? (option as OptionObject).label || String(option) : String(option)}
+                                            
+                                            <!-- Use label as fallback when value is empty -->
+                                            {@const optionValue = isObject ? 
+                                                ((option as OptionObject).value || optionLabel) : 
+                                                String(option)}
+                                            
                                             {@const fieldValue = editedAnswers[field.id] || []}
                                             {@const values = Array.isArray(fieldValue) ? fieldValue : (typeof fieldValue === 'string' ? fieldValue.split(',').map((v: string) => v.trim()) : [])}
                                             {@const isOtherOption = optionLabel.toLowerCase() === 'other' || optionLabel.toLowerCase() === 'others'}
