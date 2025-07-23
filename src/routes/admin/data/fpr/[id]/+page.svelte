@@ -1,7 +1,8 @@
 <script lang="ts">
   import Header from '../../../../../components/Header.svelte'; // adjust the paths as needed
-    import Year from '../../../../../components/Year.svelte';   
+  import Year from '../../../../../components/Year.svelte';   
   import Confirm from '../../../../../components/Confirm.svelte';   
+  import * as XLSX from 'xlsx';
   import { goto } from '$app/navigation';
   import { selectedRecords } from '../../selectFPRRecord';
   import { get } from 'svelte/store';
@@ -9,6 +10,8 @@
 
   let pageName = "Individual Records Management";
   let showModal = false;
+  let exportOptions = false;
+  let exportType = ""
   export let data;
   export let selectRecord: boolean = false;
 
@@ -34,31 +37,6 @@
   onDestroy(() => {
       selectedRecords.set(new Set());
   });
-
-  function flattenObject(obj: any, prefix = ''): { [key: string]: any } {
-    return Object.keys(obj).reduce((acc: any, key) => {
-      const value = obj[key];
-      const prefixedKey = prefix ? `${prefix}.${key}` : key;
-
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        Object.assign(acc, flattenObject(value, prefixedKey));
-      } else if (Array.isArray(value)) {
-        acc[prefixedKey] = value
-          .map((item, index) => {
-            if (typeof item === 'object') {
-              return JSON.stringify(item);
-            } else {
-              return String(item);
-            }
-          })
-          .join('; ');
-      } else {
-        acc[prefixedKey] = value;
-      }
-
-      return acc;
-    }, {});
-  }
 
   function sanitizeData(data: any[]) {
     return data.map(entry => {
@@ -116,8 +94,16 @@
     link.click();
   }
 
+  function exportFullXLSX(data: any[]) {
 
-  async function handleExport() {
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    XLSX.writeFile(workbook, "records.xlsx");
+  }
+
+
+  async function handleExport(exportType: string) {
     const selectedIds = Array.from($selectedRecords);
 
         const res = await fetch('/admin/data/export-fpr', {
@@ -138,7 +124,16 @@
           console.log("Exported successfully");
         }
         const cleaned = sanitizeData(data);
-        exportFullCSV(cleaned);
+
+        if(exportType == "csv"){
+          exportFullCSV(cleaned);
+        }
+        else if(exportType == "xlsx"){
+          exportFullXLSX(cleaned);
+        }
+        else if(exportType == "pdf"){
+          // insert function call
+        }
   }
 
 
@@ -167,12 +162,27 @@
           />
           <!-- Select Records -->
             <button class="text-[#1A5A9E] font-bold text-lg cursor-pointer" on:click={() => selectRecord = !selectRecord}>Select</button>
-              <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
-                </svg>
-                <span>Export</span>
-              </button>
+              <div class="flex flex-col relative">
+                <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" on:click={() => exportOptions = !exportOptions} aria-label="Export Selected Records">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
+                  </svg>
+                  <span>Export</span>
+                </button>
+                {#if exportOptions}
+                  <div class="absolute mt-8 z-999">
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("csv")} aria-label="Export CSV Records">
+                      <span>Export CSV</span>
+                    </button>
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("xlsx")} aria-label="Export XLSX Records">
+                      <span>Export XLSX</span>
+                    </button>
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("pdf")} aria-label="Export PDF Records">
+                      <span>Export PDF</span>
+                    </button>
+                  </div>
+                {/if}
+              </div>
         </div>
         <!-- Desktop-->
         <div class="absolute lg:top-8 lg:right-5 sm:top-6 sm:right-5 top-4 right-5 flex items-center gap-2 p-2">
@@ -191,12 +201,27 @@
                 deleteMessage="Are you sure you want to delete the selected records?"
               />
               <button class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectRecord ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`} on:click={() => selectRecord = !selectRecord}>Select</button>
-              <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" on:click={handleExport} aria-label="Export Selected Records">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
-                </svg>
-                <span>Export</span>
-              </button>
+              <div class="flex flex-col relative">
+                <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" on:click={() => exportOptions = !exportOptions} aria-label="Export Selected Records">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
+                  </svg>
+                  <span>Export</span>
+                </button>
+                {#if exportOptions}
+                  <div class="absolute mt-8 z-999">
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("csv")} aria-label="Export CSV Records">
+                      <span>Export CSV</span>
+                    </button>
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("xlsx")} aria-label="Export XLSX Records">
+                      <span>Export XLSX</span>
+                    </button>
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("pdf")} aria-label="Export PDF Records">
+                      <span>Export PDF</span>
+                    </button>
+                  </div>
+                {/if}
+              </div>
             </div>
             <div class="flex justify-between items-center gap-2 lg:top-8 lg:right-4 top-4 right-2">
               <span class="text-xs lg:text-lg md:text-md sm:text-sm whitespace-nowrap">{data.currentPage} of {data.totalPages}</span>
