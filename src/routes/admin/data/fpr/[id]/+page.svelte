@@ -19,21 +19,15 @@
   const { fprData, currentPage, totalPages } = data;
 
   function goToPage(page: number) {
-    if (page >= 1 && page <= (totalPages ?? 1)) {
       goto(`?page=${page}`);
-    }
   }
 
   const confirmDeleteAction = async (ids: unknown[]) => {
     return deleteAction(ids as number[]);
   };
-
-  const deleteAction = async (ids: number[]) => {
-    
-    // Refresh or re-fetch your data here
+  const deleteAction = async (ids: number[]) => {    
     console.log('Deleted:', ids);
   };
-
   onDestroy(() => {
       selectedRecords.set(new Set());
   });
@@ -241,7 +235,7 @@
       </div>
       <div class="flex flex-col justify-left gap-4 mx-4">
         <!-- put the thing here -->
-         <Year fprData={fprData} selectRecord={selectRecord} />
+         <Year fprData={fprData ?? []} selectRecord={selectRecord} />
       </div>
     </div>
   </div>

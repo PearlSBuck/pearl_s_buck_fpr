@@ -1,6 +1,17 @@
 import { json } from "@sveltejs/kit";
 import { supabaseAdmin } from "$lib/db";
 
+type FISRow = {
+  Assisted_By: string;
+  SC_ID: number;
+  SC_Name: string;
+  fis_answers_list: {
+    Question: { Name: string }[];
+    Answer: string;
+  }[];
+};
+
+
 export async function POST({ request }) {
   const { ids } = await request.json();
 
@@ -23,22 +34,33 @@ export async function POST({ request }) {
     `)
     .in("sc_id", ids);
 
-    const reorderedData = data?.map(row => ({
-      Assisted_By: row.Assisted_By,
-      SC_ID: row.SC_ID,
-      SC_Name: row.SC_Name,
-      fis_answers_list: row.fis_answers_list.map(answer => ({
-        Question: answer.Question, 
-        Answer: answer.Answer
-      }))
-    }));
+    const transformed = data?.map((row: FISRow) => {
+      const base = {
+        SC_ID: row.SC_ID,
+        SC_Name: row.SC_Name ?? "",
+        Filled_out_by: row.Assisted_By,
+      };
 
+      const qas: Record<string, string> = {};
+      row.fis_answers_list.forEach((item, index) => {
+        qas[`Question${index + 1}`] =
+          typeof item.Question === "object" && item.Question !== null
+            ? item.Question.Name
+            : String(item.Question);
 
-    console.log(reorderedData);
+        qas[`Answer${index + 1}`] = item.Answer ?? "";
+      });
+
+      return {
+        ...base,
+        ...qas,
+      };
+    });
+
 
   if (error) {
     return json({ error: error.message }, { status: 500 });
   }
 
-  return json(reorderedData);
+  return json(transformed);
 }
