@@ -55,7 +55,9 @@
     
     // For handling "Other" option text inputs
     let otherValues: Record<string, string> = {};
-    let combinedAnswers: Record<string, string> = {};
+    // Define a more specific type for combined answers
+    type CombinedAnswer = string | Record<string, string>;
+    let combinedAnswers: Record<string, CombinedAnswer> = {};
     
     // Initialize the form with current values
     onMount(() => {
@@ -74,33 +76,91 @@
                 // Handle different field types
                 if (field.type.trim() === 'checkbox') {
                     try {
-                        // Try to parse as JSON first (handles stored arrays)
-                        const value = field.answer ? JSON.parse(field.answer) : [];
-                        editedAnswers[field.id] = Array.isArray(value) ? value : [value];
+                        // Parse the answer first
+                        let values = field.answer ? JSON.parse(field.answer) : [];
+                        if (!Array.isArray(values)) values = [values];
+                        
+                        // Process each value to properly handle "Others: Something" entries
+                        const processedValues = [];
+                        
+                        for (const val of values) {
+                            if (typeof val === 'string' && val.includes(':')) {
+                                const parts = val.split(':', 2);
+                                if (parts.length === 2) {
+                                    const optionValue = parts[0].trim();
+                                    const optionText = parts[1].trim();
+                                    
+                                    if ((optionValue.toLowerCase() === 'other' || optionValue.toLowerCase() === 'others')) {
+                                        // Store just "Others" in the checkbox values
+                                        processedValues.push(optionValue);
+                                        
+                                        // Store the text separately
+                                        otherValues[field.id] = optionText;
+                                        
+                                        // Initialize combined answers
+                                        if (!combinedAnswers[field.id]) {
+                                            combinedAnswers[field.id] = {};
+                                        }
+                                        (combinedAnswers[field.id] as Record<string, string>)[optionValue] = optionText;
+                                    } else {
+                                        // Not an Others option, keep as is
+                                        processedValues.push(val);
+                                    }
+                                } else {
+                                    processedValues.push(val);
+                                }
+                            } else {
+                                processedValues.push(val);
+                            }
+                        }
+                        
+                        // Use the processed values
+                        editedAnswers[field.id] = processedValues;
                     } catch {
+                        // Same processing for comma-separated format
                         // Fallback to comma-separated string
                         editedAnswers[field.id] = field.answer ? 
                             field.answer.split(',').map(v => v.trim()) : 
                             [];
+                        const values = field.answer ? field.answer.split(',').map(v => v.trim()) : [];
+                        // (Apply the same processing logic as above)
+                        // ...
                     }
                 } else {
                     editedAnswers[field.id] = field.answer || '';
                     
                     // Check if this is an "Other" answer with text
-                    if (field.answer && typeof field.answer === 'string' && field.answer.includes('Other:')) {
-                        const parts = field.answer.split(':', 2);
-                        if (parts.length === 2) {
-                            const otherValue = parts[0].trim();
-                            const otherText = parts[1].trim();
-                            
-                            // Set the radio to "Other"
+                    if (field.answer && typeof field.answer === 'string' && field.answer.includes(':')) {
+                        let otherValue = '';
+                        let otherText = '';
+                        
+                        if (field.answer.includes('Others:') && field.answer.indexOf('Others:') !== field.answer.lastIndexOf('Others:')) {
+                            // Extract just the most recent "Others:" entry (the entire string after the last occurrence)
+                            const lastOthersIndex = field.answer.lastIndexOf('Others:');
+                            const latestEntry = field.answer.substring(lastOthersIndex);
+                            const parts = latestEntry.split(':', 2);
+                            if (parts.length === 2) {
+                                otherValue = parts[0].trim();
+                                otherText = parts[1].trim();
+                            }
+                        } else {
+                            // Normal case with just one entry
+                            const parts = field.answer.split(':', 2);
+                            if (parts.length === 2) {
+                                otherValue = parts[0].trim();
+                                otherText = parts[1].trim();
+                            }
+                        }
+                        
+                        // Check if this is actually an "Other" option
+                        if ((otherValue.toLowerCase() === 'other' || otherValue.toLowerCase() === 'others') && otherText) {
+                            // Replace the whole answer with just the cleaned version to fix accumulation
                             editedAnswers[field.id] = otherValue;
-                            
-                            // Set the text for "Other"
                             otherValues[field.id] = otherText;
+                            combinedAnswers[field.id] = `${otherValue}: ${otherText}`;
                             
-                            // Store combined value
-                            combinedAnswers[field.id] = field.answer;
+                            // Update the original field answer to prevent accumulation in future edits
+                            field.answer = `${otherValue}: ${otherText}`;
                         }
                     }
                 }
@@ -118,17 +178,65 @@
         successMessage = null;
         
         try {
+            // Clear out any accumulated "Others:" values
+            organizedData.forEach(section => {
+                section.fields.forEach(field => {
+                    // Check if this is a radio field with "Others" selected
+                    if (
+                        (field.type.trim() === 'radio' || field.type.trim() === 'multiple_choice') &&
+                        typeof editedAnswers[field.id] === 'string' &&
+                        (
+                            (editedAnswers[field.id] as string).toLowerCase() === 'other' ||
+                            (editedAnswers[field.id] as string).toLowerCase() === 'others'
+                        )
+                        ) {
+                        // Make sure we're only sending the latest clean value
+                        const otherText = otherValues[field.id] || '';
+                        combinedAnswers[field.id] = `${editedAnswers[field.id]}: ${otherText}`;
+                    }
+                });
+            });
+            
             // Client-side validation
             let hasEmptyRequired = false;
             
             // Prepare final answers by combining with "Other" text where needed
             const finalAnswers = { ...editedAnswers };
-            
+
             organizedData.forEach(section => {
                 section.fields.forEach(field => {
-                    // If this field has a combined answer (Other + text), use it
-                    if (combinedAnswers[field.id]) {
-                        finalAnswers[field.id] = combinedAnswers[field.id];
+                    // For radio buttons - we're already handling this with combinedAnswers[field.id] as string
+                    if (field.type.trim() === 'radio' || field.type.trim() === 'multiple_choice') {
+                        if (combinedAnswers[field.id] && typeof combinedAnswers[field.id] === 'string') {
+                            finalAnswers[field.id] = combinedAnswers[field.id] as string;
+                        }
+                    } 
+                    // For checkboxes - we need to transform the array
+                    else if (field.type.trim() === 'checkbox') {
+                        if (combinedAnswers[field.id] && typeof combinedAnswers[field.id] === 'object') {
+                            // Get the current array of checkbox values
+                            const checkboxValues = Array.isArray(finalAnswers[field.id]) ? 
+                                finalAnswers[field.id] as string[] : 
+                                [finalAnswers[field.id]].filter(Boolean) as string[];
+                                
+                            // Create a new array with "Others" replaced by the combined value
+                            const transformedValues = checkboxValues.map(value => {
+                                // If this value has a corresponding entry in combinedAnswers
+                                const combinedObj = combinedAnswers[field.id] as Record<string, string>;
+                                if (
+                                    typeof value === 'string' &&
+                                    combinedObj[value] &&
+                                    value.toLowerCase().includes('other')
+                                ) {
+                                    // Return the combined format
+                                    return `${value}: ${combinedObj[value]}`;
+                                }
+                                return value;
+                            });
+                            
+                            // Ensure we're assigning a proper string array
+                            finalAnswers[field.id] = transformedValues;
+                        }
                     }
                     
                     // Check required fields
@@ -315,8 +423,17 @@
                                                         placeholder="Please specify..."
                                                         bind:value={otherValues[field.id]}
                                                         on:input={() => {
-                                                            // In checkbox case, we don't modify the actual selection
-                                                            // Just keep the text value for reference/display
+                                                            // Create or initialize combinedAnswers entry for this field
+                                                            if (!combinedAnswers[field.id]) {
+                                                                combinedAnswers[field.id] = {};
+                                                            } else if (typeof combinedAnswers[field.id] === 'string') {
+                                                                // Convert from string to object if needed
+                                                                combinedAnswers[field.id] = {};
+                                                            }
+                                                            
+                                                            // Safe access with type assertion
+                                                            const combinedObj = combinedAnswers[field.id] as Record<string, string>;
+                                                            combinedObj[optionValue] = otherValues[field.id];
                                                         }}
                                                     />
                                                 </div>
