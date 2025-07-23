@@ -75,7 +75,6 @@ export async function submitAnswersToSupabase(formId: string) {
 		.from('fpr_answers')
 		.insert({
 			form_id: formId,
-			answer: '',
 			filled_out_by: filledOutByValue,
 			sc_id: scIdValue
 		})

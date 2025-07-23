@@ -71,7 +71,7 @@
         try {
             //all required answers were submitted successfully
             const missingFields = validateForm(data.form.sections)
-            if(!missingFields){
+            if(missingFields.length === 0){
                 console.log($formAnswers);
                 console.log($filledOutBy);
                 console.log($SCId);
