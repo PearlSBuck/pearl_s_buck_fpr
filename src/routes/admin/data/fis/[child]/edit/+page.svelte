@@ -51,7 +51,10 @@
     
     // For handling "Other" option text inputs
     let otherValues: Record<string, string> = {};
-    let combinedAnswers: Record<string, string> = {};
+    // This can now hold both string values (for radio) and objects (for checkbox)
+    // Define a more specific type for combined answers
+    type CombinedAnswer = string | Record<string, string>;
+    let combinedAnswers: Record<string, CombinedAnswer> = {};
     
     // Initialize the form with current values
     onMount(() => {
@@ -113,9 +116,34 @@
             
             organizedData.forEach(section => {
                 section.fields.forEach(field => {
-                    // If this field has a combined answer (Other + text), use it
-                    if (combinedAnswers[field.id]) {
-                        finalAnswers[field.id] = combinedAnswers[field.id];
+                    // For radio buttons - we're already handling this with combinedAnswers[field.id] as string
+                    if (field.type.trim() === 'radio' || field.type.trim() === 'multiple_choice') {
+                        if (combinedAnswers[field.id] && typeof combinedAnswers[field.id] === 'string') {
+                            finalAnswers[field.id] = combinedAnswers[field.id] as string;
+                        }
+                    } 
+                    // For checkboxes - we need to transform the array
+                    else if (field.type.trim() === 'checkbox') {
+                        if (combinedAnswers[field.id] && typeof combinedAnswers[field.id] === 'object') {
+                            // Get the current array of checkbox values
+                            const checkboxValues = Array.isArray(finalAnswers[field.id]) ? 
+                                finalAnswers[field.id] as string[] : 
+                                [finalAnswers[field.id]].filter(Boolean) as string[];
+                                
+                            // Create a new array with "Others" replaced by the combined value
+                            const transformedValues = checkboxValues.map(value => {
+                                // If this value has a corresponding entry in combinedAnswers
+                                const combinedObj = combinedAnswers[field.id] as Record<string, string>;
+                                if (combinedObj[value] && value.toLowerCase().includes('other')) {
+                                    // Return the combined format
+                                    return `${value}: ${combinedObj[value]}`;
+                                }
+                                return value;
+                            });
+                            
+                            // Ensure we're assigning a proper string array
+                            finalAnswers[field.id] = transformedValues;
+                        }
                     }
                     
                     // Check required fields
@@ -296,6 +324,19 @@
                                                         class="w-full p-2 rounded-md bg-white border border-green-300 focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
                                                         placeholder="Please specify..."
                                                         bind:value={otherValues[field.id]}
+                                                        on:input={() => {
+                                                            // Create or initialize combinedAnswers entry for this field
+                                                            if (!combinedAnswers[field.id]) {
+                                                                combinedAnswers[field.id] = {};
+                                                            } else if (typeof combinedAnswers[field.id] === 'string') {
+                                                                // Convert from string to object if needed
+                                                                combinedAnswers[field.id] = {};
+                                                            }
+                                                            
+                                                            // Safe access with type assertion
+                                                            const combinedObj = combinedAnswers[field.id] as Record<string, string>;
+                                                            combinedObj[optionValue] = otherValues[field.id];
+                                                        }}
                                                     />
                                                 </div>
                                             {/if}
