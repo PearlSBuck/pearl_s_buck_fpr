@@ -150,7 +150,7 @@
         ></textarea>
 
     <!-- UI for radio group input -->
-    {:else if type === 'radio' }
+    {:else if type === 'radio'  ||  type==='multiple_choice'}
         <div class="space-y-2 ml-2">
             {#each options as option}
             <label class="flex items-center space-x-2">
@@ -196,7 +196,7 @@
         </div>
     
     <!-- UI for check box group input -->
-    {:else if type === 'checkbox' ||  type==='multiple_choice'}
+    {:else if type === 'checkbox'}
         <div class="space-y-2 ml-2">
             {#each options as option}
             <label class="flex items-center space-x-2">
