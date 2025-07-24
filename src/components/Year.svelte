@@ -1,69 +1,83 @@
 <script lang="ts">
+    import { selectedRecords } from '../routes/admin/data/selectFPRRecord';
     import { goto } from '$app/navigation';
-    // Change from fprData to receiving these directly
-    export let years: number[];
-    export let recordsByYear: Record<number, any[]>;
-    export let childId: number;
-
-    function formatDate(dateString: string) {
-        return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-        });
+    
+    export let years: (string|number)[] = [];
+    export let recordsByYear: {[year: string]: any[]}; // Change to string key for consistency
+    export let childId: string;
+    export let selectRecord: boolean = false;
+    
+    function viewRecord(answerId: string) {
+        if (selectRecord) {
+            toggleSelection(answerId);
+        } else {
+            goto(`/admin/data/fpr/${childId}/${answerId}`);
+        }
     }
-
-    function viewReport(answerId: string, childId: number) {
-    goto(`/admin/data/fpr/${childId}/${answerId}`);
+    
+    function toggleSelection(id: string) {
+        selectedRecords.update(records => {
+            if (records.has(id)) {
+                records.delete(id);
+            } else {
+                records.add(id);
+            }
+            return records;
+        });
     }
 </script>
 
-<div class="years-container w-full p-4">
-    {#if years.length === 0}
-        <div class="empty-state py-12 text-center text-gray-500">
-        <p>No progress reports available for this child.</p>
-        </div>
-    {:else}
-        {#each years as year}
-            <div class="year-group mb-8 pb-4 border-b border-gray-200">
-                <h2 class="text-xl font-bold text-[#1A5A9E] mb-3">{year}</h2>
-                
-                <div class="space-y-2">
-                {#each recordsByYear[year] as record}
-                    <button 
-                        class="record-card w-full p-3 bg-gray-50 rounded-md hover:bg-gray-100 cursor-pointer transition-colors text-left"
-                        on:click={() => viewReport(record.answer_id, record.sc_id)}
+<!-- Years list -->
+<div class="w-full space-y-4">
+    {#each years as year, i}
+        <div class="border rounded-lg p-3 shadow">
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">{year}</h2>
+            <div class="space-y-2">
+                {#each recordsByYear[String(year)] as record} <!-- Convert year to string -->
+                    <div 
+                        role="button"
+                        tabindex="0"
+                        class="flex items-center justify-between p-2 rounded bg-[#474C58] text-white cursor-pointer hover:bg-[#5a5f6c]"
+                        class:bg-blue-600={$selectedRecords.has(record.answer_id)}
+                        class:text-white={$selectedRecords.has(record.answer_id)}
+                        on:click={() => viewRecord(record.answer_id)}
+                        on:keydown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                viewRecord(record.answer_id);
+                            }
+                        }}
                     >
-                        <div class="flex justify-between">
-                            <div>
-                                <p class="font-medium">Progress Report</p>
-                                <p class="text-sm text-gray-600">Form v{record.forms?.version || '1.0'}</p>
+                        {#if selectRecord}
+                            <!-- Checkbox for selection mode -->
+                            <div class="flex items-center">
+                                <input 
+                                    type="checkbox"
+                                    class="mr-2 h-4 w-4 accent-white"
+                                    checked={$selectedRecords.has(record.answer_id)}
+                                    on:click|stopPropagation={() => toggleSelection(record.answer_id)}
+                                />
+                                <div class="flex flex-col">
+                                    <span class="text-white">{new Date(record.created_at).toLocaleDateString()}</span>
+                                    {#if record.forms?.version}
+                                        <span class="text-white text-xs">Version {record.forms.version}</span>
+                                    {/if}
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-sm text-gray-600">{formatDate(record.created_at)}</p>
+                        {:else}
+                            <div class="flex flex-col">
+                                <span class="text-white">{new Date(record.created_at).toLocaleDateString()}</span>
+                                {#if record.forms?.version}
+                                    <span class="text-white text-xs">Version {record.forms.version}</span>
+                                {/if}
                             </div>
-                        </div>
-                    </button>
+                        {/if}
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-white">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                    </div>
                 {/each}
-                </div>
             </div>
-        {/each}
-    {/if}
+        </div>
+    {/each}
 </div>
-
-
-<style>
-    .years-container {
-        width: 100%;
-        padding: 1rem;
-    }
-    .empty-state {
-        padding: 3rem 0;
-        text-align: center;
-        color: #666;
-    }
-    .year-group {
-        border-bottom: 1px solid #eee;
-        padding-bottom: 1rem;
-    }
-</style>
