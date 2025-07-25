@@ -1,4 +1,8 @@
 <!--+page.svelte-->
+<style>
+
+</style>
+
 <script lang="ts">
   import Header from '../../../components/Header.svelte';
   import Record from '../../../components/Record.svelte'; 
@@ -8,6 +12,7 @@
   import { goto } from '$app/navigation';
   import { selectedRecords } from './selectRecord';
   import { onDestroy } from 'svelte';  
+  import * as XLSX from 'xlsx';
 
   let pageName = "Individual Records Management";
   let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
@@ -26,6 +31,16 @@
   let searchQuery = data.query;
   let filterMode = !!searchQuery;
 
+  // Track whether an export is in progress
+  let isExporting = false;
+
+  // Add a state variable for the dropdown
+  let exportDropdownOpen = false;
+  
+  // Add these variables near the top of your script
+  let showDeleteInProgress = false;
+  let deleteSuccessMessage = '';
+  
   function onDeleteConfirmed() {
     console.log("Deleted:", Array.from(get(selectedRecords)));
     selectedRecords.set(new Set()); // clear selection
@@ -68,9 +83,26 @@
   };
 
   const deleteAction = async (ids: number[]) => {
-    await deleteSCRecords(ids);
-    // Refresh or re-fetch your data here
-    console.log('Deleted:', ids);
+    try {
+      // Show feedback to user
+      showDeleteInProgress = true;
+      
+      // Call your API to delete records
+      await deleteSCRecords(ids);
+      
+      // Clear selection
+      selectedRecords.set(new Set());
+      
+      // Success message
+      deleteSuccessMessage = `Successfully deleted ${ids.length} record(s)`;
+      
+      // Force a full page reload to refresh data
+      window.location.href = `/admin/data?t=${Date.now()}`;
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('An error occurred during deletion');
+      showDeleteInProgress = false;
+    }
   };
 
   onDestroy(() => {
@@ -82,42 +114,223 @@
   );
 
   function exportFullCSV(fullData: any[]) {
-    const header = Object.keys(fullData[0]).join(',') + '\n';
+    const headersSet = new Set<string>();
+    
+    // Collect all possible headers from all records
+    fullData.forEach(row => {
+      Object.keys(row).forEach(key => headersSet.add(key));
+    });
+    
+    const headers = Array.from(headersSet);
+    const headerLine = headers.join(',') + '\n';
+    
     const rows = fullData
-      .map((row) =>
-        Object.values(row)
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+      .map(row =>
+        headers
+          .map(key => {
+            const value = row[key];
+            return `"${String(value ?? '').replace(/"/g, '""')}"`;
+          })
           .join(',')
       )
       .join('\n');
-
-    const blob = new Blob([header + rows], { type: 'text/csv' });
+    
+    const blob = new Blob([headerLine + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-
+    
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'full-records.csv';
+    link.download = 'family-introduction-sheet.csv';
     link.click();
 }
 
-
-  async function handleExport() {
-    const selectedIds = Array.from($selectedRecords);
-
-    const res = await fetch('/admin/data/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: selectedIds })
+  // Function to export data as XLSX
+  function exportFullXLSX(data: any[]) {
+    // Clean the data to handle nested objects
+    const cleanedData = data.map(entry => {
+      const newEntry: {[key: string]: any} = {};
+      
+      for (const key in entry) {
+        if (!Object.prototype.hasOwnProperty.call(entry, key)) continue;
+        const value = entry[key];
+        
+        // If value is object and has Name property
+        if (typeof value === 'object' && value !== null && 'Name' in value) {
+          newEntry[key] = value.Name;
+        } else {
+          newEntry[key] = value;
+        }
+      }
+      
+      return newEntry;
     });
+    
+    // Create Excel worksheet and workbook
+    const worksheet = XLSX.utils.json_to_sheet(cleanedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Records');
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(workbook, "records.xlsx");
+  }
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert('Failed to fetch export data');
+  // Update handleExport to accept format parameter
+  async function handleExport(format: string) {
+    // Prevent multiple exports at once
+    if (isExporting) return;
+    
+    // Add guard to prevent FPR exports from this page
+    if (selected === 'progress_report') {
+      alert('For Family Progress Reports, please go to the individual child page to export records.');
+      exportDropdownOpen = false;
       return;
     }
+    
+    // Close the dropdown after selection
+    exportDropdownOpen = false;
+    
+    // Ensure records are selected
+    const selectedIds = Array.from($selectedRecords);
+    if (selectedIds.length === 0) {
+      alert('Please select at least one record to export');
+      return;
+    }
+    
+    try {
+      isExporting = true;
+      
+      // Handle CSV export
+      if (format === 'csv') {
+        const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            ids: selectedIds,
+            format: 'csv' 
+          })
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to export data');
+        }
+        
+        const data = await res.json();
+        if (data && data.length > 0) {
+          exportFullCSV(data);
+        } else {
+          alert('No data to export');
+        }
+      }
+      // Handle XLSX export
+      else if (format === 'xlsx') {
+        const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            ids: selectedIds,
+            format: 'csv' // Request CSV data format for transformation to XLSX
+          })
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.message || 'Failed to export data');
+        }
+        
+        const data = await res.json();
+        if (data && data.length > 0) {
+          exportFullXLSX(data);
+        } else {
+          alert('No data to export');
+        }
+      }
+      // Handle PDF export
+      else if (format === 'pdf') {
+        // Show progress indicator for multiple records
+        if (selectedIds.length > 1) {
+          alert(`Exporting ${selectedIds.length} files. Please wait...`);
+        }
+        
+        // Process each record individually
+        for (const id of selectedIds) {
+          const record = data.records.find(r => r.sc_id == id);
+          if (!record) continue;
+          
+          const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              ids: [id],
+              format: 'pdf' 
+            })
+          });
+          
+          if (!res.ok) {
+            console.error(`Failed to export record ${id}`);
+            continue;
+          }
+          
+          const blob = await res.blob();
+          const cleanName = record.sc_name.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+          const filename = `${record.sc_id}_${cleanName}.pdf`;
+          
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          link.click();
+          URL.revokeObjectURL(url);
+          
+          // Add a small delay between downloads
+          if (selectedIds.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert(error instanceof Error ? error.message : 'An error occurred during export');
+    } finally {
+      isExporting = false;
+    }
+  }
 
-    exportFullCSV(data);
+  function createWorkbook(data: any[]) {
+    const wb = XLSX.utils.book_new();
+    
+    // Create a separate sheet for each record (child)
+    data.forEach((record, index) => {
+      const childName = record.metadata['Child Name'].replace(/[^\w]/g, '_').substring(0, 15);
+      const sheetName = `${record.metadata['Child ID']}_${childName}`.substring(0, 31); // Excel has 31 char limit
+      
+      // Create rows for the sheet
+      const rows = [];
+      
+      // Add metadata
+      rows.push(['Child Information']);
+      rows.push(['Child ID', record.metadata['Child ID']]);
+      rows.push(['Child Name', record.metadata['Child Name']]);
+      rows.push(['Created Date', record.metadata['Created Date']]);
+      rows.push(['Form Version', record.metadata['Form Version']]);
+      rows.push(['Filled Out By', record.metadata['Filled Out By']]);
+      rows.push([]);
+      
+      // Add each section with questions and answers
+      record.sections.forEach((section: { title: string, questions: Array<{ question: string, answer: string }> }) => {
+        // rows.push([section.title]);
+        section.questions.forEach((qa: { question: string, answer: string }) => {
+          rows.push([qa.question, qa.answer]);
+        });
+        rows.push([]);
+      });
+      
+      // Create a worksheet from the rows
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+    
+    return wb;
   }
 </script>
 
@@ -227,14 +440,44 @@
             onConfirmAction={confirmDeleteAction}
             deleteMessage="Are you sure you want to delete the selected records?"
           />
-          <!-- Select Records -->
-            <button class="text-[#1A5A9E] font-bold text-lg cursor-pointer" on:click={() => selectRecord = !selectRecord}>Select</button>
-              <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
+          <!-- Select Records (conditionally disabled) -->
+          <button 
+            class="text-[#1A5A9E] font-bold text-lg cursor-pointer"
+            class:opacity-50={selected === 'progress_report'}
+            class:pointer-events-none={selected === 'progress_report'}
+            on:click={() => selected === 'intro_sheet' && (selectRecord = !selectRecord)}
+          >
+            Select
+          </button>
+            <!-- Mobile export -->
+              <!-- Mobile Export Button with Dropdown (conditionally disabled) -->
+          <div class="flex flex-col relative">
+            <button 
+              class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer"
+              class:opacity-50={selected === 'progress_report'}
+              class:pointer-events-none={selected === 'progress_report'}
+              on:click={() => selected === 'intro_sheet' && (exportDropdownOpen = !exportDropdownOpen)}
+              aria-label="Export Selected Records"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
-                </svg>
-                <span>Export</span>
-              </button>
+              </svg>
+              <span>Export</span>
+            </button>
+            {#if exportDropdownOpen && selected === 'intro_sheet'}
+              <div class="absolute mt-8 z-999">
+                <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("csv")} aria-label="Export CSV Records">
+                  <span>Export CSV</span>
+                </button>
+                <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("xlsx")} aria-label="Export XLSX Records">
+                  <span>Export XLSX</span>
+                </button>
+                <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("pdf")} aria-label="Export PDF Records">
+                  <span>Export PDF</span>
+                </button>
+              </div>
+            {/if}
+          </div>
         </div>
         <!-- Desktop-->
         <div class="absolute lg:top-8 lg:right-5 sm:top-6 sm:right-5 top-4 right-5 flex items-center gap-2 p-2">
@@ -252,13 +495,41 @@
                 onConfirmAction={confirmDeleteAction}
                 deleteMessage="Are you sure you want to delete the selected records?"
               />
-              <button class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectRecord ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`} on:click={() => selectRecord = !selectRecord}>Select</button>
-              <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" on:click={handleExport} aria-label="Export Selected Records">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
-                </svg>
-                <span>Export</span>
+              <button 
+                class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectRecord ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`}
+                class:opacity-50={selected === 'progress_report'}
+                class:pointer-events-none={selected === 'progress_report'}
+                on:click={() => selected === 'intro_sheet' && (selectRecord = !selectRecord)}
+              >
+                Select
               </button>
+              
+              <!-- Desktop Export Button with Dropdown -->
+              <div class="flex flex-col relative">
+                <button 
+                  class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" 
+                  on:click={() => exportDropdownOpen = !exportDropdownOpen} 
+                  aria-label="Export Selected Records"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
+                  </svg>
+                  <span>Export</span>
+                </button>
+                {#if exportDropdownOpen}
+                  <div class="absolute mt-8 z-999">
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("csv")} aria-label="Export CSV Records">
+                      <span>Export CSV</span>
+                    </button>
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("xlsx")} aria-label="Export XLSX Records">
+                      <span>Export XLSX</span>
+                    </button>
+                    <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("pdf")} aria-label="Export PDF Records">
+                      <span>Export PDF</span>
+                    </button>
+                  </div>
+                {/if}
+              </div>
             </div>
             <div class="flex justify-between items-center gap-2 lg:top-8 lg:right-4 top-4 right-2">
               <span class="text-xs lg:text-lg md:text-md sm:text-sm whitespace-nowrap">{data.currentPage} of {data.totalPages}</span>
@@ -290,4 +561,22 @@
       </div>
     </div>
   </div>
+  {#if selected === 'progress_report'}
+  <div class="text-center text-sm text-gray-600 mt-4 mb-4">
+    <p>To export Family Progress Reports, please select a child record to view their individual reports.</p>
+  </div>
+  {/if}
+
+  <!-- Add this right after the Confirm component (around line 407) -->
+  {#if showDeleteInProgress}
+    <div class="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-[1000]">
+      <div class="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+        <svg class="animate-spin h-8 w-8 text-[#1A5A9E] mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p>Deleting records...</p>
+      </div>
+    </div>
+  {/if}
 </div>
