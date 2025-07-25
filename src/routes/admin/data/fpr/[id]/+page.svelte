@@ -18,6 +18,16 @@
     [year: number]: RecordType[];
   }
 
+  interface Question {
+    question: string;
+    answer: string;
+  }
+
+  interface Section {
+    title: string;
+    questions: Question[];
+  }
+
   let pageName = "Individual Records Management";
   export let data: {
     years: number[];
@@ -120,43 +130,156 @@
     });
   }
 
-  // Add CSV export function
+  // Function to export data as CSV (improved version)
   function exportFullCSV(data: any[]) {
-    const headersSet = new Set<string>();
-
-    data.forEach(row => {
-      Object.keys(row).forEach(key => headersSet.add(key));
-    });
-
-    const headers = Array.from(headersSet);
-    const headerLine = headers.join(',') + '\n';
-
-    const rows = data
-      .map(row =>
-        headers
-          .map(key => {
-            const value = row[key];
-            return `"${String(value ?? '').replace(/"/g, '""')}"`;
-          })
-          .join(',')
-      )
-      .join('\n');
-
-    const blob = new Blob([headerLine + rows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${childName}_fpr_records.csv`;
-    link.click();
+    // For records with properly structured data
+    if (data.length > 0 && data[0].metadata && data[0].sections) {
+      const rows: string[][] = [];
+      
+      // Add header row
+      rows.push(['Child ID', 'Child Name', 'Created Date', 'Form Version', 'Filled Out By', 'Section', 'Question', 'Answer']);
+      
+      // Process each record
+      data.forEach(record => {
+        const metadata = record.metadata;
+        
+        // Process each section and its questions
+        record.sections.forEach((section: { title: string, questions: Array<{ question: string, answer: string }> }) => {
+          section.questions.forEach((qa: { question: string, answer: string }) => {
+            rows.push([
+              metadata['Child ID'] || 'Unknown',
+              metadata['Child Name'] || 'Unknown',
+              metadata['Created Date'] || 'Unknown',
+              metadata['Form Version'] || 'Unknown',
+              metadata['Filled Out By'] || 'Unknown',
+              section.title || 'Unknown Section',
+              qa.question || 'Unknown Question',
+              qa.answer || ''
+            ]);
+          });
+        });
+      });
+      
+      // Convert to CSV
+      const csvContent = rows.map(row => 
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      ).join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      // Use child name from the data if available, otherwise use a generic name
+      const exportFileName = data.length > 0 && data[0].metadata &&
+                            data[0].metadata['Child Name'] &&
+                            data[0].metadata['Child Name'] !== 'Unknown' ?
+                            `${data[0].metadata['Child Name'].replace(/[^\w]/g, '_')}_fpr_records.csv` :
+                            `fpr_records.csv`;
+      
+      link.href = url;
+      link.download = exportFileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    } else {
+      // Fall back to the original implementation for flat data
+      const headersSet = new Set<string>();
+      
+      data.forEach(row => {
+        Object.keys(row).forEach(key => headersSet.add(key));
+      });
+      
+      const headers = Array.from(headersSet);
+      const headerLine = headers.join(',') + '\n';
+      
+      const rows = data
+        .map(row =>
+          headers
+            .map(key => {
+              const value = row[key];
+              return `"${String(value ?? '').replace(/"/g, '""')}"`;
+            })
+            .join(',')
+        )
+        .join('\n');
+      
+      const blob = new Blob([headerLine + rows], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${childName}_fpr_records.csv`;
+      link.click();
+    }
   }
 
-  // Add XLSX export function
+  // Function to export data as XLSX (matching CSV format)
   function exportFullXLSX(data: any[]) {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    XLSX.writeFile(workbook, `${childName}_fpr_records.xlsx`);
+    // Check if the data has the structured format we expect
+    if (data.length > 0 && data[0].metadata && data[0].sections) {
+      const wb = XLSX.utils.book_new();
+      
+      // Create a single flat table format similar to CSV
+      const rows = [];
+      
+      // Add header row
+      rows.push(['Child ID', 'Child Name', 'Created Date', 'Form Version', 'Filled Out By', 'Section', 'Question', 'Answer']);
+      
+      // Process each record and flatten them into rows
+      data.forEach(record => {
+        const metadata = record.metadata;
+        
+        // Process each section and its questions
+        record.sections.forEach((section: { title: string, questions: Array<{ question: string, answer: string }> }) => {
+          section.questions.forEach((qa: { question: string, answer: string }) => {
+            rows.push([
+              metadata['Child ID'] || 'Unknown',
+              metadata['Child Name'] || 'Unknown',
+              metadata['Created Date'] || 'Unknown',
+              metadata['Form Version'] || 'Unknown',
+              metadata['Filled Out By'] || 'Unknown',
+              section.title || 'Unknown Section',
+              qa.question || 'Unknown Question',
+              qa.answer || ''
+            ]);
+          });
+        });
+      });
+      
+      // Create a worksheet from the rows
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      
+      // Set column widths for better readability
+      const colWidths = [
+        { wch: 10 },  // Child ID
+        { wch: 20 },  // Child Name
+        { wch: 15 },  // Created Date
+        { wch: 12 },  // Form Version
+        { wch: 15 },  // Filled Out By
+        { wch: 20 },  // Section
+        { wch: 40 },  // Question
+        { wch: 40 }   // Answer
+      ];
+      ws['!cols'] = colWidths;
+      
+      // Add the worksheet to the workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'FPR Records');
+      
+      // Use child name from the data if available, otherwise use a generic name
+      const exportFileName = data.length > 0 && data[0].metadata &&
+                            data[0].metadata['Child Name'] &&
+                            data[0].metadata['Child Name'] !== 'Unknown' ?
+                            `${data[0].metadata['Child Name'].replace(/[^\w]/g, '_')}_fpr_records.xlsx` :
+                            `fpr_records.xlsx`;
+      
+      // Generate Excel file and trigger download
+      XLSX.writeFile(wb, exportFileName);
+    } else {
+      // Fall back to the original implementation for flat data
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+      XLSX.writeFile(workbook, `fpr_records.xlsx`);
+    }
   }
 
   // Add export handler function
@@ -169,64 +292,71 @@
     }
 
     try {
-      const res = await fetch('/admin/data/export-fpr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds })
-      });
+      // For CSV and XLSX, get structured data with questions and answers
+      if (exportType === "csv" || exportType === "xlsx") {
+        const res = await fetch('/admin/data/export-fpr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            ids: selectedIds,
+            format: exportType 
+          })
+        });
 
-      if (!res.ok) {
-        alert('Failed to fetch export data');
-        return;
-      }
+        if (!res.ok) {
+          alert('Failed to fetch export data');
+          return;
+        }
 
-      const data = await res.json();
-      const cleaned = sanitizeData(data);
+        const data = await res.json();
+        
+        if (exportType === "csv") {
+          exportFullCSV(data);
+        } else {
+          exportFullXLSX(data);
+        }
+      } 
+      // Handle PDF export - fetch binary data and download
+      else if (exportType === "pdf") {
+        // Create a download link for the PDF that will be returned
+        const pdfDownloadLink = document.createElement('a');
+        
+        // Make request to the server for PDF generation
+        const response = await fetch('/admin/data/export-fpr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ids: selectedIds,
+            format: 'pdf'
+          })
+        });
 
-      if (exportType === "csv") {
-        exportFullCSV(cleaned);
-      } else if (exportType === "xlsx") {
-        exportFullXLSX(cleaned);
-      } else if (exportType === "pdf") {
-        // Handle PDF export - for multiple records
-        if (selectedIds.length > 1) {
-          alert(`Exporting ${selectedIds.length} files. Please wait...`);
+        if (!response.ok) {
+          alert('Failed to generate PDF');
+          return;
+        }
+
+        // Get the binary data from the response
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        
+        // Get filename from Content-Disposition header if available
+        let filename = 'fpr_records.pdf';
+        const contentDisposition = response.headers.get('Content-Disposition');
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1];
+          }
         }
         
-        for (const id of selectedIds) {
-          const res = await fetch('/admin/data/export-fpr', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              ids: [id],
-              format: 'pdf' 
-            })
-          });
-          
-          if (!res.ok) {
-            console.error(`Failed to export record ${id}`);
-            continue;
-          }
-          
-          const blob = await res.blob();
-          // Convert recordsByYear object to a flattened array of records
-          const allRecords = Object.values(recordsByYear).reduce((acc, val) => acc.concat(val), []);
-          const record = allRecords.find((r: RecordType) => r.answer_id === id);
-          const recordYear = record ? new Date(record.created_at).getFullYear() : 'unknown';
-          const filename = `${childIdStr}_${childName}_${recordYear}_FPR.pdf`.replace(/\s+/g, '_');
-          
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = filename;
-          link.click();
-          URL.revokeObjectURL(url);
-          
-          // Add a small delay between downloads
-          if (selectedIds.length > 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
+        // Set up download link and trigger click
+        pdfDownloadLink.href = url;
+        pdfDownloadLink.download = filename;
+        pdfDownloadLink.click();
+        
+        // Clean up by revoking the object URL
+        URL.revokeObjectURL(url);
       }
       
       // Close the export options dropdown after export

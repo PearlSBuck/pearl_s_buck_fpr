@@ -2,6 +2,23 @@ import { json } from "@sveltejs/kit";
 import PDFDocument from 'pdfkit';
 import { Buffer } from 'buffer';
 import { supabaseAdmin } from "$lib/db";
+import type { RequestHandler } from '@sveltejs/kit';
+import { 
+    fetchFPRRecords, 
+    fetchFPRAnswers, 
+    fetchFormSections 
+} from '../export-utils/query-helpers';
+
+import { 
+    organizeAnswersBySection, 
+    cleanRecordData 
+} from '../export-utils/data-formatters';
+
+import type { 
+    SectionWithFields, 
+    Record as FPRRecord, 
+    ExportRequestBody 
+} from '../export-utils/types';
 
 interface FormField {
     id: string;
@@ -10,17 +27,8 @@ interface FormField {
     sectionid: string;
 }
 
-interface SectionWithFields {
-    id: string;
-    title: string;
-    fields: Array<{
-        label: string;
-        answer: string;
-    }>;
-}
-
-export async function POST({ request }) {
-    const { ids, format = 'csv' } = await request.json();
+export const POST: RequestHandler = async ({ request }) => {
+    const { ids, format = 'csv' } = await request.json() as ExportRequestBody;
 
     if (!Array.isArray(ids) || ids.length === 0) {
         return json({ error: "No IDs provided" }, { status: 400 });
@@ -48,22 +56,65 @@ export async function POST({ request }) {
         return json({ error: "No records found" }, { status: 404 });
         }
 
-        // For CSV/XLSX exports, return the data as JSON
+        // For CSV/XLSX exports
         if (format === 'csv' || format === 'xlsx') {
-        // Add child names to the records
-        for (const record of data) {
-            const { data: fisRecord } = await supabaseAdmin
-            .from("fis_answers")
-            .select("sc_name")
-            .eq("sc_id", record.sc_id)
-            .single();
+            // Process each record individually rather than merging them
+            const processedRecords = [];
             
-            if (fisRecord) {
-            record.sc_name = fisRecord.sc_name;
+            for (const record of data) {
+                // Fetch child name from fis_answers if not already present
+                if (!record.sc_name || record.sc_name.trim() === '') {
+                    const { data: fisRecord } = await supabaseAdmin
+                        .from("fis_answers")
+                        .select("sc_name")
+                        .eq("sc_id", record.sc_id)
+                        .single();
+                    
+                    if (fisRecord && fisRecord.sc_name) {
+                        record.sc_name = fisRecord.sc_name;
+                    }
+                }
+                
+                const answers = await fetchFPRAnswers(record.answer_id);
+                const sections = await fetchFormSections(record.form_id);
+                
+                // Transform answers to match expected format
+                const transformedAnswers = answers.map(answer => ({
+                    ...answer,
+                    form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields
+                }));
+
+                // Organize answers by section
+                const organizedSections = organizeAnswersBySection(record, sections, transformedAnswers);
+                
+                // Create a record object with metadata
+                const recordData = {
+                    metadata: {
+                        'Child ID': record.sc_id,
+                        'Child Name': record.sc_name || `Child ID: ${record.sc_id}`,
+                        'Created Date': new Date(record.created_at).toLocaleDateString(),
+                        'Form Version': record.forms?.version || 'N/A',
+                        'Filled Out By': record.filled_out_by || 'Unknown'
+                    },
+                    sections: [] as any[]
+                };
+                
+                // Add each section with its questions and answers
+                organizedSections.forEach(section => {
+                    const sectionData = {
+                        title: section.title,
+                        questions: section.fields.map(field => ({
+                            question: field.label,
+                            answer: field.answer
+                        }))
+                    };
+                    recordData.sections.push(sectionData);
+                });
+                
+                processedRecords.push(recordData);
             }
-        }
-        
-        return json(data);
+            
+            return json(processedRecords);
         }
 
         // For PDF export, process each record
@@ -72,15 +123,20 @@ export async function POST({ request }) {
         const allAnswers: Array<{record: any, answers: SectionWithFields[]}> = [];
         
         for (const record of data) {
-            // Add child name to record
-            const { data: fisRecord } = await supabaseAdmin
-            .from("fis_answers")
-            .select("sc_name")
-            .eq("sc_id", record.sc_id)
-            .single();
-            
-            if (fisRecord) {
-            record.sc_name = fisRecord.sc_name;
+            // Ensure child name is present
+            if (!record.sc_name || record.sc_name.trim() === '') {
+                const { data: fisRecord } = await supabaseAdmin
+                .from("fis_answers")
+                .select("sc_name")
+                .eq("sc_id", record.sc_id)
+                .single();
+                
+                if (fisRecord && fisRecord.sc_name) {
+                    record.sc_name = fisRecord.sc_name;
+                } else {
+                    // Fallback if name not found in fis_answers
+                    record.sc_name = `Child ID: ${record.sc_id}`;
+                }
             }
             
             // Get all answers for this record
