@@ -30,6 +30,7 @@ export interface Record {
     answer_id: string;
     form_id: string;
     created_at: string;
+    filled_out_by?: string; // Add this property
     forms?: {
         id: string;
         title: string;

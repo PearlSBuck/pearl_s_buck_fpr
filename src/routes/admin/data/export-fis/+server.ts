@@ -15,7 +15,7 @@ import {
 
 import type { 
     SectionWithFields, 
-    Record, 
+    Record as FISRecord, 
     ExportRequestBody 
 } from '../export-utils/types';
 
@@ -34,15 +34,89 @@ export const POST: RequestHandler = async ({ request }) => {
             return json({ error: "No records found" }, { status: 404 });
         }
 
-        // For CSV/XLSX exports, prepare data to return as JSON
+        // For CSV/XLSX exports
         if (format === 'csv' || format === 'xlsx') {
-            return json(records);
+            // Process each record individually rather than merging them
+            const processedRecords = [];
+            
+            for (const record of records) {
+                const answers = await fetchFISAnswers(record.answer_id);
+                const sections = await fetchFormSections(record.form_id);
+                
+                // Transform answers to match expected format
+                const transformedAnswers = answers.map(answer => ({
+                    ...answer,
+                    form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields
+                }));
+
+                // Organize answers by section
+                const organizedSections = organizeAnswersBySection(record, sections, transformedAnswers);
+                
+                // Create a record object with metadata
+                const recordData = {
+                    metadata: {
+                        'Child ID': record.sc_id,
+                        'Child Name': record.sc_name,
+                        'Created Date': new Date(record.created_at).toLocaleDateString(),
+                        'Form Version': record.forms?.version || 'N/A',
+                        'Filled Out By': record.filled_out_by || 'Unknown'
+                    },
+                    sections: [] as any[]
+                };
+                
+                // Add each section with its questions and answers
+                organizedSections.forEach(section => {
+                    const sectionData = {
+                        title: section.title,
+                        questions: section.fields.map(field => ({
+                            question: field.label,
+                            answer: field.answer
+                        }))
+                    };
+                    recordData.sections.push(sectionData);
+                });
+                
+                processedRecords.push(recordData);
+            }
+            
+            // Format for the specified export type
+            if (format === 'csv') {
+                const csvData = processedRecords.map(record => {
+                    // Create a flattened CSV-friendly structure for each record
+                    // Fix the type error for 'Child ID'
+                    const flatRecord: Record<string, string> = {
+                        'Child ID': String(record.metadata['Child ID']), // Convert to string
+                        'Child Name': record.metadata['Child Name'],
+                        'Created Date': record.metadata['Created Date'],
+                        'Form Version': record.metadata['Form Version'],
+                        'Filled Out By': record.metadata['Filled Out By']
+                    };
+                    
+                    // Add each question-answer as a separate row
+                    let sectionIndex = 1;
+                    record.sections.forEach(section => {
+                        // flatRecord[`Section ${sectionIndex}`] = section.title;
+                        section.questions.forEach((qa: { question: string, answer: string }, i: number) => {
+                            flatRecord[`Question${i+1}`] = qa.question;
+                            flatRecord[`Answer${i+1}`] = qa.answer;
+                        });
+                        sectionIndex++;
+                    });
+                    
+                    return flatRecord;
+                });
+                
+                return json(csvData);
+            } else {
+                // For XLSX, we can use the same structure
+                return json(processedRecords);
+            }
         }
 
     // For PDF export, process each record
         if (format === 'pdf') {
             // Get the answers for each record and organize by section
-            const allAnswers: Array<{record: Record, answers: SectionWithFields[]}> = [];
+            const allAnswers: Array<{record: FISRecord, answers: SectionWithFields[]}> = [];
             
             for (const record of records) {
                 const answers = await fetchFISAnswers(record.answer_id);

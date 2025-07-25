@@ -114,21 +114,33 @@
   );
 
   function exportFullCSV(fullData: any[]) {
-    const header = Object.keys(fullData[0]).join(',') + '\n';
+    const headersSet = new Set<string>();
+    
+    // Collect all possible headers from all records
+    fullData.forEach(row => {
+      Object.keys(row).forEach(key => headersSet.add(key));
+    });
+    
+    const headers = Array.from(headersSet);
+    const headerLine = headers.join(',') + '\n';
+    
     const rows = fullData
-      .map((row) =>
-        Object.values(row)
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+      .map(row =>
+        headers
+          .map(key => {
+            const value = row[key];
+            return `"${String(value ?? '').replace(/"/g, '""')}"`;
+          })
           .join(',')
       )
       .join('\n');
-
-    const blob = new Blob([header + rows], { type: 'text/csv' });
+    
+    const blob = new Blob([headerLine + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-
+    
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'full-records.csv';
+    link.download = 'family-introduction-sheet.csv';
     link.click();
 }
 
@@ -282,6 +294,43 @@
     } finally {
       isExporting = false;
     }
+  }
+
+  function createWorkbook(data: any[]) {
+    const wb = XLSX.utils.book_new();
+    
+    // Create a separate sheet for each record (child)
+    data.forEach((record, index) => {
+      const childName = record.metadata['Child Name'].replace(/[^\w]/g, '_').substring(0, 15);
+      const sheetName = `${record.metadata['Child ID']}_${childName}`.substring(0, 31); // Excel has 31 char limit
+      
+      // Create rows for the sheet
+      const rows = [];
+      
+      // Add metadata
+      rows.push(['Child Information']);
+      rows.push(['Child ID', record.metadata['Child ID']]);
+      rows.push(['Child Name', record.metadata['Child Name']]);
+      rows.push(['Created Date', record.metadata['Created Date']]);
+      rows.push(['Form Version', record.metadata['Form Version']]);
+      rows.push(['Filled Out By', record.metadata['Filled Out By']]);
+      rows.push([]);
+      
+      // Add each section with questions and answers
+      record.sections.forEach((section: { title: string, questions: Array<{ question: string, answer: string }> }) => {
+        // rows.push([section.title]);
+        section.questions.forEach((qa: { question: string, answer: string }) => {
+          rows.push([qa.question, qa.answer]);
+        });
+        rows.push([]);
+      });
+      
+      // Create a worksheet from the rows
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+    
+    return wb;
   }
 </script>
 
