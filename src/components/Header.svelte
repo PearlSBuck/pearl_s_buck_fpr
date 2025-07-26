@@ -17,6 +17,9 @@
   // Check if current route is admin
   $: isAdminRoute = $page.route.id?.startsWith('/admin') || false;
   
+  // Check if current route is login - hide navbar completely for login page
+  $: isLoginRoute = $page.route.id === '/login' || $page.url.pathname === '/login';
+  
   function toggleNav() {
     isNavOpen = !isNavOpen;
   }
@@ -102,10 +105,12 @@ function navigateToManageUsers() {
 
 <svelte:window on:click={handleOutsideClick} />
 
+<!-- Header always shows, but navigation buttons are hidden on login page -->
 <div class="fixed top-0 left-0 right-0 z-50 bg-[#F6F8FF]">
   <div class="bg-white h-14 sm:h-16 flex items-center px-3 sm:px-4 justify-between">
-    <!-- Hamburger Menu Button for Mobile -->
+    <!-- Hamburger Menu Button for Mobile (hidden on login page) -->
     <div class="flex items-center">
+      {#if !isLoginRoute}
       <button 
         on:click={toggleNav} 
         class="nav-toggle cursor-pointer p-1 sm:p-0 mr-2 sm:mr-0 md:hidden" 
@@ -120,6 +125,12 @@ function navigateToManageUsers() {
       <button on:click={toggleNav} class="nav-toggle cursor-pointer hidden md:block">
         <img src="/logo.jpg" alt="Logo" class="h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 p-1"/>
       </button>
+      {:else}
+      <!-- Logo for login page (always visible, no click handler) -->
+      <div class="cursor-default">
+        <img src="/logo.jpg" alt="Logo" class="h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 p-1"/>
+      </div>
+      {/if}
     </div>
      
     <!-- Title - Responsive -->
@@ -128,15 +139,16 @@ function navigateToManageUsers() {
       <span class="sm:hidden">PSB Foundation</span>
     </h1>
      
-    <!-- User Icon -->
+    <!-- User Icon (hidden on login page) -->
     <div class="flex items-center gap-2">
-      {#if search}
+      {#if search && !isLoginRoute}
       <button 
         class="p-2 hover:bg-gray-100 rounded-full transition-colors" 
         aria-label="Search"
       >
       </button>
       {/if}
+      {#if !isLoginRoute}
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 63 63" fill="none" class="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 p-1 sm:p-2">
         <rect width="63" height="63" rx="31.5" fill="#0C376C" />
         <path
@@ -150,10 +162,12 @@ function navigateToManageUsers() {
           fill="white"
         />
       </svg>
+      {/if}
     </div>
   </div>
    
-  <!-- Second Header Bar -->
+  <!-- Second Header Bar (hidden on login page) -->
+  {#if !isLoginRoute}
   <div class="bg-[#474C58] h-12 sm:h-14 flex justify-between items-center px-3 sm:px-4">
   <span class="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 flex-1">
     <p class="text-white text-sm sm:text-base md:text-lg lg:text-xl font-semibold truncate min-w-0 flex-1 lg:ml-6">
@@ -170,8 +184,11 @@ function navigateToManageUsers() {
     {/if}
   </span>
 </div>
+  {/if}
 </div>
 
+<!-- Navigation elements (hidden on login page) -->
+{#if !isLoginRoute}
 <!-- Mobile Overlay -->
 {#if isNavOpen}
   <button 
@@ -357,6 +374,7 @@ function navigateToManageUsers() {
     {/if}
   </div>
 </div>
+{/if}
 
 <style>
   /* Ensure smooth transitions */
