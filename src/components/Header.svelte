@@ -135,9 +135,6 @@ function navigateToManageUsers() {
         class="p-2 hover:bg-gray-100 rounded-full transition-colors" 
         aria-label="Search"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="sm:w-6 sm:h-6">
-          <path d="M21 21L15 15M17 10C17..." stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
       </button>
       {/if}
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 63 63" fill="none" class="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 p-1 sm:p-2">
