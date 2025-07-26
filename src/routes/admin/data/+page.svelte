@@ -21,7 +21,7 @@
 
 
 
-// Alternative reactive approach (choose one of the above methods)
+// Alternative reactive approach 
 $: {
   const tabParam = $page.url.searchParams.get('tab');
   if (tabParam === 'intro_sheet' || tabParam === 'progress_report') {
