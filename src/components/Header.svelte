@@ -154,16 +154,22 @@ function navigateToManageUsers() {
   </div>
    
   <!-- Second Header Bar -->
-  <div class="bg-[#474C58] h-8 sm:h-10 flex justify-between items-center">
-    <span class="flex items-center gap-2 lg:gap-4 ml-3 sm:ml-4">
-      <p class="lg:ml-10 text-white text-xs sm:text-sm md:text-base lg:text-lg font-semibold truncate max-w-[150px] sm:max-w-none">{name}</p>
-      {#if backButton}
-      <button on:click={() => history.back()} class="bg-[#1A5A9E] text-white font-semibold py-1 px-2 sm:py-1.5 sm:px-3 rounded-lg cursor-pointer text-xs sm:text-sm hover:bg-[#0f4577] transition-colors">
-        Back
-      </button>
-      {/if}
-    </span>
-  </div>
+  <div class="bg-[#474C58] h-12 sm:h-14 flex justify-between items-center px-3 sm:px-4">
+  <span class="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 flex-1">
+    <p class="text-white text-sm sm:text-base md:text-lg lg:text-xl font-semibold truncate min-w-0 flex-1 lg:ml-6">
+      {name}
+    </p>
+    {#if backButton}
+    <button 
+      on:click={() => history.back()} 
+      class="bg-[#1A5A9E] text-white font-medium py-2 px-3 sm:py-2 sm:px-4 rounded-lg cursor-pointer text-xs sm:text-sm hover:bg-[#0f4577] active:bg-[#0a3a63] transition-colors flex-shrink-0 touch-manipulation"
+      aria-label="Go back"
+    >
+      Back
+    </button>
+    {/if}
+  </span>
+</div>
 </div>
 
 <!-- Mobile Overlay -->
