@@ -13,10 +13,23 @@
   import { selectedRecords } from './selectRecord';
   import { onDestroy } from 'svelte';  
   import * as XLSX from 'xlsx';
+  import { page } from '$app/stores';
 
   let pageName = "Individual Records Management";
   let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
   let showModal = false;
+
+
+
+// Alternative reactive approach (choose one of the above methods)
+$: {
+  const tabParam = $page.url.searchParams.get('tab');
+  if (tabParam === 'intro_sheet' || tabParam === 'progress_report') {
+    selected = tabParam;
+  }
+}
+
+
   
   export let data: {
     records: { sc_id: number; sc_name: string }[];
