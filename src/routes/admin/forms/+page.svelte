@@ -3,8 +3,8 @@
     import { onMount } from 'svelte';
     import { enhance } from '$app/forms';
     import { goto } from '$app/navigation';
-    import Header from '../forms/[id]/Header.svelte'; // Import the Header component
-    
+    import Header from '../../../components/Header.svelte'; // Import the Header component
+    import { page } from '$app/stores';
     export let data;
     
     let show = false;
@@ -16,6 +16,45 @@
     /** @type {number[]} */
     let availableYears = [];
     let currentFormType = '';
+
+
+    $: {
+    const action = $page.url.searchParams.get('action');
+    console.log('Current URL:', $page.url.href);
+    console.log('Action parameter:', action);
+    
+    if (action === 'handleIntroSheet') {
+        console.log('Calling handleIntroSheet()...');
+        handleIntroSheet();
+        
+        // Clean up the URL parameter after calling the function
+        const url = new URL($page.url);
+        url.searchParams.delete('action');
+        history.replaceState({}, '', url.toString());
+        console.log('URL cleaned up');
+    }
+}
+
+
+$: {
+    const action = $page.url.searchParams.get('action');
+    console.log('Current URL:', $page.url.href);
+    console.log('Action parameter:', action);
+    
+    if (action === 'handleProgressReport') {
+        console.log('Calling handleIntroSheet()...');
+        handleProgressReport();
+        
+        // Clean up the URL parameter after calling the function
+        const url = new URL($page.url);
+        url.searchParams.delete('action');
+        history.replaceState({}, '', url.toString());
+        console.log('URL cleaned up');
+    }
+}
+
+
+
 
     // Initialize component on mount
     onMount(() => {
