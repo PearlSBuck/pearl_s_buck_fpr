@@ -75,7 +75,7 @@
         />
 
     <!-- UI for radio group input -->
-    {:else if type === 'radio'}
+    {:else if type === 'radio' || type === 'multiple_choice'}
         <div class="space-y-2 ml-2">
             {#each options as option}
             <label class="flex items-center space-x-2">
