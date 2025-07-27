@@ -273,7 +273,10 @@ export async function handleSectionChanges(updatedSection: any, changeType: stri
                 const { type, id, section } = sectionChange;
 
                 if (type === 'update') {
-                    await supabaseAdmin.from('form_sections').update(section).eq('id', id);
+                    await supabaseAdmin.from('form_sections').update({
+                        title: section.title, 
+                        orderindex: section.orderindex  
+                    }).eq('id', id);
                 } else if (type === 'add') {
                     await supabaseAdmin.from('form_sections').insert({
                         formid: formId,
