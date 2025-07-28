@@ -1,4 +1,3 @@
-// +page.server.js
 import { supabase } from "$lib/db";
 import { fail } from '@sveltejs/kit';
 
@@ -21,9 +20,9 @@ export async function load() {
 
     console.log('Server: Fetched forms count:', data?.length || 0);
     console.log('Server: First form structure:', data?.[0] || 'No forms');
-        
+
     // Map database columns to camelCase for frontend
-    const mappedForms = data?.map((form:any) => ({
+    const mappedForms = data?.map(form => ({
         ...form,
         createdAt: form.createdat, // Map createdat to createdAt
         version: form.version, // Include version column
@@ -39,7 +38,7 @@ export async function load() {
 
 // Optional: Add actions for form operations
 export const actions = {
-    delete: async ({ request }: { request: Request }) => {
+    delete: async ({ request }) => {
         const data = await request.formData();
         const formId = data.get('formId');
 
