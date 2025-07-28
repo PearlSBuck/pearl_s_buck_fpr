@@ -216,7 +216,7 @@
                     <input
                         type="checkbox"
                         class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
-                        bind:checked={otherChecked}
+                        bind:checked={otherChecked} 
                     />
                     <input
                         type="text"
