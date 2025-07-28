@@ -75,7 +75,7 @@
                 console.log($formAnswers);
                 console.log($filledOutBy);
                 console.log($SCId);
-                const success = await submitAnswersToSupabase(data.form.id);
+                const success = await submitAnswersToSupabase(data.form.id, 'FIS');
                 if (success) {
                     notification.set({ message: 'Successfully submitted form entry', type: 'success' });
                 } else {

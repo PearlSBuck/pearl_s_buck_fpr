@@ -44,8 +44,8 @@ export function clearAnswers() {
 	localStorage.removeItem(OFFLINE_ANSWERS_KEY);
 }
 
-// --- SUBMISSION TO SUPABASE ---
-export async function submitAnswersToSupabase(formId: string) {
+// --- SUBMISSION TO SUPABASE (FPR/FIS-aware schema) ---
+export async function submitAnswersToSupabase(formId: string, formType: 'FPR' | 'FIS', scname?: string) {
 	const stored = localStorage.getItem(OFFLINE_ANSWERS_KEY);
 	if (!stored) {
 		console.warn('No answers to submit.');
@@ -70,36 +70,67 @@ export async function submitAnswersToSupabase(formId: string) {
 	const filledOutByValue = get(filledOutBy);
 	const scIdValue = get(SCId);
 
-	// 1. Insert parent answer row
-	const { data: parentAnswer, error: parentError } = await supabaseAdmin
-		.from('fpr_answers')
-		.insert({
+	// --- STEP 1: Prepare table names ---
+	const parentTable = formType === 'FPR' ? 'fpr_answers' : 'fis_answers';
+	const listTable = formType === 'FPR' ? 'fpr_answers_list' : 'fis_answers_list';
+
+	// --- STEP 2: Prepare INSERT payload for parent row ---
+	let parentInsertPayload: Record<string, any>;
+
+	if (formType === 'FPR') {
+		parentInsertPayload = {
 			form_id: formId,
 			filled_out_by: filledOutByValue,
 			sc_id: scIdValue
-		})
+		};
+		// if formType === 'FIS'
+	} else {
+		parentInsertPayload = {
+			form_id: formId,
+			sc_name: scname,
+			filled_out_by: filledOutByValue
+
+		};
+	}
+
+	// --- STEP 3: Insert parent row ---
+	const { data: parentAnswer, error: parentError } = await supabaseAdmin
+		.from(parentTable)
+		.insert(parentInsertPayload)
 		.select()
 		.single();
 
 	if (parentError) {
-		console.error('Error inserting parent answer row:', parentError);
+		console.error(`Error inserting into ${parentTable}:`, parentError);
 		return false;
 	}
 
 	const parentAnswerId = parentAnswer.answer_id;
-	// 2. Insert answer list
-	const submissions = answerEntries.map(([question_id, answer]) => ({
-		answer_id: parentAnswerId,
-		question_id,
-		answer
-	}));
 
+	// --- STEP 4: Prepare answer list ---
+	const submissions = answerEntries.map(([question_id, answer]) => {
+		if (formType === 'FPR') {
+			return {
+				answer_id: parentAnswerId,
+				question_id,
+				answer
+			};
+		} else if (formType === 'FIS') {
+			return {
+				answer_id: parentAnswerId,
+				question_id,
+				answer
+			};
+		}
+	});
+
+	// --- STEP 5: Insert answer list rows ---
 	const { error: listError } = await supabaseAdmin
-		.from('fpr_answers_list')
+		.from(listTable)
 		.insert(submissions);
 
 	if (listError) {
-		console.error('Error submitting answer list:', listError);
+		console.error(`Error inserting into ${listTable}:`, listError);
 		return false;
 	}
 
@@ -107,3 +138,4 @@ export async function submitAnswersToSupabase(formId: string) {
 	clearAnswers();
 	return true;
 }
+
