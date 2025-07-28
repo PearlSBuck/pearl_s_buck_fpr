@@ -132,12 +132,6 @@
             }
             return field.value || [];
         }
-        
-        if (field.type === 'multiple_choice') {
-            // Handle multiple choice - single selection only (like radio)
-            return field.value || '';
-        }
-        
         // Ensure text fields always have a string value, never undefined/null
         return field.value || '';
     }
@@ -195,25 +189,6 @@
         }
     }
 
-    function getDisplayTitle(form: any) {
-    if (!form) return 'Form View';
-    
-    const title = form.title?.toLowerCase() || '';
-    
-    // Check if it's a Family Introduction Sheet (FIS)
-    if (title.includes('fis') || title.includes('family introduction sheet')) {
-        return 'Family Introduction Sheet';
-    }
-    
-    // Check if it's a Family Progress Report (FPR)
-    if (title.includes('fpr') || title.includes('family progress report')) {
-        return 'Family Progress Report';
-    }
-    
-    // Default to the original title
-    return form.title || 'Form View';
-}
-
     function clearMessages() {
         error = null;
         successMessage = null;
@@ -226,13 +201,8 @@
     
 
     function getTotalFieldsCount(): number {
-        if (!formSections) return 0;
-        return formSections.reduce((acc: number, section: any) => {
-            if (section.repeatable && section.instances) {
-                return acc + section.instances.reduce((instAcc: number, inst: any) => instAcc + (inst.fields?.length || 0), 0);
-            }
-            return acc + (section.fields?.length || 0);
-        }, 0);
+        if (!data.form?.sections) return 0;
+        return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
     }
 
     // Check if field type should always be editable (text inputs, textareas, etc.)
@@ -240,7 +210,7 @@
         return ['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'textarea'].includes(fieldType);
     }
 
-    // Check if field type should always be editable (including select, dropdown, radio, checkbox, and multiple_choice)
+    // Check if field type should always be editable (including select, dropdown, radio, and checkbox)
     function isAlwaysEditableField(fieldType: string): boolean {
         return ['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'textarea', 'select', 'dropdown', 'radio', 'checkbox', 'radio_with_other', 'multiple_choice', 'date'].includes(fieldType);
     }
@@ -305,8 +275,18 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
+   
 
 <div class="bg-[#F6F8FF] min-h-screen">
+    <!-- Header Section -->
+
+    <Header 
+        name={data.form?.title || 'Form View'} 
+        search={false} 
+        backButton={true} 
+    />
+   
+<!-------------- ---------------------------->
     <!-- Main Content Container -->
      {#if show}
     <div
@@ -343,9 +323,8 @@
                         <div class="text-sm text-gray-600 grid grid-cols-2 gap-4">
                             <div><strong>Form ID:</strong> {data.form.id}</div>
                             <div><strong>Created:</strong> {formatDate(data.form.createdAt)}</div>
-                            <div><strong>Sections:</strong> {formSections.length}</div>
+                            <div><strong>Sections:</strong> {data.form.sections.length}</div>
                             <div><strong>Fields:</strong> {getTotalFieldsCount()}</div>
-                            <div><strong>Household Members:</strong> {householdMemberCount}</div>
                         </div>
 
                         <!-- Action Buttons -->
@@ -374,7 +353,7 @@
                                 </button>
                             {:else}
                                 <button type="button" class="bg-[#1A5A9E] text-white font-bold px-4 py-2 rounded-md shadow-lg hover:bg-blue-700" on:click={toggleEditMode}>
-                                    Edit Form
+                                     Edit Form
                                 </button>
                             {/if}
                         </div>
@@ -397,13 +376,13 @@
                 {/if}
 
                 <!-- Form Sections -->
-                {#if formSections && formSections.length > 0}
+                {#if data.form.sections && data.form.sections.length > 0}
                     <div class="p-6 space-y-8">
                         {#if $displayedData?.form}
                             {#each $displayedData.form.sections.slice().sort((a:any, b:any) => a.orderindex - b.orderindex) as section, sectionIndex (section.id || sectionIndex)}
                             <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
-                                <div class="bg-[#474C58] text-white px-6 py-4 flex justify-between items-center">
+                                <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
                                     <h2 class="text-xl font-bold">{section.title}</h2>
                                     {#if editMode}
                                     <div class="relative z-50 flex items-end">
@@ -496,31 +475,12 @@
                                                                 <option value="">Select an option...</option>
                                                                 {#if field.options && Array.isArray(field.options)}
                                                                     {#each field.options as option}
-                                                                        <option value={typeof option === 'object' ? (option.value || option.label.toLowerCase().replace(/\s+/g, '_')) : option}>
+                                                                        <option value={typeof option === 'object' ? option.value : option}>
                                                                             {typeof option === 'object' ? option.label : option}
                                                                         </option>
                                                                     {/each}
                                                                 {/if}
                                                             </select>
-                                                        {:else if field.type === 'multiple_choice' && (editMode || isAlwaysEditableField(field.type))}
-                                                            <div class="space-y-3">
-                                                                {#if field.options && Array.isArray(field.options)}
-                                                                    {#each field.options as option, i}
-                                                                        <label class="flex items-center gap-3 cursor-pointer" for={"field-" + field.id + "-choice-" + i}>
-                                                                            <input
-                                                                                id={"field-" + field.id + "-choice-" + i}
-                                                                                type="radio"
-                                                                                class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E]"
-                                                                                bind:group={fieldValues[field.id]}
-                                                                                value={typeof option === 'object' ? (option.value || option.label.toLowerCase().replace(/\s+/g, '_')) : option}
-                                                                                required={field.required}
-                                                                                on:focus={clearMessages}
-                                                                            />
-                                                                            <span class="text-gray-700">{typeof option === 'object' ? option.label : option}</span>
-                                                                        </label>
-                                                                    {/each}
-                                                                {/if}
-                                                            </div>
                                                         {:else if field.type === 'radio' && (editMode || isAlwaysEditableField(field.type))}
                                                             <div class="space-y-3">
                                                                 {#if field.options && Array.isArray(field.options)}
@@ -593,42 +553,6 @@
                                                                     {/each}
                                                                 {/if}
                                                             </div>
-                                                        {:else if field.type === 'date'}
-                                                            <!-- Date field -->
-                                                            <input
-                                                                id={"field-" + field.id}
-                                                                class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
-                                                                type="date"
-                                                                bind:value={fieldValues[field.id]}
-                                                                required={field.required}
-                                                                on:focus={clearMessages}
-                                                                disabled={false}
-                                                                readonly={false}
-                                                            />
-                                                        {:else if field.type === 'datetime-local'}
-                                                            <!-- DateTime field -->
-                                                            <input
-                                                                id={"field-" + field.id}
-                                                                class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
-                                                                type="datetime-local"
-                                                                bind:value={fieldValues[field.id]}
-                                                                required={field.required}
-                                                                on:focus={clearMessages}
-                                                                disabled={false}
-                                                                readonly={false}
-                                                            />
-                                                        {:else if field.type === 'time'}
-                                                            <!-- Time field -->
-                                                            <input
-                                                                id={"field-" + field.id}
-                                                                class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
-                                                                type="time"
-                                                                bind:value={fieldValues[field.id]}
-                                                                required={field.required}
-                                                                on:focus={clearMessages}
-                                                                disabled={false}
-                                                                readonly={false}
-                                                            />
                                                         {:else if isTextFieldType(field.type)}
                                                             <!-- Always editable text fields -->
                                                             <input
