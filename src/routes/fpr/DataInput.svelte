@@ -138,7 +138,7 @@
 <div class="mb-4">
     <label for={name} class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm">{label}{#if required} <label class='text-red-400'> *</label>{/if}</label>
     <!-- UI for text input -->
-    {#if type === 'text' || type==='number'}
+    {#if type === 'text'}
         <textarea
             id={"field-" + id}
             class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg h-13 focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
@@ -148,6 +148,16 @@
             bind:value
             oninput={() => dispatch('change', value)}
         ></textarea>
+    {:else if type === 'number'}
+        <input
+            id={"field-" + id}
+            type="number"
+            class="w-full p-3 rounded-md bg-[#DDE1E6] border-0 shadow-lg h-13 focus:ring-2 focus:ring-[#1A5A9E] focus:outline-none"
+            placeholder={placeholder || 'Enter a number...'}
+            required={required}
+            bind:value
+            oninput={() => dispatch('change', value)}
+        />
 
     <!-- UI for radio group input -->
     {:else if type === 'radio'  ||  type==='multiple_choice'}
