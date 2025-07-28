@@ -75,7 +75,7 @@
         />
 
     <!-- UI for radio group input -->
-    {:else if type === 'radio'}
+    {:else if type === 'radio' || type === 'multiple_choice'}
         <div class="space-y-2 ml-2">
             {#each options as option}
             <label class="flex items-center space-x-2">
@@ -115,6 +115,14 @@
             <option value={option.value}>{option.label}</option>
             {/each}
         </select>
+    {:else if type == 'date'}
+        <input
+            name={name}
+            class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-full"
+            type="date"
+            bind:value 
+            required={required}
+            />
 
     <!-- {:else if type === 'signature'}
         <SignaturePad bind:this={sigRef} penColor="blue" />

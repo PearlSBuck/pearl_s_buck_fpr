@@ -10,6 +10,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables");
 
 }
+// Prevent multiple client instances in dev (HMR-safe)
+const globalAny = globalThis as any;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+export const supabase =
+  globalAny.supabase ?? createClient(supabaseUrl, supabaseAnonKey);
+
+export const supabaseAdmin =
+  globalAny.supabaseAdmin ?? createClient(supabaseUrl, supabaseServiceRoleKey);
+
+if (import.meta.env.DEV) {
+  globalAny.supabase = supabase;
+  globalAny.supabaseAdmin = supabaseAdmin;
+}

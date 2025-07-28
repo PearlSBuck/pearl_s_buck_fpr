@@ -3,7 +3,6 @@
     import { getContext, onMount } from 'svelte';
     import { enhance } from '$app/forms';
     import { goto } from '$app/navigation';
-    import Header from '../../../components/Header.svelte'; // Import the Header component
     import { page } from '$app/stores';
     export let data;
     
@@ -182,7 +181,6 @@ $: {
         selectedYear = +/** @type {HTMLSelectElement} */(event.target).value;
         
         // Re-filter selectedForms based on the selected year and current displayText
-        // @ts-ignore
         let formsToFilter = data.forms.filter(form => {
             if (displayText === 'FPR') {
                 return form.title && form.title.trim().toLowerCase() === 'fpr';
@@ -209,10 +207,11 @@ $: {
             // Create the URL path: /admin/forms/[form name]-[version]
             const formName = encodeURIComponent(form.title);
             const version = encodeURIComponent(form.version);
-            const url = `/admin/forms/${formName}-${version}`;
-            
+            const url = `/fis/${formName}-${version}`;
+            window.location.href = `/fis/${form.title}-${form.version}`;
             console.log('Navigating to:', url);
-            window.location.href=url;
+            
+
         } else {
             console.warn('Form missing title or version:', form);
         }
@@ -270,23 +269,7 @@ $: {
 
             <!-- Document Type Selection -->
             <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    <!-- Family Progress Report Button -->
-                    <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden border-l-4 border-green-600 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                        <div class="bg-green-600 text-white px-6 py-4">
-                            <h3 class="text-xl font-bold">Family Progress Report</h3>
-                        </div>
-                        <div class="p-6">
-                            <p class="text-gray-600 mb-6">Track and review your family's progress over time</p>
-                            <button 
-                                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 shadow-lg"
-                                on:click={handleProgressReport}
-                            >
-                                View Progress Reports
-                            </button>
-                        </div>
-                    </div>
-
+                <div class="grid grid-cols-1  gap-8 max-w-4xl mx-auto">
                     <!-- Family Introduction Sheet Button -->
                     <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden border-l-4 border-blue-600 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
                         <div class="bg-blue-600 text-white px-6 py-4">

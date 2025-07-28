@@ -1,4 +1,4 @@
-// +page.server.js - Updated to remove repeatable section references
+// +page.server.js - Updated to ONLY handle exact form name + version match
 import { supabase } from "$lib/db";
 import { fail, error } from '@sveltejs/kit';
 
@@ -111,7 +111,7 @@ export async function load({ params, url }) {
 
         console.log('Found exact match:', formBasic);
 
-        // Fetch sections for this form - REMOVED repeatable, section_type, max_instances
+        // Fetch sections for this form
         const { data: sectionsData, error: sectionsError } = await supabase
             .from('form_sections')
             .select('id, title, orderindex, formid')
@@ -124,25 +124,25 @@ export async function load({ params, url }) {
         }
 
         console.log(`Found ${sectionsData?.length || 0} sections for form ${formBasic.id}`);
-        
-        // Debug: Let's see what sections exist and their formid values
-        const { data: allSections, error: allSectionsError } = await supabase
-            .from('form_sections')
-            .select('id, title, formid');
-            
-        if (!allSectionsError && allSections) {
-            console.log('All sections in database:', allSections.map(s => ({
-                id: s.id,
-                title: s.title,
-                formid: s.formid,
-                formidType: typeof s.formid,
-                matches: s.formid === formBasic.id
-            })));
-            console.log('Looking for formid:', formBasic.id, 'type:', typeof formBasic.id);
-        }
 
         // Fetch all fields for all sections in one query for better performance
         const sectionIds = sectionsData?.map((section:any) => section.id) || [];
+
+        /**
+         * @typedef {Object} FormBasic
+         * @property {string} id
+         * @property {string} title
+         * @property {string} createdat
+         * @property {number} version
+         */
+
+        /**
+         * @typedef {Object} FormSection
+         * @property {string} id
+         * @property {string} title
+         * @property {number} orderindex
+         * @property {string} formid
+         */
 
         interface FormField {
             id: string;
@@ -184,7 +184,7 @@ export async function load({ params, url }) {
             fieldsBySection[field.sectionid].push(field);
         });
 
-        // Build the complete form structure - REMOVED repeatable functionality
+        // Build the complete form structure
         const mappedForm = {
             id: formBasic.id,
             title: formBasic.title,
@@ -196,7 +196,9 @@ export async function load({ params, url }) {
                 title: section.title,
                 orderIndex: section.orderindex,
                 formId: section.formid,
-                fields: (fieldsBySection[section.id] || []).map(field => ({
+                fields: (fieldsBySection[section.id] || [])
+                    .sort((a, b) => a.orderindex - b.orderindex)
+                    .map(field => ({
                     id: field.id,
                     label: field.label,
                     name: field.name,
@@ -309,32 +311,37 @@ export const actions = {
                 if (key.startsWith('field_')) {
                     const fieldId = key.replace('field_', '');
                     fieldUpdates.push({ id: fieldId, value: value || '' });
-                } else if (key.endsWith('_other')) {
-                    // Handle "others" text fields for radio_with_other
-                    fieldUpdates.push({
-                        fieldKey: key,
-                        value: value || '',
-                        isOtherText: true
-                    });
                 }
             }
 
-            console.log(`Processing ${fieldUpdates.length} field updates for form ${formId}`);
+            console.log(`Updating ${fieldUpdates.length} fields for form ${formId}`);
 
-            // For now, we'll just log the data that would be saved
-            console.log('Field updates to be saved:', fieldUpdates.slice(0, 5)); // Log first 5 for brevity
+            // NOTE: You may need a separate table for storing form responses/field values
+            const updatePromises = fieldUpdates.map(({ id, value }) =>
+                supabase
+                    .from('form_fields') // or whatever table stores the field values
+                    .update({ /* Add the correct column for storing field values */ })
+                    .eq('id', id)
+            );
 
-            return { 
-                success: true, 
-                message: `Successfully processed ${fieldUpdates.length} field updates`,
-                fieldCount: fieldUpdates.length
-            };
+            const results = await Promise.all(updatePromises);
+            
+            // Check for any errors
+            const errors = results.filter(result => result.error);
+            if (errors.length > 0) {
+                console.error('Update errors:', errors.map(r => r.error));
+                return fail(500, { message: `Failed to update ${errors.length} fields` });
+            }
+
+            console.log(`Successfully updated ${fieldUpdates.length} fields`);
+            return { success: true, message: `Successfully updated ${fieldUpdates.length} fields` };
         } catch (err) {
             console.error('Save all fields error:', err);
-            return fail(500, { message: 'Internal server error: ' + (err instanceof Error ? err.message : 'Unknown error') });
+            return fail(500, { message: 'Internal server error' });
         }
     },
 
+    // New action to create a new version of a form
     createNewVersion: async ({ request }) => {
         const data = await request.formData();
         const formId = data.get('formId');
@@ -358,54 +365,6 @@ export const actions = {
             return { success: true };
         } catch (err) {
             console.error('Action error:', err);
-            return fail(500, { message: 'Internal server error' });
-        }
-    },
-
-    deleteForm: async ({ request }) => {
-        // NOTE: This delete functionality requires:
-        // - RLS (Row Level Security) to be disabled on the forms table
-        // - Cascading deletes to be properly set up for form_fields and form_section tables
-        
-        const data = await request.formData();
-        const formId = data.get('formId');
-        const confirmationText = data.get('confirmationText');
-
-        console.log('=== DELETE FORM ACTION STARTED ===');
-        console.log('Form ID:', formId);
-        console.log('Confirmation text:', confirmationText);
-
-        if (!formId) {
-            console.log('ERROR: No form ID provided');
-            return fail(400, { message: 'Form ID is required' });
-        }
-
-        if (confirmationText !== 'Pearl S. Buck International') {
-            console.log('ERROR: Incorrect confirmation text');
-            return fail(400, { message: 'Incorrect confirmation text. Please type "Pearl S. Buck International" exactly.' });
-        }
-
-        try {
-            // we only need to delete the form itself
-            // sections and fields related to the form will be automatically deleted by the database
-            const { error: formError } = await supabase
-                .from('forms')
-                .delete()
-                .eq('id', formId);
-
-            if (formError) {
-                console.error('Error deleting form:', formError);
-                return fail(500, { message: 'Failed to delete form: ' + formError.message });
-            }
-
-            console.log('=== DELETE FORM ACTION COMPLETED SUCCESSFULLY ===');
-            return { 
-                success: true, 
-                deleted: true,
-                message: 'Form deleted successfully'
-            };
-        } catch (err) {
-            console.error('Delete form error:', err);
             return fail(500, { message: 'Internal server error' });
         }
     }
