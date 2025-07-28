@@ -159,7 +159,7 @@
                     type="radio"
                     name={name}
                     bind:group={value}
-                    value={option.value}
+                    value={option.value !== undefined && option.value !== '' ? option.value : option.label}
                     required={required}
                     onchange={() => dispatch('change', option.value)}
                     />
@@ -206,7 +206,7 @@
                     class="w-4 h-4 text-[#1A5A9E] focus:ring-[#1A5A9E] rounded"
                     name={name}
                     bind:group={value}
-                    value={option.value}
+                    value={option.value !== undefined && option.value !== '' ? option.value : option.label}
                     required={required}
                     onchange={() => dispatch('change', value)}
                 />
