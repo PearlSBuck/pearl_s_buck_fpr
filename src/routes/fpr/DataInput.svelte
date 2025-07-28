@@ -1,23 +1,8 @@
 <script lang="ts">
-    import SignaturePad from './SignaturePad.svelte'; 
-    // 
+    
 
-    let sigRef: any;
-    let img = '';
     let initialized = false;
-    function save() {
-        if (sigRef && !sigRef.isEmpty()) {
-            img = sigRef.toDataURL();
-        }
-    }
-    let file: File | null = null;
-    let previewUrl: string | null = null;
-    let uploading = false;
-
-    function clear() {
-        sigRef.clear();
-        img = '';
-    }
+    
     interface Option {
         label?: string;
         value?: string;
@@ -263,18 +248,6 @@
             required={required}
             oninput={() => dispatch('change', value)}
             />
-
-    {:else if type === 'signature'}
-        <SignaturePad bind:this={sigRef} penColor="blue" />
-
-        <div class="place-self-center">
-            <button onclick={clear} class=" text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 ">Clear</button>
-        </div>
-
-        {#if img}
-        <h3>Preview:</h3>
-        <img src={img} alt="Signature" />
-        {/if}
     
     {/if}
     
