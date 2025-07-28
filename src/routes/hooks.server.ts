@@ -24,5 +24,16 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
+  if (event.url.pathname.startsWith('/admin')) {
+      const role = event.locals.user.app_metadata?.role || event.locals.user.user_metadata?.role;
+
+      if (role !== 'Admin') {
+        return new Response(null, {
+          status: 303,
+          headers: { location: '/home' } // or redirect somewhere else
+        });
+      }
+    }
+
   return resolve(event);
 };
