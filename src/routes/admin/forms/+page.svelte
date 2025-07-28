@@ -211,7 +211,7 @@ $: {
             const url = `/admin/forms/${formName}-${version}`;
             
             console.log('Navigating to:', url);
-            goto(url);
+            window.location.href=url;
         } else {
             console.warn('Form missing title or version:', form);
         }

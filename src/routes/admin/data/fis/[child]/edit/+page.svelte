@@ -188,7 +188,7 @@
             
             // Navigate back to view page after short delay
             setTimeout(() => {
-                goto(`/admin/data/fis/${record.sc_id}`);
+                window.location.href= (`/admin/data/fis/${record.sc_id}`);
             }, 1500);
             
         } catch (err) {
@@ -200,7 +200,7 @@
     }
     
     function cancelEdit() {
-        goto(`/admin/data/fis/${record.sc_id}`);
+        window.location.href = (`/admin/data/fis/${record.sc_id}`);
     }
 </script>
 

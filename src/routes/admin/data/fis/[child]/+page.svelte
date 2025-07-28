@@ -79,7 +79,8 @@
     // Helper function to render field values based on type
     function renderFieldValue(field: any) {
         if (!field.answer) return 'Not provided';
-        
+        console.log(field.type+" "+field.answer)
+
         switch (field.type) {
             case 'checkbox':
                 try {
@@ -104,7 +105,7 @@
     // Handle Edit button click
     function handleEdit() {
         console.log('Edit record:', record.sc_id);
-        goto(`/admin/data/fis/${record.sc_id}/edit`);
+        window.location.href = `/admin/data/fis/${record.sc_id}/edit`;
     }
 
     // Handle Delete button click

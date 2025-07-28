@@ -97,11 +97,19 @@
 <div class="fixed overflow-auto top-0 left-0 h-full w-full flex flex-col bg-[#F6F8FF]">
     <div class="pt-27 flex flex-col px-10">   
         <div class="w-full shadow-md/20 rounded-lg bg-white p-5">
-            <div>
-                <label class="text-lg">
+            <div class="items-center justify-start flex">
+                <label class="text-lg" for="formTitle">
                     Form Title:
-                    <input class="rounded-full m-0 h-5 w-47.5" type="text" id="title" name="title" bind:value={form.title} placeholder="Enter a title..." />
                 </label>
+
+                        <select class="rounded-full m-0 h-5 w-47.5" id="title" name="title" bind:value={form.title} placeholder="Enter a title..." >
+                            <option>
+                                FPR
+                            </option>
+                            <option>
+                                FIS
+                            </option>
+                        </select>
             </div>
             <div class="md:flex md:justify-between md:pt-3">
                 <div>
