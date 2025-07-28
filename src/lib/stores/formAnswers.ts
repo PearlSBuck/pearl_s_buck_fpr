@@ -109,17 +109,18 @@ export async function submitAnswersToSupabase(formId: string, formType: 'FPR' | 
 
 	// --- STEP 4: Prepare answer list ---
 	const submissions = answerEntries.map(([question_id, answer]) => {
+		const formattedAnswer = Array.isArray(answer) ? JSON.stringify(answer) : answer;
 		if (formType === 'FPR') {
 			return {
 				answer_id: parentAnswerId,
 				question_id,
-				answer
+				answer: formattedAnswer
 			};
 		} else if (formType === 'FIS') {
 			return {
 				answer_id: parentAnswerId,
 				question_id,
-				answer
+				answer: formattedAnswer
 			};
 		}
 	});

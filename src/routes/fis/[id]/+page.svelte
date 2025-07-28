@@ -136,6 +136,7 @@
             missingFields.push('Enter Sponsored Child Name');
         }
         console.log(missingFields);
+        console.log($formAnswers);
         // NOTE for QA: 
         //  if you want to test wihtout having to validate, make this return false
         return missingFields;
