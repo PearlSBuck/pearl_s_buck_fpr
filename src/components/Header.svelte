@@ -28,21 +28,6 @@
     isNavOpen = false;
   }
   
-  function navigateToHome() {
-    goto('/home');
-    closeNav(); // Close navigation after navigation
-  }
-
-  function navigateToFamilyIntroductionSheet() {
-    goto('/admin/forms',{replaceState:true});
-    closeNav();
-}
-
-function navigateToFamilyProgressReport() {
-  goto('/admin/forms',{replaceState});
-  closeNav();
-}
-
 
 function navigateToLogout() {
   goto('/login');
@@ -50,24 +35,6 @@ function navigateToLogout() {
   closeNav();
 }
 
-
-
-function navigateToFIS() {
-  closeNav();
-  // Navigate to the admin data page with a URL parameter to set the selected tab
-  goto('/admin/data?tab=intro_sheet');
-}
-
-function navigateToFPR() {
-  closeNav();
-  // Navigate to the admin data page with a URL parameter to set the selected tab
-  goto('/admin/data?tab=progress_report');
-}
-function navigateToManageUsers() {
-  closeNav();
-  // Navigate to the admin data page with a URL parameter to set the selected tab
-  goto('/admin/manage');
-}
   
   function toggleForms() {
     formsExpanded = !formsExpanded;
@@ -233,18 +200,22 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {formsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <a href="/admin/forms" class="w-full h-full px-6 sm:px-8 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
-            <span class="flex items-center gap-3">
-              <span>📋</span>
-              <span>Family Introduction Sheet</span>
-            </span>
-          </a>
-          <a href="/admin/forms" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
-            <span class="flex items-center gap-3">
-              <span>📝</span>
-              <span>Family Progress Report</span>
-            </span>
-          </a>
+          <div class="w-full h-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+            <a href="/admin/forms">
+              <span class="flex items-center gap-3">
+                <span>📋</span>
+                <span>Family Introduction Sheet</span>
+              </span>
+            </a>
+          </div>
+          <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+            <a href="/admin/forms" >
+              <span class="flex items-center gap-3">
+                <span>📝</span>
+                <span>Family Progress Report</span>
+              </span>
+            </a>
+          </div>
         </div>
       </div>
       
@@ -260,12 +231,15 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {addRecordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <a href="/admin/forms/create" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
-            <span class="flex items-center gap-3">
-              <span>📋</span>
-              <span>Create</span>
-            </span>
-          </a>
+          <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+
+            <a href="/admin/forms/create">
+              <span class="flex items-center gap-3">
+                <span>📋</span>
+                <span>Create</span>
+              </span>
+            </a>
+          </div>
         </div>
       </div>
       
@@ -281,18 +255,22 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {manageRecordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <a href="/admin/data?tab=intro_sheet" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
-            <span class="flex items-center gap-3">
-              <span>📋</span>
-              <span>Family Introduction Sheet</span>
-            </span>
-          </a>
-          <a href="/admin/data?tab=progress_report" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
-            <span class="flex items-center gap-3">
-              <span>📝</span>
-              <span>Family Progress Report</span>
-            </span>
-          </a>
+          <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+            <a href="/admin/data?tab=intro_sheet">
+              <span class="flex items-center gap-3">
+                <span>📋</span>
+                <span>Family Introduction Sheet</span>
+              </span>
+            </a>
+          </div>
+          <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+            <a href="/admin/data?tab=progress_report">
+              <span class="flex items-center gap-3">
+                <span>📝</span>
+                <span>Family Progress Report</span>
+              </span>
+            </a>
+          </div>
         </div>
       </div>
       
@@ -308,12 +286,14 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {userManagementExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <a href="/admin/manage" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
-            <span class="flex items-center gap-3">
-              <span>🤝</span>
-              <span>Manage Users</span>
-            </span>
-          </a>
+          <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+            <a href="/admin/manage" >
+              <span class="flex items-center gap-3">
+                <span>🤝</span>
+                <span>Manage Users</span>
+              </span>
+            </a>
+          </div>
         </div>
       </div>
       
@@ -346,18 +326,22 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {recordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <a href="/admin/forms" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
-            <span class="flex items-center gap-3">
-              <span>📊</span>
-              <span>Family Introduction Sheet</span>
-            </span>
-          </a>
-          <a href="/admin/forms" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
-            <span class="flex items-center gap-3">
-              <span>📈</span>
-              <span>Family Progress Report</span>
-            </span>
-          </a>
+          <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+            <a href="/admin/forms" >
+              <span class="flex items-center gap-3">
+                <span>📊</span>
+                <span>Family Introduction Sheet</span>
+              </span>
+            </a>
+          </div>
+          <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+            <a href="/admin/forms" >
+              <span class="flex items-center gap-3">
+                <span>📈</span>
+                <span>Family Progress Report</span>
+              </span>
+            </a>
+          </div>
         </div>
       </div>
 
