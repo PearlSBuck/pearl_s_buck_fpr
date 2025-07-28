@@ -18,9 +18,37 @@ interface AuditLog {
   action_performed: string;
   user_id: string | null;
   admin_id: string | null;
-  user_name: string | null;  // Added this field
+  user_name: string | null;
   user_fullname: string | null;
   admin_fullname: string | null;
+}
+
+interface User {
+  id: string;
+  username: string;
+  fullname: string;
+  email: string;
+  role: string;
+  age: number;
+  birthdate: string;
+  residence: string;
+  created_at: string;
+}
+
+interface UserFilters {
+  searchTerm?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: 'fullname' | 'username' | 'email' | 'role' | 'created_at';
+  sortOrder?: 'asc' | 'desc';
+}
+
+interface UserResponse {
+  users: User[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  hasMore: boolean;
 }
 
 interface AuditLogFilters {
@@ -39,6 +67,138 @@ interface AuditLogResponse {
   totalPages: number;
   currentPage: number;
   hasMore: boolean;
+}
+
+/**
+ * Retrieves users with filtering, sorting, and pagination
+ */
+async function getUsers(filters: UserFilters): Promise<UserResponse> {
+  const {
+    searchTerm = '',
+    page = 1,
+    limit = 10,
+    sortBy = 'created_at',
+    sortOrder = 'desc'
+  } = filters;
+
+  try {
+    // Build the base query
+    let query = supabase
+      .from('users')
+      .select('*', { count: 'exact' });
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      query = query.or(`fullname.ilike.%${searchLower}%,username.ilike.%${searchLower}%,email.ilike.%${searchLower}%`);
+    }
+
+    // Apply sorting
+    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+
+    // Apply pagination
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    const { data, error: queryError, count } = await query;
+
+    if (queryError) {
+      console.error('Database query error:', queryError);
+      throw new Error(`Failed to fetch users: ${queryError.message}`);
+    }
+
+    const totalCount = count || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      users: data as User[] || [],
+      totalCount,
+      totalPages,
+      currentPage: page,
+      hasMore: page < totalPages
+    };
+
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    throw new Error('Failed to retrieve users');
+  }
+}
+
+/**
+ * Get a single user by ID
+ */
+async function getUserById(userId: string): Promise<User | null> {
+  try {
+    const { data, error: queryError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (queryError) {
+      if (queryError.code === 'PGRST116') {
+        return null; // User not found
+      }
+      console.error('Database query error:', queryError);
+      throw new Error(`Failed to fetch user: ${queryError.message}`);
+    }
+
+    return data as User;
+
+  } catch (err) {
+    console.error('Error fetching user by ID:', err);
+    throw new Error('Failed to retrieve user');
+  }
+}
+
+/**
+ * Update user information
+ */
+async function updateUser(userId: string, updates: Partial<User>): Promise<User> {
+  try {
+    // Remove id and created_at from updates as they shouldn't be modified
+    const { id, created_at, ...allowedUpdates } = updates;
+
+    const { data, error: updateError } = await supabase
+      .from('users')
+      .update(allowedUpdates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Database update error:', updateError);
+      throw new Error(`Failed to update user: ${updateError.message}`);
+    }
+
+    return data as User;
+
+  } catch (err) {
+    console.error('Error updating user:', err);
+    throw new Error('Failed to update user');
+  }
+}
+
+/**
+ * Delete a user
+ */
+async function deleteUser(userId: string): Promise<void> {
+  try {
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (deleteError) {
+      console.error('Database delete error:', deleteError);
+      throw new Error(`Failed to delete user: ${deleteError.message}`);
+    }
+
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    throw new Error('Failed to delete user');
+  }
 }
 
 /**
@@ -107,7 +267,7 @@ async function getAuditLogs(filters: AuditLogFilters): Promise<AuditLogResponse>
       action_performed: log.action_performed,
       user_id: log.user_id,
       admin_id: log.admin_id,
-      user_name: log.user_name,  // Include the user_name field
+      user_name: log.user_name,
       user_fullname: log.user?.fullname || null,
       admin_fullname: log.admin?.fullname || null
     }));
@@ -161,7 +321,7 @@ async function createAuditLog(
   actionPerformed: string,
   userId?: string,
   adminId?: string,
-  userName?: string  // Added userName parameter
+  userName?: string
 ): Promise<void> {
   try {
     const { error: insertError } = await supabase
@@ -170,7 +330,7 @@ async function createAuditLog(
         action_performed: actionPerformed,
         user_id: userId || null,
         admin_id: adminId || null,
-        user_name: userName || null  // Include user_name in insert
+        user_name: userName || null
       });
 
     if (insertError) {
@@ -213,7 +373,7 @@ async function getAuditLogsByMonth(
 export const load: PageServerLoad = async ({ url }) => {
   const searchParams = url.searchParams;
   
-  // Extract query parameters
+  // Extract query parameters for audit logs
   const month = parseInt(searchParams.get('month') || String(new Date().getMonth()));
   const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()));
   const page = parseInt(searchParams.get('page') || '1');
@@ -222,7 +382,15 @@ export const load: PageServerLoad = async ({ url }) => {
   const sortBy = (searchParams.get('sortBy') as 'date' | 'action' | 'user') || 'date';
   const sortOrder = (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc';
 
+  // Extract query parameters for users
+  const userSearchTerm = searchParams.get('userSearch') || '';
+  const userPage = parseInt(searchParams.get('userPage') || '1');
+  const userLimit = parseInt(searchParams.get('userLimit') || '10');
+  const userSortBy = (searchParams.get('userSortBy') as 'fullname' | 'username' | 'email' | 'role' | 'created_at') || 'fullname';
+  const userSortOrder = (searchParams.get('userSortOrder') as 'asc' | 'desc') || 'asc';
+
   try {
+    // Fetch audit logs
     const auditLogData = await getAuditLogsByMonth(
       month,
       year,
@@ -233,8 +401,18 @@ export const load: PageServerLoad = async ({ url }) => {
       sortOrder
     );
 
+    // Fetch users
+    const userData = await getUsers({
+      searchTerm: userSearchTerm,
+      page: userPage,
+      limit: userLimit,
+      sortBy: userSortBy,
+      sortOrder: userSortOrder
+    });
+
     return {
       auditLogs: auditLogData,
+      users: userData,
       filters: {
         month,
         year,
@@ -243,15 +421,146 @@ export const load: PageServerLoad = async ({ url }) => {
         searchTerm,
         sortBy,
         sortOrder
+      },
+      userFilters: {
+        searchTerm: userSearchTerm,
+        page: userPage,
+        limit: userLimit,
+        sortBy: userSortBy,
+        sortOrder: userSortOrder
       }
     };
   } catch (err) {
-    console.error('Error loading audit logs:', err);
-    throw error(500, 'Failed to load audit logs');
+    console.error('Error loading data:', err);
+    throw error(500, 'Failed to load data');
   }
 };
 
 export const actions: Actions = {
+  // User management actions
+  /**
+   * Search users
+   */
+  searchUsers: async ({ request }) => {
+    const formData = await request.formData();
+    const searchTerm = formData.get('searchTerm') as string || '';
+    const page = parseInt(formData.get('page') as string || '1');
+    const limit = parseInt(formData.get('limit') as string || '10');
+    const sortBy = (formData.get('sortBy') as 'fullname' | 'username' | 'email' | 'role' | 'created_at') || 'fullname';
+    const sortOrder = (formData.get('sortOrder') as 'asc' | 'desc') || 'asc';
+
+    try {
+      const userData = await getUsers({
+        searchTerm,
+        page,
+        limit,
+        sortBy,
+        sortOrder
+      });
+      return { success: true, users: userData };
+    } catch (err) {
+      console.error('Error searching users:', err);
+      throw error(500, 'Failed to search users');
+    }
+  },
+
+  /**
+   * Get user by ID
+   */
+  getUser: async ({ request }) => {
+    const formData = await request.formData();
+    const userId = formData.get('userId') as string;
+
+    if (!userId) {
+      throw error(400, 'User ID is required');
+    }
+
+    try {
+      const user = await getUserById(userId);
+      if (!user) {
+        throw error(404, 'User not found');
+      }
+      return { success: true, user };
+    } catch (err) {
+      console.error('Error fetching user:', err);
+      throw error(500, 'Failed to fetch user');
+    }
+  },
+
+  /**
+   * Update user
+   */
+  updateUser: async ({ request }) => {
+    const formData = await request.formData();
+    const userId = formData.get('userId') as string;
+    const adminId = formData.get('adminId') as string;
+
+    if (!userId) {
+      throw error(400, 'User ID is required');
+    }
+
+    const updates: Partial<User> = {};
+    
+    // Extract update fields from form data
+    const fullname = formData.get('fullname') as string;
+    const username = formData.get('username') as string;
+    const email = formData.get('email') as string;
+    const role = formData.get('role') as string;
+    const age = formData.get('age') as string;
+    const birthdate = formData.get('birthdate') as string;
+    const residence = formData.get('residence') as string;
+
+    if (fullname) updates.fullname = fullname;
+    if (username) updates.username = username;
+    if (email) updates.email = email;
+    if (role) updates.role = role;
+    if (age) updates.age = parseInt(age);
+    if (birthdate) updates.birthdate = birthdate;
+    if (residence) updates.residence = residence;
+
+    try {
+      const updatedUser = await updateUser(userId, updates);
+      
+      // Log the update action
+      await createAuditLog('Updated user profile', userId, adminId, updatedUser.username);
+      
+      return { success: true, user: updatedUser };
+    } catch (err) {
+      console.error('Error updating user:', err);
+      throw error(500, 'Failed to update user');
+    }
+  },
+
+  /**
+   * Delete user
+   */
+  deleteUser: async ({ request }) => {
+    const formData = await request.formData();
+    const userId = formData.get('userId') as string;
+    const adminId = formData.get('adminId') as string;
+
+    if (!userId) {
+      throw error(400, 'User ID is required');
+    }
+
+    try {
+      // Get user info before deletion for logging
+      const user = await getUserById(userId);
+      const userName = user?.username || 'Unknown User';
+
+      await deleteUser(userId);
+      
+      // Log the deletion action
+      await createAuditLog('Deleted user account', userId, adminId, userName);
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      throw error(500, 'Failed to delete user');
+    }
+  },
+
+  // Existing audit log actions...
   /**
    * Action to create a new audit log entry
    */
@@ -260,7 +569,7 @@ export const actions: Actions = {
     const actionPerformed = formData.get('action') as string;
     const userId = formData.get('userId') as string | null;
     const adminId = formData.get('adminId') as string | null;
-    const userName = formData.get('userName') as string | null;  // Added userName support
+    const userName = formData.get('userName') as string | null;
 
     if (!actionPerformed) {
       throw error(400, 'Action is required');
@@ -324,7 +633,7 @@ export const actions: Actions = {
       const csvRows = auditLogData.logs.map(log => [
         new Date(log.created_at).toLocaleString(),
         log.action_performed,
-        log.user_name || log.user_fullname || 'N/A',  // Prioritize user_name
+        log.user_name || log.user_fullname || 'N/A',
         log.admin_fullname || 'N/A'
       ]);
 
@@ -348,7 +657,7 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
-    const userName = formData.get('userName') as string;  // Added userName support
+    const userName = formData.get('userName') as string;
     
     try {
       await createAuditLog('Created new user account', userId, adminId, userName);
@@ -363,7 +672,7 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
-    const userName = formData.get('userName') as string;  // Added userName support
+    const userName = formData.get('userName') as string;
     
     try {
       await createAuditLog('Updated user profile', userId, adminId, userName);
@@ -378,7 +687,7 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
-    const userName = formData.get('userName') as string;  // Added userName support
+    const userName = formData.get('userName') as string;
     
     try {
       await createAuditLog('Deleted user account', userId, adminId, userName);
@@ -393,7 +702,7 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
-    const userName = formData.get('userName') as string;  // Added userName support
+    const userName = formData.get('userName') as string;
     
     try {
       await createAuditLog('Changed user permissions', userId, adminId, userName);
@@ -408,7 +717,7 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
-    const userName = formData.get('userName') as string;  // Added userName support
+    const userName = formData.get('userName') as string;
     
     try {
       await createAuditLog('Changed user role', userId, adminId, userName);
@@ -423,7 +732,7 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
-    const userName = formData.get('userName') as string;  // Added userName support
+    const userName = formData.get('userName') as string;
     
     try {
       await createAuditLog('Reset user password', userId, adminId, userName);
@@ -438,7 +747,7 @@ export const actions: Actions = {
     const formData = await request.formData();
     const userId = formData.get('userId') as string;
     const adminId = formData.get('adminId') as string;
-    const userName = formData.get('userName') as string;  // Added userName support
+    const userName = formData.get('userName') as string;
     
     try {
       await createAuditLog('Viewed user profile', userId, adminId, userName);
@@ -460,18 +769,7 @@ export const actions: Actions = {
       console.error('Error logging user group creation:', err);
       throw error(500, 'Failed to log user group creation');
     }
-  },
-
-  logDataExport: async ({ request }) => {
-    const formData = await request.formData();
-    const adminId = formData.get('adminId') as string;
-    
-    try {
-      await createAuditLog('Exported user data', undefined, adminId);
-      return { success: true };
-    } catch (err) {
-      console.error('Error logging data export:', err);
-      throw error(500, 'Failed to log data export');
-    }
   }
 };
+
+  

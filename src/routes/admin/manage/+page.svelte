@@ -1,18 +1,19 @@
 <!--User Management Page -->
 <!--+page.svelte-->
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { getContext, onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import Header from '../../../components/Header.svelte'; // adjust the paths as needed
   import { onDestroy } from 'svelte';
 
   let debounceTimeout: ReturnType<typeof setTimeout>;
+  let userSearchTimeout: ReturnType<typeof setTimeout>;
 
   // Page name for header
   let pageName = "User Management Page";
-  
-  // Component state
+
+  // Component state for audit logs
   let selectedMonth = new Date().getMonth();
   let selectedYear = new Date().getFullYear();
   let currentPage = 1;
@@ -24,13 +25,34 @@
   let isLoading = false;
   let tooltipPosition = { x: 0, y: 0 };
   let tooltipVisible = false;
+
+  // Component state for user management
+  let userSearchTerm = '';
+  let userCurrentPage = 1;
+  let userSortBy = 'fullname';
+  let userSortOrder = 'asc';
+  let isUserLoading = false;
+  let isSearching = false; // New loading state for search
+let displayedUsers: { id: string; fullname: string; username: string; email?: string; role: string }[] = [];
+  let selectedUser = null;
+  let showUserModal = false;
   
+  // Reduced debounce time for faster response
+  const SEARCH_DEBOUNCE_DELAY = 200; // Reduced from 500ms
+  
+  const setPageContext:any = getContext('setPageContext');
+  onMount(() => {
+    setPageContext(pageName,false,true);
+  })
+
   // Data from server
   export let data;
   
   // Reactive statements to get data from server
   $: auditLogs = data?.auditLogs || { logs: [], totalCount: 0, totalPages: 0, currentPage: 1, hasMore: false };
+  $: users = data?.users || { users: [], totalCount: 0, totalPages: 0, currentPage: 1, hasMore: false };
   $: filters = data?.filters || {};
+  $: userFilters = data?.userFilters || {};
   
   // Update local state when server data changes
   $: if (filters.month !== undefined) selectedMonth = filters.month;
@@ -39,8 +61,29 @@
   $: if (filters.sortBy !== undefined) sortBy = filters.sortBy;
   $: if (filters.sortOrder !== undefined) sortOrder = filters.sortOrder;
   $: if (filters.searchTerm !== undefined) searchTerm = filters.searchTerm;
+
+  // Update user state when server data changes
+  $: if (userFilters.searchTerm !== undefined) userSearchTerm = userFilters.searchTerm;
+  $: if (userFilters.page !== undefined) userCurrentPage = userFilters.page;
+  $: if (userFilters.sortBy !== undefined) userSortBy = userFilters.sortBy;
+  $: if (userFilters.sortOrder !== undefined) userSortOrder = userFilters.sortOrder;
+  
+  // Client-side filtering for immediate response
+  $: {
+    if (userSearchTerm.trim() === '') {
+      displayedUsers = users.users;
+    } else {
+      const searchLower = userSearchTerm.toLowerCase();
+      displayedUsers = users.users.filter(user => 
+        user.fullname.toLowerCase().includes(searchLower) ||
+        user.username.toLowerCase().includes(searchLower) ||
+        (user.email && user.email.toLowerCase().includes(searchLower))
+      );
+    }
+  }
   
   const logsPerPage = 10;
+  const usersPerPage = 10;
   
   // Transform server data to match frontend expectations
   $: transformedLogs = auditLogs.logs.map(log => ({
@@ -63,6 +106,13 @@
     if (action.toLowerCase().includes('view') || action.toLowerCase().includes('access')) return 'view';
     return 'edit';
   };
+
+  // FIXED: Create Account redirect function
+  function handleRedirectToCreate(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    window.location.href = '/admin/manage/create';
+  }
   
   const getActionColor = (action: string) => {
     const type = getActionType(action);
@@ -74,7 +124,7 @@
       default: return 'text-gray-600';
     }
   };
-  
+
   const getActionBgColor = (action: string) => {
     const type = getActionType(action);
     switch (type) {
@@ -95,6 +145,116 @@
       case 'edit': return '✏️';
       default: return '📝';
     }
+  };
+
+  // Enhanced updateUserFilters with better loading states
+  const updateUserFilters = async () => {
+    // Only show main loading for pagination, not search
+    if (!isSearching) {
+      isUserLoading = true;
+    }
+    
+    try {
+      const url = new URL($page.url);
+      url.searchParams.set('userSearch', userSearchTerm);
+      url.searchParams.set('userPage', userCurrentPage.toString());
+      url.searchParams.set('userSortBy', userSortBy);
+      url.searchParams.set('userSortOrder', userSortOrder);
+      
+      await goto(url.toString(), { replaceState: true });
+    } finally {
+      isUserLoading = false;
+      isSearching = false;
+    }
+  };
+
+  const handleUserSearch = async () => {
+    userCurrentPage = 1;
+    await updateUserFilters();
+  };
+
+  // Optimized search handler with immediate feedback
+  const handleUserSearchInput = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const newSearchTerm = target.value;
+    userSearchTerm = newSearchTerm;
+    
+    // Show searching state immediately
+    isSearching = true;
+    
+    clearTimeout(userSearchTimeout);
+    userSearchTimeout = setTimeout(async () => {
+      try {
+        userCurrentPage = 1;
+        await updateUserFilters();
+      } finally {
+        isSearching = false;
+      }
+    }, SEARCH_DEBOUNCE_DELAY);
+  };
+
+  const handleUserPageChange = async (newPage: number) => {
+    userCurrentPage = newPage;
+    await updateUserFilters();
+  };
+
+  // FIXED: View User redirect function
+  const viewUser = async (event: Event, user: any) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    try {
+      // Log the user view action (don't wait for response)
+      const formData = new FormData();
+      formData.append('userId', user.id);
+      formData.append('adminId', 'current-admin'); // Replace with actual admin ID
+      formData.append('userName', user.username);
+      
+      fetch($page.url.pathname + '?/logUserView', {
+        method: 'POST',
+        body: formData
+      }).catch(error => console.error('Error logging user view:', error));
+      
+    } catch (error) {
+      console.error('Error with logging:', error);
+    }
+    
+    // Immediate redirect
+    window.location.href = `/admin/manage/view/${user.id}`;
+  };
+
+  const closeUserModal = () => {
+    showUserModal = false;
+    selectedUser = null;
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role.toLowerCase()) {
+      case 'admin': return 'bg-red-100 text-red-800';
+      case 'worker': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatUserDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const calculateAge = (birthdate: string) => {
+    const today = new Date();
+    const birth = new Date(birthdate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
   };
 
   // Header tooltip content
@@ -150,7 +310,7 @@
     hoveredHeader = null;
   };
 
-  // Utility functions
+  // Utility functions for audit logs
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -169,7 +329,7 @@
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
-  // Navigation functions
+  // Navigation functions for audit logs
   const updateFilters = async () => {
     isLoading = true;
     const url = new URL($page.url);
@@ -220,7 +380,7 @@
     await updateFilters();
   };
 
-  // Cleaner debounced search input handler
+  // Cleaner debounced search input handler for audit logs
   const handleSearchInput = (event: Event) => {
     const target = event.target as HTMLInputElement;
     searchTerm = target.value;
@@ -275,9 +435,15 @@
   $: startIndex = auditLogs.logs.length > 0 ? (currentPage - 1) * logsPerPage + 1 : 0;
   $: endIndex = Math.min(currentPage * logsPerPage, auditLogs.totalCount || 0);
 
-  // Clean up timeout on component destroy
+  // User pagination
+  $: userTotalPages = users.totalPages || 0;
+  $: userStartIndex = users.users.length > 0 ? (userCurrentPage - 1) * usersPerPage + 1 : 0;
+  $: userEndIndex = Math.min(userCurrentPage * usersPerPage, users.totalCount || 0);
+
+  // Clean up timeouts on component destroy
   onDestroy(() => {
     clearTimeout(debounceTimeout);
+    clearTimeout(userSearchTimeout);
   });
 </script>
 
@@ -287,7 +453,6 @@
 
 <div class="pt-2 bg-[#F6F8FF] min-h-screen">
   <!-- Header -->
-  <Header name={pageName} search backButton/>
 
   <!-- Page Title -->
   <div class="bg-[#474C58] text-white py-3">
@@ -301,21 +466,57 @@
       <!-- Edit User Section -->
       <div class="lg:col-span-1">
         <div class="bg-white rounded-xl shadow-2xl p-6 h-full mb-8">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">Edit User (DUMMY)</h3>
+          <h3 class="text-2xl font-bold text-gray-900 mb-6">Edit User</h3>
           
           <div class="space-y-4">
+            <!-- Enhanced search input with better visual feedback -->
             <div class="flex space-x-2">
               <div class="flex-1 relative">
-                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <!-- Search icon with dynamic state -->
+                <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  {#if isSearching}
+                    <div class="w-5 h-5 border-2 border-[#1A5A9E] border-t-transparent rounded-full animate-spin"></div>
+                  {:else}
+                    <svg class="text-gray-400 w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  {/if}
+                </div>
+                
                 <input
                   type="text"
-                  placeholder="Search by Name"
-                  class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1A5A9E] focus:border-transparent"
+                  placeholder="Search by Name, Username, or Email"
+                  class="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1A5A9E] focus:border-transparent transition-all duration-200"
+                  value={userSearchTerm}
+                  on:input={handleUserSearchInput}
+                  autocomplete="off"
+                  spellcheck="false"
                 />
+                
+                <!-- Clear button -->
+                {#if userSearchTerm}
+                  <button
+                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    on:click={() => {
+                      userSearchTerm = '';
+                      clearTimeout(userSearchTimeout);
+                      isSearching = false;
+                      userCurrentPage = 1;
+                      updateUserFilters();
+                    }}
+                  >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
+                {/if}
               </div>
-              <button class="flex items-center space-x-2 bg-[#1A5A9E] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              
+              <!-- FIXED: Create Account Button -->
+              <button
+                on:click={handleRedirectToCreate}
+                class="flex items-center space-x-2 bg-[#1A5A9E] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -323,20 +524,130 @@
               </button>
             </div>
 
-            <div class="space-y-3">
-              {#each ['Username1', 'Username2', 'Username3', 'Username4'] as username, index}
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                  <div class="flex items-center space-x-3">
-                    <span class="text-gray-600 font-medium">{index + 1}.</span>
-                    <span class="text-gray-900">{username}</span>
+            <!-- Enhanced loading states -->
+            {#if isUserLoading}
+              <div class="flex justify-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1A5A9E]"></div>
+              </div>
+            {:else}
+              <!-- Users list with immediate filtering -->
+              <div class="space-y-3 max-h-96 overflow-y-auto">
+                <!-- Search results indicator -->
+                {#if userSearchTerm && displayedUsers.length > 0}
+                  <div class="text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                    <span class="font-medium">{displayedUsers.length}</span> user{displayedUsers.length === 1 ? '' : 's'} found
+                    {#if isSearching}
+                      <span class="text-blue-600 ml-2">• Searching server...</span>
+                    {/if}
                   </div>
-                  <button class="bg-[#1A5A9E] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-colors">
-                    View
+                {/if}
+                
+                {#each displayedUsers as user, index}
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-all duration-200 transform hover:scale-[1.01]">
+                    <div class="flex items-center space-x-3">
+                      <span class="text-gray-600 font-medium">{userStartIndex + index}.</span>
+                      <div class="flex flex-col">
+                        <!-- Highlight search matches -->
+                        <span class="text-gray-900 font-medium">
+                          {#if userSearchTerm}
+                            {@html user.fullname.replace(new RegExp(`(${userSearchTerm})`, 'gi'), '<mark class="bg-yellow-200">$1</mark>')}
+                          {:else}
+                            {user.fullname}
+                          {/if}
+                        </span>
+                        <span class="text-sm text-gray-500">
+                          @{#if userSearchTerm}
+                            {@html user.username.replace(new RegExp(`(${userSearchTerm})`, 'gi'), '<mark class="bg-yellow-200">$1</mark>')}
+                          {:else}
+                            {user.username}
+                          {/if}
+                        </span>
+                      </div>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getRoleBadgeColor(user.role)}">
+                        {user.role}
+                      </span>
+                    </div>
+                    <!-- FIXED: View Button -->
+                    <button 
+                      class="bg-[#1A5A9E] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-all duration-200 transform hover:scale-105"
+                      on:click={(event) => viewUser(event, user)}
+                    >
+                      View
+                    </button>
+                  </div>
+                {/each}
+                
+                {#if displayedUsers.length === 0}
+                  <div class="text-center py-8 text-gray-500">
+                    {#if isSearching}
+                      <div class="flex flex-col items-center space-y-2">
+                        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
+                        <span>Searching...</span>
+                      </div>
+                    {:else if userSearchTerm}
+                      <div class="flex flex-col items-center space-y-2">
+                        <svg class="w-12 h-12 text-gray-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M10.5 7.5V13.5M10.5 16.5H10.51" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>No users found matching "{userSearchTerm}"</span>
+                        <button 
+                          class="text-[#1A5A9E] hover:underline text-sm"
+                          on:click={() => {
+                            userSearchTerm = '';
+                            updateUserFilters();
+                          }}
+                        >
+                          Clear search
+                        </button>
+                      </div>
+                    {:else}
+                      'No users found.'
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            {/if}
+
+            <!-- User Pagination -->
+            {#if userTotalPages > 1}
+              <div class="flex items-center justify-between border-t pt-4">
+                <div class="text-sm text-gray-700">
+                  Showing {userStartIndex} to {userEndIndex} of {users.totalCount} users
+                </div>
+                <div class="flex space-x-2">
+                  <button
+                    class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                    disabled={userCurrentPage === 1}
+                    on:click={() => handleUserPageChange(userCurrentPage - 1)}
+                  >
+                    Previous
+                  </button>
+                  
+                  {#each Array.from({ length: Math.min(5, userTotalPages) }, (_, i) => {
+                    const startPage = Math.max(1, userCurrentPage - 2);
+                    return startPage + i;
+                  }) as pageNum}
+                    {#if pageNum <= userTotalPages}
+                      <button
+                        class="px-3 py-1 text-sm rounded {pageNum === userCurrentPage ? 'bg-[#1A5A9E] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
+                        on:click={() => handleUserPageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </button>
+                    {/if}
+                  {/each}
+                  
+                  <button
+                    class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                    disabled={userCurrentPage === userTotalPages}
+                    on:click={() => handleUserPageChange(userCurrentPage + 1)}
+                  >
+                    Next
                   </button>
                 </div>
-              {/each}
-              <div class="text-center py-4 text-gray-500">...</div>
-            </div>
+              </div>
+            {/if}
           </div>
         </div>
       </div>

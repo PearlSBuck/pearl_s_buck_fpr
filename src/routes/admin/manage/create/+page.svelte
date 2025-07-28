@@ -62,6 +62,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { supabase } from '$lib/db'
+	import { getContext, onMount } from 'svelte';
     import Header from '../../../../components/Header.svelte'; // Adjust path if needed
 
     let showPassword = false;
@@ -104,6 +105,11 @@
         residence = ''
     }
 
+    const setPageContext:any = getContext('setPageContext');
+    onMount(() => {
+        setPageContext("Create User",false,true);
+
+    })
     // Function to log audit entry
     async function logAuditEntry(actionPerformed: string, userId: string, userFullName: string, adminId?: string) {
         try {
@@ -258,7 +264,6 @@
 </script>
 
 <div class="app-container">
-    <Header name="Create User" search={false} backButton={true} />
 
     <div class="content-area flex flex-col items-center bg-blue-50 pt-8 px-8 pb-8">
         <div class="w-full max-w-4xl bg-white shadow-md rounded-lg p-10 mt-8">

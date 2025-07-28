@@ -1,8 +1,9 @@
 <!--+page.svelte-->
-<script>
+<script lang="ts">
     import { goto } from '$app/navigation';
     import { page } from '$app/stores';
-    import Header from '../forms/[id]/Header.svelte';
+	import { getContext, onMount } from 'svelte';
+    import Header from '../../../components/Header.svelte';
     
     export let data;
     
@@ -101,19 +102,19 @@
             return dateString;
         }
     }
+
+    const setPageContext:any = getContext('setPageContext');
+    onMount(() => {
+
+    setPageContext("Family Introduction Sheets" ,false,false);
+    })
 </script>
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 
-<div class="bg-[#F6F8FF] min-h-screen">
-    <!-- Header Section -->
-    <Header 
-        name="Family Introduction Sheets" 
-        search={false} 
-        backButton={false} 
-    />
+<div class="bg-[#F6F8FF] min-h-screen"> 
 
     <!-- Main Content Container -->
     <div class="pt-4">

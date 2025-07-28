@@ -14,7 +14,7 @@
 
 <script lang="ts">
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { getContext, onMount } from 'svelte';
     import { page } from '$app/stores';
     import { supabase } from '$lib/db';
     import Header from '../../../../../components/Header.svelte';
@@ -232,11 +232,17 @@ async function deleteUser(userId: string) {
         alert('Error deleting user: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
 }
+
+
+    const setPageContext:any = getContext('setPageContext');
+    onMount(() => {
+        setPageContext("Manage User",false,true);
+
+    })
 </script>
 
 <div class="app-container">
     <!-- Header -->
-    <Header name="Manage User" search={false} backButton={true} />
 
     <div class="content-area flex flex-col items-center bg-blue-50 pt-8 px-6 pb-8">
         <!-- User Card -->
