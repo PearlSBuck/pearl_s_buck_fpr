@@ -10,7 +10,6 @@
 </head>
 
 <div class="pt-6 bg-[#F6F8FF] min-h-screen">
-  <Header name="" />
 
   <div class="bg-[#474C58] h-10"></div>
   <div class="relative container mx-auto px-4 lg:w-lg md:w-md sm:w-sm">

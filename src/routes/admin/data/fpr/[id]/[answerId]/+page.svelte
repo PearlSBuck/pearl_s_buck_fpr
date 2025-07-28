@@ -43,6 +43,7 @@
 <script lang="ts">
     import Header from '../../../../../../components/Header.svelte';
     import { goto } from '$app/navigation';
+	import { getContext, onMount } from 'svelte';
     
     // Get data from the server load function
     export let data;
@@ -128,11 +129,15 @@
                 return field.answer;
         }
     }
+
+    const setPageContext:any = getContext('setPageContext');
+    onMount(() => {
+        setPageContext("Individual Records Management",false,true);
+
+    })
 </script>
 
 <div class="app-container">
-    <!-- Header -->
-    <Header name="Individual Records Management" search={false} backButton={true} />
 
     <div class="content-area flex flex-col items-center pt-8 px-6 pb-8">
         <!-- Child Identification Card -->

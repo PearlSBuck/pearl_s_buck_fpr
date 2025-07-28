@@ -11,7 +11,7 @@
   import { get } from 'svelte/store';  
   import { goto } from '$app/navigation';
   import { selectedRecords } from './selectRecord';
-  import { onDestroy } from 'svelte';  
+  import { getContext, onDestroy, onMount } from 'svelte';  
   import * as XLSX from 'xlsx';
   import { page } from '$app/stores';
 
@@ -19,7 +19,11 @@
   let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
   let showModal = false;
 
+  const setPageName:any = getContext('setPageName');
 
+  onMount(() => {
+    setPageName(pageName);
+  })
 
 // Alternative reactive approach 
 $: {
@@ -349,7 +353,6 @@ $: {
 
 <div class="pt-2 bg-[#F6F8FF]">
 
-  <Header name={pageName} backButton/>
 
   <div class="flex justify-end gap-0 mt-32 pr-10 pl-10 relative bg-[#F6F8FF]">
     <!-- Button 1: Progress Report -->

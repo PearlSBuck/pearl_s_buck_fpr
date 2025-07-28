@@ -1,6 +1,6 @@
 <script lang="ts">    
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { getContext, onMount } from 'svelte';
     import { supabase } from '$lib/db';
     import Header from '../../../components/Header.svelte';
 
@@ -8,7 +8,10 @@
     let searchTerm = '';
     let pageName = "User Management Page";
 
+    const setPageContext:any = getContext('setPageContext');
     onMount(async () => {
+
+        setPageContext(pageName,false,false);
         const { data, error } = await supabase.from('users').select('id, username, role');
 
         if (error) {
@@ -30,11 +33,12 @@
     $: filteredUsers = users.filter(user => 
         user.username.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+
 </script>
 
 <div class="p-6 space-y-6">
     <!-- Header -->
-    <Header name={pageName} backButton/>
     <div class="flex items-center justify-center mt-30">
 
         <!-- Main Content Card -->
