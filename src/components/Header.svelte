@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { supabase } from '$lib/db';
+  import { supabase, supabaseAdmin } from '$lib/db';
   
   export let name: string = '';
   export let search: boolean = false;
@@ -72,6 +72,30 @@ async function navigateToLogout() {
       closeNav();
     }
   }
+  async function getCurrentUser() {
+    const {
+      data: { user },
+      error
+    } = await supabase.auth.getUser();
+
+    if (error) {
+      console.error('Error fetching user:', error);
+      return null;
+    }
+
+    return user?.id; // <-- This is the user's UUID
+  }
+
+  async function isAdmin(){
+    const { data } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', await getCurrentUser())
+      .single();
+
+    return data?.role === 'Admin';
+  }
+
 </script>
 
 <svelte:window on:click={handleOutsideClick} />
