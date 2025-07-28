@@ -1,7 +1,7 @@
 <script lang="ts">
     import Header from '../../../../../../components/Header.svelte';
     import { goto } from '$app/navigation';
-    import { onMount } from 'svelte';
+    import { getContext, onMount } from 'svelte';
   
     interface OptionObject {
         value: string;
@@ -56,8 +56,12 @@
     type CombinedAnswer = string | Record<string, string>;
     let combinedAnswers: Record<string, CombinedAnswer> = {};
     
+
+    const setPageContext:any = getContext('setPageContext');
+    
     // Initialize the form with current values
     onMount(() => {
+        setPageContext("Edit Family Introduction Sheet",false,true);
         organizedData.forEach(section => {
             section.fields.forEach(field => {
                 // Parse options if they're stored as a string
@@ -202,7 +206,6 @@
 
 <div class="app-container">
     <!-- Header -->
-    <Header name="Edit Family Introduction Sheet" search={false} backButton={true} />
 
     <div class="content-area flex flex-col items-center pt-8 px-6 pb-8">
         <!-- Child Identification Card -->

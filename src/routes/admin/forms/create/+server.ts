@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { Pool } from "pg";
 import { createForm, createFormSection, createFormFieldsPerSection } from './manage_forms.server';
-import { POSTGRES_URL } from "$env/static/private";
+const POSTGRES_URL = process.env.POSTGRES_URL!;
 
 const pgSingleton = () =>
     new Pool({

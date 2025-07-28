@@ -1,17 +1,155 @@
 <script lang="ts">
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
+  
   export let name: string = '';
   export let search: boolean = false;
   export let backButton: boolean = false;
+  
+  let isNavOpen = false;
+  let formsExpanded = true;
+  let recordsExpanded = true;
+  let managementExpanded = true;
+  let addRecordsExpanded = true;
+  let manageRecordsExpanded = true;
+  let userManagementExpanded = true;
+  
+  // Check if current route is admin
+  $: isAdminRoute = $page.route.id?.startsWith('/admin') || false;
+  
+  // Check if current route is login - hide navbar completely for login page
+  $: isLoginRoute = $page.route.id === '/login' || $page.url.pathname === '/login';
+  
+  function toggleNav() {
+    isNavOpen = !isNavOpen;
+  }
+  
+  function closeNav() {
+    isNavOpen = false;
+  }
+  
+  function navigateToHome() {
+    goto('/home');
+    closeNav(); // Close navigation after navigation
+  }
+
+  function navigateToFamilyIntroductionSheet() {
+    goto('/admin/forms?action=handleIntroSheet');
+    closeNav();
+}
+
+function navigateToFamilyProgressReport() {
+  goto('/admin/forms?action=handleProgressReport');
+  closeNav();
+}
+
+
+function navigateToLogout() {
+  goto('/login');
+  closeNav();
+}
+
+function navigateToCreate() {
+  goto('/admin/forms/create');
+  closeNav();
+}
+
+function navigateToFIS() {
+  closeNav();
+  // Navigate to the admin data page with a URL parameter to set the selected tab
+  goto('/admin/data?tab=intro_sheet');
+}
+
+function navigateToFPR() {
+  closeNav();
+  // Navigate to the admin data page with a URL parameter to set the selected tab
+  goto('/admin/data?tab=progress_report');
+}
+function navigateToManageUsers() {
+  closeNav();
+  // Navigate to the admin data page with a URL parameter to set the selected tab
+  goto('/admin/manage');
+}
+  
+  function toggleForms() {
+    formsExpanded = !formsExpanded;
+  }
+  
+  function toggleRecords() {
+    recordsExpanded = !recordsExpanded;
+  }
+  
+  function toggleManagement() {
+    managementExpanded = !managementExpanded;
+  }
+  
+  function toggleAddRecords() {
+    addRecordsExpanded = !addRecordsExpanded;
+  }
+  
+  function toggleManageRecords() {
+    manageRecordsExpanded = !manageRecordsExpanded;
+  }
+  
+  function toggleUserManagement() {
+    userManagementExpanded = !userManagementExpanded;
+  }
+
+  // Close navigation when clicking outside
+  function handleOutsideClick(event: MouseEvent) {
+    if (isNavOpen && !(event.target as Element).closest('.nav-container') && !(event.target as Element).closest('.nav-toggle')) {
+      closeNav();
+    }
+  }
 </script>
+
+<svelte:window on:click={handleOutsideClick} />
+
+<!-- Header always shows, but navigation buttons are hidden on login page -->
 <div class="fixed top-0 left-0 right-0 z-50 bg-[#F6F8FF]">
-    <div class="bg-white h-16 flex items-center px-4 justify-between">
-      <img src="/logo.jpg" alt="Logo" class="h-12 w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 sm:h-12 sm:w-12 p-1"/>
+  <div class="bg-white h-14 sm:h-16 flex items-center px-3 sm:px-4 justify-between">
+    <!-- Hamburger Menu Button for Mobile (hidden on login page) -->
+    <div class="flex items-center">
+      {#if !isLoginRoute}
+      <button 
+        on:click={toggleNav} 
+        class="nav-toggle cursor-pointer p-1 sm:p-0 mr-2 sm:mr-0 md:hidden" 
+        aria-label="Toggle navigation menu"
+      >
+        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
 
-      <h1 class="absolute left-1/2 transform -translate-x-1/2 text-black font-bold whitespace-nowrap hidden sm:block text-sm sm:text-base md:text-xl lg:text-2xl xl:text-3xl">
-      Pearl S. Buck Foundation Philippines, Inc.
-      </h1>
-
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 63 63" fill="none" class="h-12 w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 sm:h-12 sm:w-12 p-2">
+      <!-- Logo (hidden on small screens when hamburger is shown) -->
+      <button on:click={toggleNav} class="nav-toggle cursor-pointer hidden md:block">
+        <img src="/logo.jpg" alt="Logo" class="h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 p-1"/>
+      </button>
+      {:else}
+      <!-- Logo for login page (always visible, no click handler) -->
+      <div class="cursor-default">
+        <img src="/logo.jpg" alt="Logo" class="h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 p-1"/>
+      </div>
+      {/if}
+    </div>
+     
+    <!-- Title - Responsive -->
+    <h1 class="absolute left-1/2 transform -translate-x-1/2 text-black font-bold whitespace-nowrap text-xs sm:text-sm md:text-base lg:text-xl xl:text-2xl px-2">
+      <span class="hidden sm:inline">Pearl S. Buck Foundation Philippines, Inc.</span>
+      <span class="sm:hidden">PSB Foundation</span>
+    </h1>
+     
+    <!-- User Icon (hidden on login page) -->
+    <div class="flex items-center gap-2">
+      {#if search && !isLoginRoute}
+      <button 
+        class="p-2 hover:bg-gray-100 rounded-full transition-colors" 
+        aria-label="Search"
+      >
+      </button>
+      {/if}
+      {#if !isLoginRoute}
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 63 63" fill="none" class="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 lg:h-14 lg:w-14 p-1 sm:p-2">
         <rect width="63" height="63" rx="31.5" fill="#0C376C" />
         <path
           fill-rule="evenodd"
@@ -24,19 +162,248 @@
           fill="white"
         />
       </svg>
-    </div>
-
-    <div class="bg-[#474C58] h-10 flex justify-between items-center">
-      <span class="flex items-center gap-2 lg:gap-4 ml-4">
-        <p class="lg:ml-10 text-white text-xs font-semibold lg:text-lg md:text-md sm:text-sm">{name}</p>
-        {#if backButton}
-        <button on:click={() => history.back()} class="bg-[#1A5A9E] text-white font-semibold py-0.5 px-3 rounded-lg cursor-pointer">Back</button>
-        {/if}
-      </span>
-      {#if search}
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="mr-4 lg:mr-10">
-      <path d="M21 21L15 15M17 10C17 10.9193 16.8189 11.8295 16.4672 12.6788C16.1154 13.5281 15.5998 14.2997 14.9497 14.9497C14.2997 15.5998 13.5281 16.1154 12.6788 16.4672C11.8295 16.8189 10.9193 17 10 17C9.08075 17 8.1705 16.8189 7.32122 16.4672C6.47194 16.1154 5.70026 15.5998 5.05025 14.9497C4.40024 14.2997 3.88463 13.5281 3.53284 12.6788C3.18106 11.8295 3 10.9193 3 10C3 8.14348 3.7375 6.36301 5.05025 5.05025C6.36301 3.7375 8.14348 3 10 3C11.8565 3 13.637 3.7375 14.9497 5.05025C16.2625 6.36301 17 8.14348 17 10Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
       {/if}
     </div>
+  </div>
+   
+  <!-- Second Header Bar (hidden on login page) -->
+  {#if !isLoginRoute}
+  <div class="bg-[#474C58] h-12 sm:h-14 flex justify-between items-center px-3 sm:px-4">
+  <span class="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0 flex-1">
+    <p class="text-white text-sm sm:text-base md:text-lg lg:text-xl font-semibold truncate min-w-0 flex-1 lg:ml-6">
+      {name}
+    </p>
+    {#if backButton}
+    <button 
+      on:click={() => history.back()} 
+      class="bg-[#1A5A9E] text-white font-medium py-2 px-3 sm:py-2 sm:px-4 rounded-lg cursor-pointer text-xs sm:text-sm hover:bg-[#0f4577] active:bg-[#0a3a63] transition-colors flex-shrink-0 touch-manipulation"
+      aria-label="Go back"
+    >
+      Back
+    </button>
+    {/if}
+  </span>
 </div>
+  {/if}
+</div>
+
+<!-- Navigation elements (hidden on login page) -->
+{#if !isLoginRoute}
+<!-- Mobile Overlay -->
+{#if isNavOpen}
+  <button 
+    type="button"
+    class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+    on:click={closeNav}
+    aria-label="Close navigation menu"
+  ></button>
+{/if}
+
+<!-- Vertical Navigation -->
+<div class="nav-container fixed top-0 left-0 h-full bg-white z-50 transform transition-transform duration-300 ease-in-out {isNavOpen ? 'translate-x-0' : '-translate-x-full'} shadow-2xl w-4/5 sm:w-3/5 md:w-1/3 lg:w-1/4 xl:w-1/5 max-w-xs">
+  <!-- Navigation Header -->
+  <div class="bg-[#1A5A9E] h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6">
+    <h2 class="text-white font-bold text-lg sm:text-xl">
+      {isAdminRoute ? 'Admin' : 'Worker'}
+    </h2>
+    <button on:click={closeNav} class="text-white hover:text-gray-300 transition-all duration-300 font-bold text-xl sm:text-2xl p-2 -m-2">
+      ×
+    </button>
+  </div>
+  
+  <!-- Navigation Items -->
+  <div class="flex flex-col bg-white overflow-y-auto" style="height: calc(100vh - 56px); /* Adjust for mobile header */">
+    {#if isAdminRoute}
+      <!-- Admin Navigation -->
+      <!-- Home -->
+      <button on:click={navigateToHome} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] font-medium border-b border-[#f0f0f0] text-sm sm:text-base active:bg-[#e9ecef]">
+        <span class="flex items-center gap-3">
+          <span class="text-lg">🏠</span>
+          <span>Home</span>
+        </span>
+      </button>
+      
+      <!-- Edit Forms Section -->
+      <div class="border-b-2 border-[#f0f0f0]">
+        <button on:click={toggleForms} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+          <span class="flex items-center gap-3">
+            <span class="text-lg">📝</span>
+            <span>Manage Forms</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-transform duration-300 {formsExpanded ? 'rotate-180' : ''} sm:w-5 sm:h-5">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {formsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
+          <button on:click={navigateToFamilyIntroductionSheet} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+            <span class="flex items-center gap-3">
+              <span>📋</span>
+              <span>Family Introduction Sheet</span>
+            </span>
+          </button>
+          <button on:click={navigateToFamilyProgressReport} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+            <span class="flex items-center gap-3">
+              <span>📝</span>
+              <span>Family Progress Report</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Add Records Section -->
+      <div class="border-b-2 border-[#f0f0f0]">
+        <button on:click={toggleAddRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+          <span class="flex items-center gap-3">
+            <span class="text-lg">➕</span>
+            <span>Create Forms</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-transform duration-300 {addRecordsExpanded ? 'rotate-180' : ''} sm:w-5 sm:h-5">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {addRecordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
+          <button on:click={navigateToCreate} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+            <span class="flex items-center gap-3">
+              <span>📋</span>
+              <span>Create</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Manage Records Section -->
+      <div class="border-b-2 border-[#f0f0f0]">
+        <button on:click={toggleManageRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+          <span class="flex items-center gap-3">
+            <span class="text-lg">⚙️</span>
+            <span>Manage Records</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-transform duration-300 {manageRecordsExpanded ? 'rotate-180' : ''} sm:w-5 sm:h-5">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {manageRecordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
+          <button on:click={navigateToFIS} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+            <span class="flex items-center gap-3">
+              <span>📋</span>
+              <span>Family Introduction Sheet</span>
+            </span>
+          </button>
+          <button on:click={navigateToFPR} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+            <span class="flex items-center gap-3">
+              <span>📝</span>
+              <span>Family Progress Report</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- User Management Section -->
+      <div class="border-b-2 border-[#f0f0f0]">
+        <button on:click={toggleUserManagement} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+          <span class="flex items-center gap-3">
+            <span class="text-lg">👥</span>
+            <span>User Management</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-transform duration-300 {userManagementExpanded ? 'rotate-180' : ''} sm:w-5 sm:h-5">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {userManagementExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
+          <button on:click={navigateToManageUsers} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+            <span class="flex items-center gap-3">
+              <span>🤝</span>
+              <span>Manage Users</span>
+            </span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Logout -->
+      <button on:click={navigateToLogout} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
+        <span class="flex items-center gap-3">
+          <span class="text-lg">🚪</span>
+          <span>Logout</span>
+        </span>
+      </button>
+      
+    {:else}
+      <!-- Regular User Navigation -->
+      <button on:click={navigateToHome} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
+        <span class="flex items-center gap-3">
+          <span class="text-lg">🏠</span>
+          <span>Home</span>
+        </span>
+      </button>
+      
+      <!-- Records Section -->
+      <div class="border-b-2 border-[#f0f0f0]">
+        <button on:click={toggleRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+          <span class="flex items-center gap-3">
+            <span class="text-lg">📋</span>
+            <span>Manage Forms</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-transform duration-300 {recordsExpanded ? 'rotate-180' : ''} sm:w-5 sm:h-5">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {recordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
+          <button on:click={navigateToFamilyIntroductionSheet} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+            <span class="flex items-center gap-3">
+              <span>📊</span>
+              <span>Family Introduction Sheet</span>
+            </span>
+          </button>
+          <button on:click={navigateToFamilyProgressReport} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+            <span class="flex items-center gap-3">
+              <span>📈</span>
+              <span>Family Progress Report</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+       <!-- Logout -->
+      <button on:click={navigateToLogout} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
+        <span class="flex items-center gap-3">
+          <span class="text-lg">🚪</span>
+          <span>Logout</span>
+        </span>
+      </button>
+      
+    {/if}
+  </div>
+</div>
+{/if}
+
+<style>
+  /* Ensure smooth transitions */
+  .transform {
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  /* Custom scrollbar for webkit browsers */
+  .overflow-y-auto::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .overflow-y-auto::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 2px;
+  }
+  
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+  
+  /* Ensure buttons are accessible on touch devices */
+  @media (max-width: 768px) {
+    button {
+      min-height: 44px; /* iOS recommended minimum touch target */
+    }
+  }
+</style>

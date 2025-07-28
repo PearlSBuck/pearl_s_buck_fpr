@@ -1,5 +1,6 @@
 <svelte:options runes={true} />
 <script lang='ts'>
+	import { getContext, onMount } from 'svelte';
     import Header from '../../../../components/Header.svelte';
     let pageName = "Forms Management";
 
@@ -84,11 +85,16 @@
             alert("Failed to save form.");
         }
     }
+
+    const setPageContext:any = getContext('setPageContext');
+    onMount(() => {
+
+    setPageContext(pageName,false,true);
+    })
 </script>
 
 
 <div class="fixed overflow-auto top-0 left-0 h-full w-full flex flex-col bg-[#F6F8FF]">
-    <Header name={pageName} search backButton={false} />
     <div class="pt-27 flex flex-col px-10">   
         <div class="w-full shadow-md/20 rounded-lg bg-white p-5">
             <div>

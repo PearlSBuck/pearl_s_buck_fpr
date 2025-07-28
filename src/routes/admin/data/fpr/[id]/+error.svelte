@@ -1,11 +1,17 @@
-<script>
+<script lang="ts">
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
     import Header from '../../../../../components/Header.svelte';
+	import { getContext, onMount } from 'svelte';
+
+
+    const setPageContext:any = getContext('setPageContext');
+    onMount(() => {
+      setPageContext("Error",false,true);
+    })
 </script>
 
 <div class="app-container">
-    <Header name="Error" search={false} backButton={true} />
     
     <div class="content-area flex flex-col items-center pt-8 px-6 pb-8">
         <div class="w-full max-w-4xl bg-white rounded-xl shadow p-8 text-center">

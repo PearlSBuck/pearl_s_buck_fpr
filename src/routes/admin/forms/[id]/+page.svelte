@@ -2,8 +2,8 @@
     // +page.svelte - Enhanced form display component with household member management
     import { enhance } from '$app/forms';
     import { page } from '$app/stores';
-    import { onMount } from 'svelte';
-    import Header from './Header.svelte'; // Import the Header component
+    import { getContext, onMount } from 'svelte';
+    import Header from '../../../../components/Header.svelte';
 
     export let data;
 
@@ -27,7 +27,10 @@
     let formSections: any[] = [];
     let householdMemberCount = 0;
 
+
+    const setPageContext:any = getContext('setPageContext');
     onMount(() => {
+        setPageContext(getDisplayTitle(data.form),false,true);
         if (data.form) {
             console.log('Initializing form with', data.form.sections.length, 'sections');
             console.log('Form version:', data.form.version);
@@ -495,13 +498,6 @@ function getInitialFieldValue(field: any) {
 </head>
 
 <div class="bg-[#F6F8FF] min-h-screen">
-    <!-- Header Section -->
-    <Header 
-         name={getDisplayTitle(data.form)} 
-        search={false} 
-        backButton={true} 
-    />
-
     <!-- Main Content Container -->
     <div class="pt-4">
         {#if data.form}

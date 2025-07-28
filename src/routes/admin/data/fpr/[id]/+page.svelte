@@ -4,7 +4,7 @@
   import Confirm from '../../../../../components/Confirm.svelte';
   import { goto } from '$app/navigation';
   import { selectedRecords } from '../../selectFPRRecord';
-  import { onDestroy } from 'svelte';
+  import { getContext, onDestroy, onMount } from 'svelte';
   import * as XLSX from 'xlsx';
 
   // Define types for the data structure
@@ -66,6 +66,12 @@
       goto(`/admin/data/fpr/${data.childId}?page=${page}`);
     }
   }
+
+
+    const setPageContext:any = getContext('setPageContext');
+    onMount(() => {
+    setPageContext(pageName,false,true);
+  })
 
   // Clear selection when component is destroyed
   onDestroy(() => {
@@ -370,7 +376,6 @@
 </script>
 
 <div class="pt-2 bg-[#F6F8FF]">
-  <Header name={pageName} backButton/>
 
   <div class="flex justify-end gap-0 mt-32 pr-10 pl-10 relative bg-[#F6F8FF]">
     <!-- Button: Progress Report -->
