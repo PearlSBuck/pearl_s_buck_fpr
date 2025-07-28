@@ -133,7 +133,7 @@ function handleFieldChanges(updatedField: any, changeType:string, sectionid?: st
         formDelta.update(delta => {
             delta.fields.push({
             type: changeType,
-            id:fieldId,
+            id:fieldId ?? updatedField.id,
             field: {
                 label: updatedField.label,
                 name: updatedField.name,
