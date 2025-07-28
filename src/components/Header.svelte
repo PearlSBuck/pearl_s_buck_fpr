@@ -2,6 +2,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { supabase, supabaseAdmin } from '$lib/db';
+	import { onMount } from 'svelte';
   
   export let name: string = '';
   export let search: boolean = false;
@@ -14,7 +15,8 @@
   let addRecordsExpanded = true;
   let manageRecordsExpanded = true;
   let userManagementExpanded = true;
-  
+  $: isUserAdmin = false;
+
   // Check if current route is admin
   $: isAdminRoute = $page.route.id?.startsWith('/admin') || false;
   
@@ -95,6 +97,12 @@ async function navigateToLogout() {
 
     return data?.role === 'Admin';
   }
+
+  onMount(async() => {
+    const admin = await isAdmin();
+    isUserAdmin = admin
+    console.log(admin)
+  })
 
 </script>
 
@@ -327,6 +335,14 @@ async function navigateToLogout() {
         </div>
       </div>
       
+      {#if isUserAdmin}
+           <button onclick={() => isAdminRoute = true} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
+        <span class="flex items-center gap-3">
+          <span class="text-lg">🚪</span>
+          <span>Admin</span>
+        </span>
+      </button>
+      {/if}
       <!-- Logout -->
       <button onclick={navigateToLogout} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
         <span class="flex items-center gap-3">
