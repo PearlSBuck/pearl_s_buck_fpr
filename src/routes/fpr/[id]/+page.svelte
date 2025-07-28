@@ -78,6 +78,7 @@
                 const success = await submitAnswersToSupabase(data.form.id, 'FPR');
                 if (success) {
                     notification.set({ message: 'Successfully submitted form entry', type: 'success' });
+                    clearAnswers();
                 } else {
                     notification.set({ message: 'Form submission failed', type: 'error' });
                 }
@@ -421,7 +422,6 @@
                         // Replace with your delete logic
                         openSubmitForm = false;
                         printInputs();
-                        clearAnswers();
                     } else{
                         notification.set({ message: 'Error: Cannot submit form while offline.', type: 'error' });
                     }
