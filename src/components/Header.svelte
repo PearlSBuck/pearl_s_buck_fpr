@@ -19,7 +19,7 @@
   $: isAdminRoute = $page.route.id?.startsWith('/admin') || false;
   
   // Check if current route is login - hide navbar completely for login page
-  $: isLoginRoute = $page.route.id === '/login' || $page.url.pathname === '/login';
+  $: isLoginRoute = $page.route.id?.startsWith('/login') || $page.url.pathname.startsWith('/login');
   
   function toggleNav() {
     isNavOpen = !isNavOpen;
@@ -31,7 +31,7 @@
   
 
 async function navigateToLogout() {
-  goto('/login');
+  window.location.href=('/login');
   const { error } = await supabase.auth.signOut();
 
   if (error) {
@@ -349,7 +349,7 @@ async function navigateToLogout() {
         <button onclick={toggleRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
           <span class="flex items-center gap-3">
             <span class="text-lg">📋</span>
-            <span>Manage Forms</span>
+            <span>Answer Forms</span>
           </span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="transition-transform duration-300 {recordsExpanded ? 'rotate-180' : ''} sm:w-5 sm:h-5">
             <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -357,7 +357,7 @@ async function navigateToLogout() {
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {recordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
           <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
-            <a href="/admin/forms" >
+            <a href="/fis" >
               <span class="flex items-center gap-3">
                 <span>📊</span>
                 <span>Family Introduction Sheet</span>
@@ -365,7 +365,7 @@ async function navigateToLogout() {
             </a>
           </div>
           <div class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
-            <a href="/admin/forms" >
+            <a href="/fpr" >
               <span class="flex items-center gap-3">
                 <span>📈</span>
                 <span>Family Progress Report</span>
