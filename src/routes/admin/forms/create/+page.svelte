@@ -94,15 +94,15 @@
 </script>
 
 
-<div class="fixed overflow-auto top-0 left-0 h-full w-full flex flex-col bg-[#F6F8FF]">
+<div class="fixed overflow-auto top-0 left-0 h-full w-full flex flex-col bg-[#F6F8FF] mt-10">
     <div class="pt-27 flex flex-col px-10">   
         <div class="w-full shadow-md/20 rounded-lg bg-white p-5">
-            <div class="items-center justify-start flex">
+            <div class="items-center justify-start flex gap-2">
                 <label class="text-lg" for="formTitle">
                     Form Title:
                 </label>
 
-                        <select class="rounded-full m-0 h-5 w-47.5" id="title" name="title" bind:value={form.title} placeholder="Enter a title..." >
+                        <select class="flex justify-center align-items rounded-full m-0 h-10 w-47.5" id="title" name="title" bind:value={form.title} >
                             <option>
                                 FPR
                             </option>
@@ -111,11 +111,11 @@
                             </option>
                         </select>
             </div>
-            <div class="md:flex md:justify-between md:pt-3">
+            <div class="md:flex md:justify-between md:pt-3 gap-2">
                 <div>
                     <label class="text-lg">
                         Version: 
-                        <input class="rounded-full m-0 h-5" type="text" id="version" name="version" bind:value={form.version} placeholder="Enter form version..." />
+                        <input class="rounded-full m-0 h-10" type="text" id="version" name="version" bind:value={form.version} placeholder="Enter form version..." />
                     </label>
                 </div>
                 <div class="flex justify-center pt-2">
