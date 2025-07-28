@@ -34,25 +34,23 @@
   }
 
   function navigateToFamilyIntroductionSheet() {
-    goto('/admin/forms?action=handleIntroSheet');
+    goto('/admin/forms',{replaceState:true});
     closeNav();
 }
 
 function navigateToFamilyProgressReport() {
-  goto('/admin/forms?action=handleProgressReport');
+  goto('/admin/forms',{replaceState});
   closeNav();
 }
 
 
 function navigateToLogout() {
   goto('/login');
+  // add logout logic here
   closeNav();
 }
 
-function navigateToCreate() {
-  goto('/admin/forms/create');
-  closeNav();
-}
+
 
 function navigateToFIS() {
   closeNav();
@@ -112,7 +110,7 @@ function navigateToManageUsers() {
     <div class="flex items-center">
       {#if !isLoginRoute}
       <button 
-        on:click={toggleNav} 
+        onclick={toggleNav} 
         class="nav-toggle cursor-pointer p-1 sm:p-0 mr-2 sm:mr-0 md:hidden" 
         aria-label="Toggle navigation menu"
       >
@@ -122,7 +120,7 @@ function navigateToManageUsers() {
       </button>
 
       <!-- Logo (hidden on small screens when hamburger is shown) -->
-      <button on:click={toggleNav} class="nav-toggle cursor-pointer hidden md:block">
+      <button onclick={toggleNav} class="nav-toggle cursor-pointer hidden md:block">
         <img src="/logo.jpg" alt="Logo" class="h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 p-1"/>
       </button>
       {:else}
@@ -175,7 +173,7 @@ function navigateToManageUsers() {
     </p>
     {#if backButton}
     <button 
-      on:click={() => history.back()} 
+      onclick={() => history.back()} 
       class="bg-[#1A5A9E] text-white font-medium py-2 px-3 sm:py-2 sm:px-4 rounded-lg cursor-pointer text-xs sm:text-sm hover:bg-[#0f4577] active:bg-[#0a3a63] transition-colors flex-shrink-0 touch-manipulation"
       aria-label="Go back"
     >
@@ -194,7 +192,7 @@ function navigateToManageUsers() {
   <button 
     type="button"
     class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-    on:click={closeNav}
+    onclick={closeNav}
     aria-label="Close navigation menu"
   ></button>
 {/if}
@@ -206,7 +204,7 @@ function navigateToManageUsers() {
     <h2 class="text-white font-bold text-lg sm:text-xl">
       {isAdminRoute ? 'Admin' : 'Worker'}
     </h2>
-    <button on:click={closeNav} class="text-white hover:text-gray-300 transition-all duration-300 font-bold text-xl sm:text-2xl p-2 -m-2">
+    <button onclick={closeNav} class="text-white hover:text-gray-300 transition-all duration-300 font-bold text-xl sm:text-2xl p-2 -m-2">
       ×
     </button>
   </div>
@@ -216,16 +214,16 @@ function navigateToManageUsers() {
     {#if isAdminRoute}
       <!-- Admin Navigation -->
       <!-- Home -->
-      <button on:click={navigateToHome} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] font-medium border-b border-[#f0f0f0] text-sm sm:text-base active:bg-[#e9ecef]">
+      <!-- <a href="/home" class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] font-medium border-b border-[#f0f0f0] text-sm sm:text-base active:bg-[#e9ecef]">
         <span class="flex items-center gap-3">
           <span class="text-lg">🏠</span>
           <span>Home</span>
         </span>
-      </button>
+      </a> -->
       
       <!-- Edit Forms Section -->
       <div class="border-b-2 border-[#f0f0f0]">
-        <button on:click={toggleForms} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+        <button onclick={toggleForms} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
           <span class="flex items-center gap-3">
             <span class="text-lg">📝</span>
             <span>Manage Forms</span>
@@ -235,24 +233,24 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {formsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <button on:click={navigateToFamilyIntroductionSheet} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+          <a href="/admin/forms" class="w-full h-full px-6 sm:px-8 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
             <span class="flex items-center gap-3">
               <span>📋</span>
               <span>Family Introduction Sheet</span>
             </span>
-          </button>
-          <button on:click={navigateToFamilyProgressReport} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+          </a>
+          <a href="/admin/forms" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
             <span class="flex items-center gap-3">
               <span>📝</span>
               <span>Family Progress Report</span>
             </span>
-          </button>
+          </a>
         </div>
       </div>
       
       <!-- Add Records Section -->
       <div class="border-b-2 border-[#f0f0f0]">
-        <button on:click={toggleAddRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+        <button onclick={toggleAddRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
           <span class="flex items-center gap-3">
             <span class="text-lg">➕</span>
             <span>Create Forms</span>
@@ -262,18 +260,18 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {addRecordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <button on:click={navigateToCreate} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+          <a href="/admin/forms/create" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
             <span class="flex items-center gap-3">
               <span>📋</span>
               <span>Create</span>
             </span>
-          </button>
+          </a>
         </div>
       </div>
       
       <!-- Manage Records Section -->
       <div class="border-b-2 border-[#f0f0f0]">
-        <button on:click={toggleManageRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+        <button onclick={toggleManageRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
           <span class="flex items-center gap-3">
             <span class="text-lg">⚙️</span>
             <span>Manage Records</span>
@@ -283,24 +281,24 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {manageRecordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <button on:click={navigateToFIS} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+          <a href="/admin/data?tab=intro_sheet" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
             <span class="flex items-center gap-3">
               <span>📋</span>
               <span>Family Introduction Sheet</span>
             </span>
-          </button>
-          <button on:click={navigateToFPR} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+          </a>
+          <a href="/admin/data?tab=progress_report" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
             <span class="flex items-center gap-3">
               <span>📝</span>
               <span>Family Progress Report</span>
             </span>
-          </button>
+          </a>
         </div>
       </div>
       
       <!-- User Management Section -->
       <div class="border-b-2 border-[#f0f0f0]">
-        <button on:click={toggleUserManagement} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+        <button onclick={toggleUserManagement} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
           <span class="flex items-center gap-3">
             <span class="text-lg">👥</span>
             <span>User Management</span>
@@ -310,17 +308,17 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {userManagementExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <button on:click={navigateToManageUsers} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+          <a href="/admin/manage" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
             <span class="flex items-center gap-3">
               <span>🤝</span>
               <span>Manage Users</span>
             </span>
-          </button>
+          </a>
         </div>
       </div>
       
       <!-- Logout -->
-      <button on:click={navigateToLogout} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
+      <button onclick={navigateToLogout} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
         <span class="flex items-center gap-3">
           <span class="text-lg">🚪</span>
           <span>Logout</span>
@@ -329,16 +327,16 @@ function navigateToManageUsers() {
       
     {:else}
       <!-- Regular User Navigation -->
-      <button on:click={navigateToHome} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
+      <!-- <a href="/home" class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
         <span class="flex items-center gap-3">
           <span class="text-lg">🏠</span>
           <span>Home</span>
         </span>
-      </button>
+      </a> -->
       
       <!-- Records Section -->
       <div class="border-b-2 border-[#f0f0f0]">
-        <button on:click={toggleRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
+        <button onclick={toggleRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
           <span class="flex items-center gap-3">
             <span class="text-lg">📋</span>
             <span>Manage Forms</span>
@@ -348,23 +346,23 @@ function navigateToManageUsers() {
           </svg>
         </button>
         <div class="bg-white overflow-hidden transition-all duration-300 ease-in-out {recordsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}">
-          <button on:click={navigateToFamilyIntroductionSheet} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
+          <a href="/admin/forms" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] text-xs sm:text-sm font-medium active:bg-[#e9ecef]">
             <span class="flex items-center gap-3">
               <span>📊</span>
               <span>Family Introduction Sheet</span>
             </span>
-          </button>
-          <button on:click={navigateToFamilyProgressReport} class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
+          </a>
+          <a href="/admin/forms" class="w-full px-6 sm:px-8 py-3 sm:py-3 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] text-xs sm:text-sm font-medium border-b border-[#f0f0f0] active:bg-[#e9ecef]">
             <span class="flex items-center gap-3">
               <span>📈</span>
               <span>Family Progress Report</span>
             </span>
-          </button>
+          </a>
         </div>
       </div>
 
        <!-- Logout -->
-      <button on:click={navigateToLogout} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
+      <button onclick={navigateToLogout} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
         <span class="flex items-center gap-3">
           <span class="text-lg">🚪</span>
           <span>Logout</span>
