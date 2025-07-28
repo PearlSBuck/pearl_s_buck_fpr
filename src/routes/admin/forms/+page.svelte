@@ -1,65 +1,24 @@
 <!--+page.svelte-->
-<script lang="ts">
-    import { getContext, onMount } from 'svelte';
+<script>
+    import { onMount } from 'svelte';
     import { enhance } from '$app/forms';
     import { goto } from '$app/navigation';
-    import Header from '../../../components/Header.svelte'; // Import the Header component
-    import { page } from '$app/stores';
+    import Header from '../forms/[id]/Header.svelte'; // Import the Header component
+    
     export let data;
     
     let show = false;
     let displayText = '';
     /** @type {{ title?: string, createdAt?: string, description?: string, version?: string }[]} */
-    let selectedForms:any = [];
+    let selectedForms = [];
     let showFormsList = false;
     let selectedYear = new Date().getFullYear(); // Default to current year
     /** @type {number[]} */
-    let availableYears:any = [];
+    let availableYears = [];
     let currentFormType = '';
 
-
-    $: {
-    const action = $page.url.searchParams.get('action');
-    console.log('Current URL:', $page.url.href);
-    console.log('Action parameter:', action);
-    
-    if (action === 'handleIntroSheet') {
-        console.log('Calling handleIntroSheet()...');
-        handleIntroSheet();
-        
-        // Clean up the URL parameter after calling the function
-        const url = new URL($page.url);
-        url.searchParams.delete('action');
-        history.replaceState({}, '', url.toString());
-        console.log('URL cleaned up');
-    }
-}
-
-
-$: {
-    const action = $page.url.searchParams.get('action');
-    console.log('Current URL:', $page.url.href);
-    console.log('Action parameter:', action);
-    
-    if (action === 'handleProgressReport') {
-        console.log('Calling handleIntroSheet()...');
-        handleProgressReport();
-        
-        // Clean up the URL parameter after calling the function
-        const url = new URL($page.url);
-        url.searchParams.delete('action');
-        history.replaceState({}, '', url.toString());
-        console.log('URL cleaned up');
-    }
-}
-
-
-
-
-    const setPageContext:any = getContext('setPageContext');
     // Initialize component on mount
     onMount(() => {
-        setPageContext("Family Documents",false,false);
         console.log('Component mounted with data:', data);
         
         // Initialize available years from all forms
@@ -98,21 +57,21 @@ $: {
         availableYears = Array.from(
             new Set(
                 selectedForms
-                    .map((form: { createdAt: string | number | Date; }) => {
+                    .map(form => {
                         if (form.createdAt) {
                             return new Date(form.createdAt).getFullYear();
                         }
                         return null;
                     })
-                    .filter((year: any) => typeof year === 'number')
+                    .filter(year => typeof year === 'number')
             )
-        ).sort((a:any, b:any) => b - a);
+        ).sort((a, b) => b - a);
         
         if (availableYears.length > 0) {
             selectedYear = availableYears[0];
         }
         
-        selectedForms = selectedForms.filter((form: { createdAt: string | number | Date; }) => {
+        selectedForms = selectedForms.filter(form => {
             if (form.createdAt) {
                 return new Date(form.createdAt).getFullYear() === selectedYear;
             }
@@ -140,7 +99,7 @@ $: {
         
         // Populate availableYears based on filtered forms
         availableYears = Array.from(
-            new Set(selectedForms.map((form: { createdAt: string | number | Date; }) => {
+            new Set(selectedForms.map(form => {
                 if (form.createdAt) {
                     return new Date(form.createdAt).getFullYear();
                 }
@@ -154,7 +113,7 @@ $: {
             selectedYear = availableYears[0];
         }
         
-        selectedForms = selectedForms.filter((form: { createdAt: string | number | Date; }) => {
+        selectedForms = selectedForms.filter(form => {
             if (form.createdAt) {
                 return new Date(form.createdAt).getFullYear() === selectedYear;
             }
@@ -178,7 +137,7 @@ $: {
     /**
      * @param {Event} event
      */
-    function onYearChange(event: { target: any; }) {
+    function onYearChange(event) {
         selectedYear = +/** @type {HTMLSelectElement} */(event.target).value;
         
         // Re-filter selectedForms based on the selected year and current displayText
@@ -203,7 +162,7 @@ $: {
      * Handle form click navigation
      * @param {{ title?: string, version?: string }} form - The form object
      */
-    function handleFormClick(form: { title: string | number | boolean; version: string | number | boolean; }) {
+    function handleFormClick(form) {
         if (form.title && form.version) {
             // Create the URL path: /admin/forms/[form name]-[version]
             const formName = encodeURIComponent(form.title);
@@ -222,7 +181,7 @@ $: {
      * @param {string} dateString
      * @returns {string}
      */
-    function formatDate(dateString: string | number | Date) {
+    function formatDate(dateString) {
         try {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', {
@@ -243,6 +202,12 @@ $: {
 </head>
 
 <div class="bg-[#F6F8FF] min-h-screen">
+    <!-- Header Section -->
+    <Header 
+        name="Family Documents" 
+        search={false} 
+        backButton={false} 
+    />
 
     <!-- Main Content Container -->
     <div class="pt-4">

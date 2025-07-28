@@ -17,7 +17,6 @@
     import { getContext, onMount } from 'svelte';
     import { page } from '$app/stores';
     import { supabase } from '$lib/db';
-    import Header from '../../../../../components/Header.svelte';
     import Confirm from '../../../../../components/Confirm.svelte';
     import PasswordEdit from '../../../../../components/PasswordEdit.svelte';
 

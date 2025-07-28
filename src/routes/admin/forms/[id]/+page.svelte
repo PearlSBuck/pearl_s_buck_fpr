@@ -2,8 +2,8 @@
     // +page.svelte - Enhanced form display component with household member management
     import { enhance } from '$app/forms';
     import { page } from '$app/stores';
-    import { getContext, onMount } from 'svelte';
-    import Header from '../../../../components/Header.svelte';
+    import { onMount } from 'svelte';
+    import Header from './Header.svelte'; // Import the Header component
 
     export let data;
 
@@ -21,16 +21,12 @@
     // Form data for editing
     let formTitle = data.form?.title || '';
     let formVersion = data.form?.version || 1.0;
-    let totalFields = 0;
 
     // Household member management - now tracking sections instead of instances
     let formSections: any[] = [];
     let householdMemberCount = 0;
 
-
-    const setPageContext:any = getContext('setPageContext');
     onMount(() => {
-        setPageContext(getDisplayTitle(data.form),false,true);
         if (data.form) {
             console.log('Initializing form with', data.form.sections.length, 'sections');
             console.log('Form version:', data.form.version);
@@ -73,7 +69,7 @@
                     });
                 }
             });
-            totalFields = Object.keys(fieldValues).length;
+            
             console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
             console.log('Initialized household member sections:', householdMemberCount);
         }
@@ -498,6 +494,13 @@ function getInitialFieldValue(field: any) {
 </head>
 
 <div class="bg-[#F6F8FF] min-h-screen">
+    <!-- Header Section -->
+    <Header 
+         name={getDisplayTitle(data.form)} 
+        search={false} 
+        backButton={true} 
+    />
+
     <!-- Main Content Container -->
     <div class="pt-4">
         {#if data.form}
@@ -526,7 +529,8 @@ function getInitialFieldValue(field: any) {
                             <div><strong>Form ID:</strong> {data.form.id}</div>
                             <div><strong>Created:</strong> {formatDate(data.form.createdAt)}</div>
                             <div><strong>Sections:</strong> {formSections.length}</div>
-                            <div><strong>Fields:</strong> {totalFields}</div>
+                            <div><strong>Fields:</strong> {getTotalFieldsCount()}</div>
+                            <div><strong>Household Members:</strong> {householdMemberCount}</div>
                         </div>
 
                         <!-- Action Buttons -->
