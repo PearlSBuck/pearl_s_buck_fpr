@@ -1,7 +1,7 @@
 <!--User Management Page -->
 <!--+page.svelte-->
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { getContext, onMount } from 'svelte';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import Header from '../../../components/Header.svelte'; // adjust the paths as needed
@@ -12,6 +12,8 @@
 
   // Page name for header
   let pageName = "User Management Page";
+
+
   
   // Component state for audit logs
   let selectedMonth = new Date().getMonth();
@@ -35,6 +37,11 @@
   let selectedUser = null;
   let showUserModal = false;
   
+    const setPageContext:any = getContext('setPageContext');
+    onMount(() => {
+      setPageContext(pageName,false,true);
+    })
+
   // Data from server
   export let data;
   
@@ -405,7 +412,6 @@
 
 <div class="pt-2 bg-[#F6F8FF] min-h-screen">
   <!-- Header -->
-  <Header name={pageName} search backButton/>
 
   <!-- Page Title -->
   <div class="bg-[#474C58] text-white py-3">
