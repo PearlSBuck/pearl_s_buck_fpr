@@ -3,7 +3,6 @@
     import { enhance } from '$app/forms';
     import { page } from '$app/stores';
     import { getContext, onMount } from 'svelte';
-    import Header from '../../../../components/Header.svelte';
 
     export let data;
 
