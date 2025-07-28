@@ -425,13 +425,6 @@
             required={true}
             options = {userList}
             bind:value={$filledOutBy}
-        /><DataInput
-            type='text'
-            label="Sponsored Child's ID"
-            name="Sponsored Child's ID"
-            placeholder='Enter value...'
-            required={true}
-            bind:value={$SCId}
         />
 		<!-- Buttons -->
 		<div class="flex flex-col sm:flex-row justify-center gap-2 mt-4">
