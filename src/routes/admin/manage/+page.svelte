@@ -8,11 +8,12 @@
   import { onDestroy } from 'svelte';
 
   let debounceTimeout: ReturnType<typeof setTimeout>;
+  let userSearchTimeout: ReturnType<typeof setTimeout>;
 
   // Page name for header
   let pageName = "User Management Page";
   
-  // Component state
+  // Component state for audit logs
   let selectedMonth = new Date().getMonth();
   let selectedYear = new Date().getFullYear();
   let currentPage = 1;
@@ -24,13 +25,24 @@
   let isLoading = false;
   let tooltipPosition = { x: 0, y: 0 };
   let tooltipVisible = false;
+
+  // Component state for user management
+  let userSearchTerm = '';
+  let userCurrentPage = 1;
+  let userSortBy = 'fullname';
+  let userSortOrder = 'asc';
+  let isUserLoading = false;
+  let selectedUser = null;
+  let showUserModal = false;
   
   // Data from server
   export let data;
   
   // Reactive statements to get data from server
   $: auditLogs = data?.auditLogs || { logs: [], totalCount: 0, totalPages: 0, currentPage: 1, hasMore: false };
+  $: users = data?.users || { users: [], totalCount: 0, totalPages: 0, currentPage: 1, hasMore: false };
   $: filters = data?.filters || {};
+  $: userFilters = data?.userFilters || {};
   
   // Update local state when server data changes
   $: if (filters.month !== undefined) selectedMonth = filters.month;
@@ -39,8 +51,15 @@
   $: if (filters.sortBy !== undefined) sortBy = filters.sortBy;
   $: if (filters.sortOrder !== undefined) sortOrder = filters.sortOrder;
   $: if (filters.searchTerm !== undefined) searchTerm = filters.searchTerm;
+
+  // Update user state when server data changes
+  $: if (userFilters.searchTerm !== undefined) userSearchTerm = userFilters.searchTerm;
+  $: if (userFilters.page !== undefined) userCurrentPage = userFilters.page;
+  $: if (userFilters.sortBy !== undefined) userSortBy = userFilters.sortBy;
+  $: if (userFilters.sortOrder !== undefined) userSortOrder = userFilters.sortOrder;
   
   const logsPerPage = 10;
+  const usersPerPage = 10;
   
   // Transform server data to match frontend expectations
   $: transformedLogs = auditLogs.logs.map(log => ({
@@ -63,6 +82,10 @@
     if (action.toLowerCase().includes('view') || action.toLowerCase().includes('access')) return 'view';
     return 'edit';
   };
+
+  function handleRedirectToCreate() {
+    goto('/admin/manage/create');
+  }
   
   const getActionColor = (action: string) => {
     const type = getActionType(action);
@@ -74,6 +97,8 @@
       default: return 'text-gray-600';
     }
   };
+
+  
   
   const getActionBgColor = (action: string) => {
     const type = getActionType(action);
@@ -95,6 +120,93 @@
       case 'edit': return '✏️';
       default: return '📝';
     }
+  };
+
+  // User management functions
+  const updateUserFilters = async () => {
+    isUserLoading = true;
+    const url = new URL($page.url);
+    url.searchParams.set('userSearch', userSearchTerm);
+    url.searchParams.set('userPage', userCurrentPage.toString());
+    url.searchParams.set('userSortBy', userSortBy);
+    url.searchParams.set('userSortOrder', userSortOrder);
+    
+    await goto(url.toString(), { replaceState: true });
+    isUserLoading = false;
+  };
+
+  const handleUserSearch = async () => {
+    userCurrentPage = 1;
+    await updateUserFilters();
+  };
+
+  const handleUserSearchInput = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    userSearchTerm = target.value;
+    
+    clearTimeout(userSearchTimeout);
+    userSearchTimeout = setTimeout(() => {
+      handleUserSearch();
+    }, 500);
+  };
+
+  const handleUserPageChange = async (newPage: number) => {
+    userCurrentPage = newPage;
+    await updateUserFilters();
+  };
+
+  const viewUser = async (user: any) => {
+  // Log the user view action
+  try {
+    const formData = new FormData();
+    formData.append('userId', user.id);
+    formData.append('adminId', 'current-admin'); // Replace with actual admin ID
+    formData.append('userName', user.username);
+    
+    await fetch($page.url.pathname + '?/logUserView', {
+      method: 'POST',
+      body: formData
+    });
+  } catch (error) {
+    console.error('Error logging user view:', error);
+  }
+
+  // Redirect to the view page
+  goto(`/admin/manage/view/${user.id}`);
+};
+
+  const closeUserModal = () => {
+    showUserModal = false;
+    selectedUser = null;
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role.toLowerCase()) {
+      case 'admin': return 'bg-red-100 text-red-800';
+      case 'worker': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatUserDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const calculateAge = (birthdate: string) => {
+    const today = new Date();
+    const birth = new Date(birthdate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
   };
 
   // Header tooltip content
@@ -150,7 +262,7 @@
     hoveredHeader = null;
   };
 
-  // Utility functions
+  // Utility functions for audit logs
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -169,7 +281,7 @@
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
-  // Navigation functions
+  // Navigation functions for audit logs
   const updateFilters = async () => {
     isLoading = true;
     const url = new URL($page.url);
@@ -220,7 +332,7 @@
     await updateFilters();
   };
 
-  // Cleaner debounced search input handler
+  // Cleaner debounced search input handler for audit logs
   const handleSearchInput = (event: Event) => {
     const target = event.target as HTMLInputElement;
     searchTerm = target.value;
@@ -275,9 +387,15 @@
   $: startIndex = auditLogs.logs.length > 0 ? (currentPage - 1) * logsPerPage + 1 : 0;
   $: endIndex = Math.min(currentPage * logsPerPage, auditLogs.totalCount || 0);
 
-  // Clean up timeout on component destroy
+  // User pagination
+  $: userTotalPages = users.totalPages || 0;
+  $: userStartIndex = users.users.length > 0 ? (userCurrentPage - 1) * usersPerPage + 1 : 0;
+  $: userEndIndex = Math.min(userCurrentPage * usersPerPage, users.totalCount || 0);
+
+  // Clean up timeouts on component destroy
   onDestroy(() => {
     clearTimeout(debounceTimeout);
+    clearTimeout(userSearchTimeout);
   });
 </script>
 
@@ -301,7 +419,7 @@
       <!-- Edit User Section -->
       <div class="lg:col-span-1">
         <div class="bg-white rounded-xl shadow-2xl p-6 h-full mb-8">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">Edit User (DUMMY)</h3>
+          <h3 class="text-2xl font-bold text-gray-900 mb-6">Edit User</h3>
           
           <div class="space-y-4">
             <div class="flex space-x-2">
@@ -311,32 +429,99 @@
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search by Name"
+                  placeholder="Search by Name, Username, or Email"
                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1A5A9E] focus:border-transparent"
+                  value={userSearchTerm}
+                  on:input={handleUserSearchInput}
                 />
               </div>
-              <button class="flex items-center space-x-2 bg-[#1A5A9E] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>Create Account</span>
+              <button
+                  on:click={handleRedirectToCreate}
+                  class="flex items-center space-x-2 bg-[#1A5A9E] text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span>Create Account</span>
               </button>
             </div>
 
-            <div class="space-y-3">
-              {#each ['Username1', 'Username2', 'Username3', 'Username4'] as username, index}
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                  <div class="flex items-center space-x-3">
-                    <span class="text-gray-600 font-medium">{index + 1}.</span>
-                    <span class="text-gray-900">{username}</span>
+            <!-- Loading state -->
+            {#if isUserLoading}
+              <div class="flex justify-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1A5A9E]"></div>
+              </div>
+            {:else}
+              <!-- Users list -->
+              <div class="space-y-3 max-h-96 overflow-y-auto">
+                {#each users.users as user, index}
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors">
+                    <div class="flex items-center space-x-3">
+                      <span class="text-gray-600 font-medium">{userStartIndex + index}.</span>
+                      <div class="flex flex-col">
+                        <span class="text-gray-900 font-medium">{user.fullname}</span>
+                        <span class="text-sm text-gray-500">@{user.username}</span>
+                      </div>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {getRoleBadgeColor(user.role)}">
+                        {user.role}
+                      </span>
+                    </div>
+                    <button 
+                      class="bg-[#1A5A9E] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-colors"
+                      on:click={() => viewUser(user)}
+                    >
+                      View
+                    </button>
                   </div>
-                  <button class="bg-[#1A5A9E] text-white px-4 py-1 rounded-lg hover:bg-blue-700 transition-colors">
-                    View
+                {/each}
+                
+                {#if users.users.length === 0}
+                  <div class="text-center py-8 text-gray-500">
+                    {userSearchTerm ? 'No users found matching your search.' : 'No users found.'}
+                  </div>
+                {/if}
+              </div>
+            {/if}
+
+            <!-- User Pagination -->
+            {#if userTotalPages > 1}
+              <div class="flex items-center justify-between border-t pt-4">
+                <div class="text-sm text-gray-700">
+                  Showing {userStartIndex} to {userEndIndex} of {users.totalCount} users
+                </div>
+                <div class="flex space-x-2">
+                  <button
+                    class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                    disabled={userCurrentPage === 1}
+                    on:click={() => handleUserPageChange(userCurrentPage - 1)}
+                  >
+                    Previous
+                  </button>
+                  
+                  {#each Array.from({ length: Math.min(5, userTotalPages) }, (_, i) => {
+                    const startPage = Math.max(1, userCurrentPage - 2);
+                    return startPage + i;
+                  }) as pageNum}
+                    {#if pageNum <= userTotalPages}
+                      <button
+                        class="px-3 py-1 text-sm rounded {pageNum === userCurrentPage ? 'bg-[#1A5A9E] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
+                        on:click={() => handleUserPageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </button>
+                    {/if}
+                  {/each}
+                  
+                  <button
+                    class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
+                    disabled={userCurrentPage === userTotalPages}
+                    on:click={() => handleUserPageChange(userCurrentPage + 1)}
+                  >
+                    Next
                   </button>
                 </div>
-              {/each}
-              <div class="text-center py-4 text-gray-500">...</div>
-            </div>
+              </div>
+            {/if}
           </div>
         </div>
       </div>
