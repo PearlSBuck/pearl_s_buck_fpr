@@ -2,7 +2,7 @@
 <script lang="ts">
     import { getContext, onMount } from 'svelte';
     import { enhance } from '$app/forms';
-    import { goto } from '$app/navigation';
+    import { goto, invalidateAll } from '$app/navigation';
     import { page } from '$app/stores';
     export let data;
     
@@ -202,15 +202,9 @@ $: {
      * Handle form click navigation
      * @param {{ title?: string, version?: string }} form - The form object
      */
-    function handleFormClick(form: { title: string | number | boolean; version: string | number | boolean; }) {
+    async function handleFormClick(form: { title: string | number | boolean; version: string | number | boolean; }) {
         if (form.title && form.version) {
-            // Create the URL path: /admin/forms/[form name]-[version]
-            const formName = encodeURIComponent(form.title);
-            const version = encodeURIComponent(form.version);
-            const url = `/admin/forms/${formName}-${version}`;
-            
-            console.log('Navigating to:', url);
-            goto(url);
+        window.location.href = `/fpr/${form.title}-${form.version}`;
         } else {
             console.warn('Form missing title or version:', form);
         }
@@ -268,7 +262,7 @@ $: {
 
             <!-- Document Type Selection -->
             <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class=" gap-8 max-w-4xl mx-auto">
                     <!-- Family Progress Report Button -->
                     <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden border-l-4 border-green-600 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
                         <div class="bg-green-600 text-white px-6 py-4">
@@ -285,21 +279,7 @@ $: {
                         </div>
                     </div>
 
-                    <!-- Family Introduction Sheet Button -->
-                    <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden border-l-4 border-blue-600 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                        <div class="bg-blue-600 text-white px-6 py-4">
-                            <h3 class="text-xl font-bold">Family Introduction Sheet</h3>
-                        </div>
-                        <div class="p-6">
-                            <p class="text-gray-600 mb-6">View and manage your family introduction documents</p>
-                            <button 
-                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-300 shadow-lg"
-                                on:click={handleIntroSheet}
-                            >
-                                View Introduction Sheets
-                            </button>
-                        </div>
-                    </div>
+           
                 </div>
             </div>
         </div>
