@@ -13,6 +13,7 @@
     import { getUserList } from '$lib/utils/userList';
 
     export let data;
+    let scname = '';
     let editModeData: any;
     let openDeletePopup = false;
     let openSubmitForm = false;
@@ -75,7 +76,7 @@
                 console.log($formAnswers);
                 console.log($filledOutBy);
                 console.log($SCId);
-                const success = await submitAnswersToSupabase(data.form.id, 'FIS');
+                const success = await submitAnswersToSupabase(data.form.id, 'FIS', scname);
                 if (success) {
                     notification.set({ message: 'Successfully submitted form entry', type: 'success' });
                 } else {
@@ -235,11 +236,34 @@
                         <span>{successMessage}</span>
                     </div>
                 {/if}
-
+                    
                 <!-- Form Sections -->
                 {#if data.form.sections && data.form.sections.length > 0}
                     <div class="p-6 space-y-8">
                         {#if $displayedData?.form}
+
+                        <!-- Enter Sponsored Child Name
+                                - This is always included as it is required in the database
+                         -->
+                        <div class="bg-[#F6F8FF] my-5 max-w-4xl mx-auto rounded-lg shadow-lg overflow-hidden">
+                            <!-- Section Header -->
+                            <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
+                                <h2 class="text-xl font-bold">Sponsored Child Name</h2>
+                            </div>
+                            <div class="mb-4">
+                            <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base ml-6  mt-2 sm:text-sm">Enter Sponsored Child's Name</h1>
+                                <div class="p-6">
+                                    <div class="grid grid-cols-1 gap-6">
+                                        <input
+                                        class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-full"
+                                        type="text"
+                                        placeholder="Last Name, First Name M.I."
+                                        bind:value={scname}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="w-full max-w-4xl mx-auto">
                         {#each $displayedData.form.sections as section, sectionIndex}
                             <div class="bg-[#F6F8FF] my-5 rounded-lg shadow-lg overflow-hidden">
