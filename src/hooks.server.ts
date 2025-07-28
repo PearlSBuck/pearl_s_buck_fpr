@@ -12,5 +12,17 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
+  const protectedRoutes = ['/admin', '/fis', '/fpr'];
+
+  if (protectedRoutes.some((route) => event.url.pathname.startsWith(route))) {
+    if (!event.locals.user) {
+      // If not authenticated, redirect to /login
+      return new Response(null, {
+        status: 303,
+        headers: { location: '/login' }
+      });
+    }
+  }
+
   return resolve(event);
 };
