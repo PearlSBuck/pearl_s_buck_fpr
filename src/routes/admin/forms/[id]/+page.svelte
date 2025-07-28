@@ -21,6 +21,7 @@
     // Form data for editing
     let formTitle = data.form?.title || '';
     let formVersion = data.form?.version || 1.0;
+    let totalFields = 0;
 
     // Household member management - now tracking sections instead of instances
     let formSections: any[] = [];
@@ -69,7 +70,7 @@
                     });
                 }
             });
-            
+            totalFields = Object.keys(fieldValues).length;
             console.log('Initialized field values:', Object.keys(fieldValues).length, 'fields');
             console.log('Initialized household member sections:', householdMemberCount);
         }
@@ -529,8 +530,7 @@ function getInitialFieldValue(field: any) {
                             <div><strong>Form ID:</strong> {data.form.id}</div>
                             <div><strong>Created:</strong> {formatDate(data.form.createdAt)}</div>
                             <div><strong>Sections:</strong> {formSections.length}</div>
-                            <div><strong>Fields:</strong> {getTotalFieldsCount()}</div>
-                            <div><strong>Household Members:</strong> {householdMemberCount}</div>
+                            <div><strong>Fields:</strong> {totalFields}</div>
                         </div>
 
                         <!-- Action Buttons -->
