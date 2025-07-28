@@ -193,7 +193,7 @@ function handleReactiveUI(updatedField: any, changeType: string, sectionid?:stri
         try {
             console.log(displayedFormData.sections[sectionIndex].fields);
             displayedFormData.sections[sectionIndex].fields.push({
-                id: 'placeholderId',
+                id: '',
                 label: updatedField.label,
                 name: updatedField.name,
                 placeholder: updatedField.placeholder,

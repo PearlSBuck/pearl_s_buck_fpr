@@ -54,6 +54,7 @@
         setTimeout(() => {
             notification.set({ message: '', type: null });
         }, 3000);
+        
     }
     $: show = $notification.type !== null;
 
@@ -378,7 +379,7 @@
                 {#if data.form.sections && data.form.sections.length > 0}
                     <div class="p-6 space-y-8">
                         {#if $displayedData?.form}
-                            {#each $displayedData.form.sections.slice().sort((a:any, b:any) => a.orderindex - b.orderindex) as section, sectionIndex (section.id)}
+                            {#each $displayedData.form.sections.slice().sort((a:any, b:any) => a.orderindex - b.orderindex) as section, sectionIndex (section.id || sectionIndex)}
                             <div class="bg-[#F6F8FF] rounded-lg shadow-lg overflow-hidden">
                                 <!-- Section Header -->
                                 <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
@@ -421,7 +422,7 @@
                                 <div class="p-6">
                                     {#if section.fields && section.fields.length > 0}
                                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                            {#each section.fields as field (field.id)}
+                                            {#each section.fields as field, i (field.id || i)}
                                                 <div class="space-y-2">
                                                     <label class="block font-bold text-gray-700 lg:text-lg md:text-base sm:text-sm" for={"field-" + field.id}>
                                                         {field.label}
