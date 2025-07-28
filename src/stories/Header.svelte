@@ -1,17 +1,15 @@
-<script>
+<script lang="ts">
   import './header.css';
   import Button from './Button.svelte';
 
-  /**
-   * @typedef {Object} Props
-   * @property {{name: string}} [user] The user object
-   * @property {() => void} [onLogin] The login event handler
-   * @property {() => void} [onLogout] The logout event handler
-   * @property {() => void} [onCreateAccount] The account creation event handler
-   */
+  interface Props {
+    user?: { name: string };
+    onLogin?: () => void;
+    onLogout?: () => void;
+    onCreateAccount?: () => void;
+  }
 
-  /** @type {Props} */
-  const { user, onLogin, onLogout, onCreateAccount } = $props();
+  const { user, onLogin, onLogout, onCreateAccount }: Props = $props();
 </script>
 
 <header>
@@ -37,10 +35,10 @@
         <span class="welcome">
           Welcome, <b>{user.name}</b>!
         </span>
-        <Button size="small" onclick={onLogout} label="Log out" />
+        <Button size="small" onClick={onLogout} label="Log out" />
       {:else}
-        <Button size="small" onclick={onLogin} label="Log in" />
-        <Button primary size="small" onclick={onCreateAccount} label="Sign up" />
+        <Button size="small" onClick={onLogin} label="Log in" />
+        <Button primary size="small" onClick={onCreateAccount} label="Sign up" />
       {/if}
     </div>
   </div>
