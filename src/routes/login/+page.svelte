@@ -17,7 +17,7 @@
         Login
     </div>
     <div class="bg-white flex flex-col items-start rounded-lg h-100 -mt-4 relative z-0 shadow-2xl">
-      <p class="m-4 mt-15 font-bold lg:text-xl md:text-lg sm:text-md">Username:</p>
+      <p class="m-4 mt-15 font-bold lg:text-xl md:text-lg sm:text-md">Email:</p>
       <input type="text" bind:value={email} class="ml-10 p-2 rounded-lg lg:w-100 md:w-75 sm:w-50 bg-[#DDE1E6] border-0 shadow-lg" placeholder="Enter your email..." />
       <p class="m-4 mt-10 font-bold lg:text-xl md:text-lg sm:text-md">Password:</p>
       <input type="password" bind:value={password} class="ml-10 p-2 rounded-lg lg:w-100 md:w-75 sm:w-50 bg-[#DDE1E6] border-0 shadow-lg" placeholder="Enter your password..." />
