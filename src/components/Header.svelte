@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { supabase } from '$lib/db';
   
   export let name: string = '';
   export let search: boolean = false;
@@ -29,9 +30,14 @@
   }
   
 
-function navigateToLogout() {
+async function navigateToLogout() {
   goto('/login');
-  // add logout logic here
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    console.error('Error signing out:', error.message);
+    return false;
+  }
   closeNav();
 }
 

@@ -23,6 +23,8 @@ export const PUT: RequestHandler = async ({ request }) => {
       return json({ success: false, error: updateError.message }, { status: 500 });
     }
 
+    console.log("Password successfully updated for user ID:", userID);
+
     return json({ success: true });
   } catch (err) {
     console.error('Password update error:', err);

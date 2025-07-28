@@ -453,7 +453,7 @@ let displayedUsers: { id: string; fullname: string; username: string; email?: st
   <title>User Management - Pearl S. Buck Foundation</title>
 </svelte:head>
 
-<div class="pt-2 bg-[#F6F8FF] min-h-screen">
+<div class="mt-10 pt-2 bg-[#F6F8FF] min-h-screen">
   <!-- Header -->
 
   <!-- Page Title -->
