@@ -13,7 +13,9 @@
   // Page name for header
   let pageName = "User Management Page";
 
-  // Component state for audit logs
+
+  
+  // Component state
   let selectedMonth = new Date().getMonth();
   let selectedYear = new Date().getFullYear();
   let currentPage = 1;
