@@ -131,6 +131,9 @@
                 }
             }
         }
+        if (scname === '' ) {
+            missingFields.push('Enter Sponsored Child Name');
+        }
         console.log(missingFields);
         // NOTE for QA: 
         //  if you want to test wihtout having to validate, make this return false
@@ -251,12 +254,13 @@
                                 <h2 class="text-xl font-bold">Sponsored Child Name</h2>
                             </div>
                             <div class="mb-4">
-                            <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base ml-6  mt-2 sm:text-sm">Enter Sponsored Child's Name</h1>
+                            <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base ml-6  mt-2 sm:text-sm">Enter Sponsored Child's Name <a class='text-red-400'> *</a></h1>
                                 <div class="p-6">
                                     <div class="grid grid-cols-1 gap-6">
                                         <input
                                         class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-full"
                                         type="text"
+                                        required
                                         placeholder="Last Name, First Name M.I."
                                         bind:value={scname}
                                         />
