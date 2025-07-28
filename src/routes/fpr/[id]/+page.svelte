@@ -281,8 +281,8 @@
                                                                     delete updated[field.id];
                                                                 } else {
                                                                     updated[field.id] = value;
+                                                                    console.log(updated[field.id]);
                                                                 }
-
                                                                 return updated;
                                                             });
                                                         }}
@@ -405,6 +405,7 @@
             name="Sponsored Child's ID"
             placeholder='Enter value...'
             required={true}
+            
             bind:value={$SCId}
         />
 		<!-- Buttons -->
