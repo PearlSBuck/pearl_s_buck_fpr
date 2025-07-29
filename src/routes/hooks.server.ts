@@ -1,64 +1,81 @@
-import { supabase, supabaseAdmin } from '$lib/db';
-import { redirect, type Handle } from '@sveltejs/kit';
-async function getCurrentUser() {
-  const {
-    data: { user },
-    error
-  } = await supabase.auth.getUser();
+import { createServerClient } from '@supabase/ssr'
+import { type Handle, redirect } from '@sveltejs/kit'
+import { sequence } from '@sveltejs/kit/hooks'
 
-  if (error) {
-    console.error('Error fetching user:', error);
-    return null;
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public'
+
+const supabase: Handle = async ({ event, resolve }) => {
+  /**
+   * Creates a Supabase client specific to this server request.
+   *
+   * The Supabase client gets the Auth token from the request cookies.
+   */
+  event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll: () => event.cookies.getAll(),
+      /**
+       * SvelteKit's cookies API requires `path` to be explicitly set in
+       * the cookie options. Setting `path` to `/` replicates previous/
+       * standard behavior.
+       */
+      setAll: (cookiesToSet) => {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          event.cookies.set(name, value, { ...options, path: '/' })
+        })
+      },
+    },
+  })
+
+  /**
+   * Unlike `supabase.auth.getSession()`, which returns the session _without_
+   * validating the JWT, this function also calls `getUser()` to validate the
+   * JWT before returning the session.
+   */
+  event.locals.safeGetSession = async () => {
+    const {
+      data: { session },
+    } = await event.locals.supabase.auth.getSession()
+    if (!session) {
+      return { session: null, user: null }
+    }
+
+    const {
+      data: { user },
+      error,
+    } = await event.locals.supabase.auth.getUser()
+    if (error) {
+      // JWT validation has failed
+      return { session: null, user: null }
+    }
+
+    return { session, user }
   }
 
-  return user?.id; // <-- This is the user's UUID
+  return resolve(event, {
+    filterSerializedResponseHeaders(name) {
+      /**
+       * Supabase libraries use the `content-range` and `x-supabase-api-version`
+       * headers, so we need to tell SvelteKit to pass it through.
+       */
+      return name === 'content-range' || name === 'x-supabase-api-version'
+    },
+  })
 }
 
-async function isAdmin() {
-  const { data } = await supabaseAdmin
-    .from('users')
-    .select('role')
-    .eq('id', await getCurrentUser())
-    .single();
+const authGuard: Handle = async ({ event, resolve }) => {
+  const { session, user } = await event.locals.safeGetSession()
+  event.locals.session = session
+  event.locals.user = user
 
-  return data?.role === 'Admin';
+  if (!event.locals.session && (event.url.pathname.startsWith('/admin') || event.url.pathname.startsWith('/fis') || event.url.pathname.startsWith('/fpr'))) {
+    redirect(303, '/auth')
+  }
+
+  if (event.locals.session && event.url.pathname === '/auth') {
+    redirect(303, '//login')
+  }
+
+  return resolve(event)
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
-  const authHeader = event.request.headers.get('Authorization');
-  const token = authHeader?.replace('Bearer ', '');
-
-  if (token) {
-    const { data, error } = await supabaseAdmin.auth.getUser(token);
-    if (data?.user && !error) {
-      event.locals.user = data.user; // pass user to load functions
-    }
-  }
-
-  const protectedRoutes = ['/admin', '/fis', '/fpr'];
-
-
-  if (protectedRoutes.some((route) => event.url.pathname.startsWith(route))) {
-
-
-    if (event.url.pathname.startsWith('/admin')) {
-      const isUserAdmin = await isAdmin();
-      console.log(isUserAdmin);
-      if (!isUserAdmin) {
-        throw redirect(308, '/home');
-
-      }
-    }
-
-
-
-    else if (!event.locals.user) {
-      // If not authenticated, redirect to /login
-      throw redirect(308, '/login');
-    }
-  }
-
-
-  return resolve(event);
-};
-
+export const handle: Handle = sequence(supabase, authGuard)
