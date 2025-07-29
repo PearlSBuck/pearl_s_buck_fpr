@@ -100,8 +100,8 @@ async function navigateToLogout() {
 
   onMount(async() => {
     const admin = await isAdmin();
-    isUserAdmin = admin
-    console.log(admin)
+    isUserAdmin = true
+
   })
 
 </script>
@@ -334,15 +334,7 @@ async function navigateToLogout() {
           </div>
         </div>
       </div>
-      
-      {#if isUserAdmin}
-           <button onclick={() => isAdminRoute = true} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
-        <span class="flex items-center gap-3">
-          <span class="text-lg">🚪</span>
-          <span>Admin</span>
-        </span>
-      </button>
-      {/if}
+    
       <!-- Logout -->
       <button onclick={navigateToLogout} class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
         <span class="flex items-center gap-3">
@@ -352,6 +344,12 @@ async function navigateToLogout() {
       </button>
       
     {:else}
+    <a href="/admin/forms" class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]" aria-label="Admin Dashboard">
+          <span class="flex items-center gap-3">
+            <span class="text-lg">🚪</span>
+            <span>Admin</span>
+          </span>
+        </a>
       <!-- Regular User Navigation -->
       <!-- <a href="/home" class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
         <span class="flex items-center gap-3">
