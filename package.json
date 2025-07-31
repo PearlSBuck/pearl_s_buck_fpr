@@ -47,16 +47,18 @@
   },
   "dependencies": {
     "@supabase/auth-helpers-sveltekit": "^0.13.0",
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",
     "@sveltejs/adapter-auto": "^6.0.1",
+    "@sveltejs/adapter-static": "^3.0.8",
     "bcryptjs": "^3.0.2",
-    "pdfkit": "^0.17.1",
-    "pg": "^8.16.0",
-    "xlsx": "^0.18.5",
     "clonedeep": "^2.0.0",
     "lightningcss": "^1.21.0",
     "lodash": "^4.17.21",
+    "pdfkit": "^0.17.1",
+    "pg": "^8.16.0",
     "signature_pad": "^5.0.10",
-    "svelte-dnd-action": "^0.9.64"
+    "svelte-dnd-action": "^0.9.64",
+    "xlsx": "^0.18.5"
   }
 }
