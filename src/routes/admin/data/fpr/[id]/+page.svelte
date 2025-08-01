@@ -6,6 +6,7 @@
   import { selectedRecords } from '../../selectFPRRecord';
   import { getContext, onDestroy, onMount } from 'svelte';
   import * as XLSX from 'xlsx';
+  import SignaturePad from '../../SignaturePad.svelte';
 
   // Define types for the data structure
   interface RecordType {
@@ -297,6 +298,15 @@
       return;
     }
 
+    // For PDF exports, show signature pad first
+    if (exportType === 'pdf') {
+      pendingExportIds = selectedIds;
+      pendingExportFormat = exportType;
+      showSignaturePad = true;
+      return;
+    }
+    
+    // For non-PDF exports, proceed as normal
     try {
       // For CSV and XLSX, get structured data with questions and answers
       if (exportType === "csv" || exportType === "xlsx") {
@@ -372,6 +382,71 @@
       console.error("Export error:", error);
       alert('An error occurred during export');
     }
+  }
+
+  // Add state variables for signature pad
+  let showSignaturePad = false;
+  let pendingExportIds: string[] = []; // Add explicit string[] type
+  let pendingExportFormat = '';
+  let signerName = '';
+
+  // Add handlers for signature pad events
+  function handleSignatureConfirm(event: CustomEvent) {
+    const { signatureData, name } = event.detail;
+    signerName = name;
+    showSignaturePad = false;
+    processPdfExport(pendingExportIds, signatureData);
+  }
+
+  function handleSignatureCancel() {
+    showSignaturePad = false;
+    pendingExportIds = [];
+    pendingExportFormat = '';
+  }
+  
+  // New function to handle PDF export with signature
+  async function processPdfExport(selectedIds: string[], signatureData: string) {
+    // Create a download link for the PDF that will be returned
+    const pdfDownloadLink = document.createElement('a');
+    
+    // Make request to the server for PDF generation
+    const response = await fetch('/admin/data/export-fpr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: selectedIds,
+        format: 'pdf',
+        signature: signatureData,
+        signerName: signerName
+      })
+    });
+
+    if (!response.ok) {
+      alert('Failed to generate PDF');
+      return;
+    }
+
+    // Get the binary data from the response
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    
+    // Get filename from Content-Disposition header if available
+    let filename = 'fpr_records.pdf';
+    const contentDisposition = response.headers.get('Content-Disposition');
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    // Set up download link and trigger click
+    pdfDownloadLink.href = url;
+    pdfDownloadLink.download = filename;
+    pdfDownloadLink.click();
+    
+    // Clean up by revoking the object URL
+    URL.revokeObjectURL(url);
   }
 </script>
 
@@ -550,6 +625,16 @@
       <div class="w-full mt-6 pb-16 md:pb-0">
         <Year years={yearsAsStrings} recordsByYear={recordsByYearStrings} childId={childIdStr} {selectRecord} />
       </div>
+
+      <!-- Signature Pad Component -->
+      {#if showSignaturePad}
+        <SignaturePad 
+          bind:name={signerName}
+          title="Sign FPR Document" 
+          on:confirm={handleSignatureConfirm} 
+          on:cancel={handleSignatureCancel} 
+        />
+      {/if}
     </div>
   </div>
 </div>
