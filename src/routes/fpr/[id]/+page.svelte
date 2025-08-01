@@ -1,9 +1,8 @@
 <script lang="ts">
     // +page.svelte - Enhanced form display component with version support and fixed slug handling
     import { page } from '$app/stores';
-    import { onMount } from 'svelte';
+    import { getContext, onMount } from 'svelte';
     import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
-    import Header from './Header.svelte'; // Import the Header component
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
     import {notification} from '$lib/stores/formEditor';
@@ -40,8 +39,10 @@
 
     // Form data for editing
     let formTitle = data.form?.title || '';
+	const setPageName:any = getContext('setPageName');
 
     onMount(() => {
+        setPageName(data.form.title ?? 'Form View',false,true)
         loadOfflineAnswers();
         fetchUsers();
     });
@@ -171,14 +172,6 @@
    
 
 <div class="bg-[#F6F8FF] min-h-screen">
-    <!-- Header Section -->
-
-    <Header 
-        name={data.form?.title || 'Form View'} 
-        search={false} 
-        backButton={true} 
-    />
-
 <!-------------- ---------------------------->
     <!-- Main Content Container -->
      <div
