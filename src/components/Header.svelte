@@ -1,7 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { supabase, supabaseAdmin } from '$lib/db';
+  import { supabaseAdmin } from '$lib/db';
+  import { supabase } from '$lib/supabaseBrowser';
 	import { onMount } from 'svelte';
   
   export let name: string = '';
@@ -15,7 +16,8 @@
   let addRecordsExpanded = true;
   let manageRecordsExpanded = true;
   let userManagementExpanded = true;
-  $: isUserAdmin = false;
+  let isUserAdmin = false;
+  // $: isUserAdmin = false;
 
   // Check if current route is admin
   $: isAdminRoute = $page.route.id?.startsWith('/admin') || false;
@@ -88,21 +90,29 @@ async function navigateToLogout() {
     return user?.id; // <-- This is the user's UUID
   }
 
-  async function isAdmin(){
-    const { data } = await supabaseAdmin
+  async function isAdmin() {
+    const userId = await getCurrentUser();
+    if (!userId) return false;
+
+    const { data, error } = await supabaseAdmin
       .from('users')
       .select('role')
-      .eq('id', await getCurrentUser())
+      .eq('id', userId)
       .single();
 
-    return data?.role === 'Admin';
-  }
+    if (error) {
+      console.error('Error checking admin role:', error.message);
+      return false;
+    }
 
-  onMount(async() => {
-    const admin = await isAdmin();
-    isUserAdmin = true
+    return data?.role === 'Admin'; 
+}
 
-  })
+
+onMount(async () => {
+  const admin = await isAdmin();
+  isUserAdmin = admin; 
+});
 
 </script>
 
@@ -372,12 +382,14 @@ async function navigateToLogout() {
       </button>
       
     {:else}
-    <a href="/admin/forms" class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]" aria-label="Admin Dashboard">
-          <span class="flex items-center gap-3">
-            <span class="text-lg">🚪</span>
-            <span>Admin</span>
-          </span>
-        </a>
+    {#if isUserAdmin}
+      <a href="/admin/forms" class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#dc3545] transition-all duration-300 border-l-4 border-transparent hover:border-[#dc3545] font-medium text-sm sm:text-base active:bg-[#e9ecef]" aria-label="Admin Dashboard">
+            <span class="flex items-center gap-3">
+              <span class="text-lg">🚪</span>
+              <span>Admin</span>
+            </span>
+      </a>
+    {/if}
       <!-- Regular User Navigation -->
       <!-- <a href="/home" class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 border-transparent hover:border-[#28a745] font-medium text-sm sm:text-base active:bg-[#e9ecef]">
         <span class="flex items-center gap-3">
