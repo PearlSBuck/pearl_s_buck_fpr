@@ -41,4 +41,6 @@ export interface Record {
 export interface ExportRequestBody {
     ids: (string | number)[];
     format: 'csv' | 'xlsx' | 'pdf';
+    signature?: string;
+    signerName?: string;
 }

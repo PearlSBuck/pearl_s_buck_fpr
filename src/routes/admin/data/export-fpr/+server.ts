@@ -17,7 +17,8 @@ import {
 import type { 
     SectionWithFields, 
     Record as FPRRecord, 
-    ExportRequestBody 
+    ExportRequestBody, 
+    Answer
 } from '../export-utils/types';
 
 interface FormField {
@@ -28,7 +29,10 @@ interface FormField {
 }
 // Adjust Answer interface to reflect what Supabase actually returns
 export const POST: RequestHandler = async ({ request }) => {
-    const { ids, format = 'csv' } = await request.json() as ExportRequestBody;
+    const { ids, format = 'csv', signature, signerName } = await request.json() as ExportRequestBody & { 
+        signature?: string;
+        signerName?: string;
+    };
 
     if (!Array.isArray(ids) || ids.length === 0) {
         return json({ error: "No IDs provided" }, { status: 400 });
@@ -80,7 +84,7 @@ export const POST: RequestHandler = async ({ request }) => {
                 const sections = await fetchFormSections(record.form_id);
                 
                 // Transform answers to match expected format
-                const transformedAnswers = answers.map(answer => ({
+                const transformedAnswers = answers.map((answer: any) => ({
                     ...answer,
                     form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields
                 }));
@@ -175,16 +179,16 @@ export const POST: RequestHandler = async ({ request }) => {
             }
 
             // Organize answers by section
-            const organizedAnswers = sections.map(section => {
+            const organizedAnswers = sections.map((section: { id: string; title: string; orderindex: number }) => {
             return {
                 ...section,
                 fields: answers
-                .filter(a => {
+                .filter((a: Answer) => {
                     // Get the form_fields object and check sectionid
                     const formFields = a.form_fields as unknown as FormField;
                     return formFields?.sectionid === section.id;
                 })
-                .map(a => {
+                .map((a: Answer) => {
                     // Get the form_fields object and extract label
                     const formFields = a.form_fields as unknown as FormField;
                     return {
@@ -229,11 +233,59 @@ export const POST: RequestHandler = async ({ request }) => {
             const { record, answers } = item;
             
             if (index > 0) {
-            doc.addPage();
+                doc.addPage();
+            }
+            
+            // Add logo and foundation name on the same line
+            try {
+                // Calculate positions for alignment
+                const pageWidth = doc.page.width - 100; // Account for margins
+                const logoWidth = 50; // Slightly smaller logo
+                const logoHeight = 50;
+                const textStartX = 180; // Position where text starts
+                
+                // Add logo on the left side
+                doc.image('static/logo.jpg', 50, doc.y, {
+                    fit: [logoWidth, logoHeight]
+                });
+                
+                // Save the current Y position
+                const currentY = doc.y;
+                
+                // Add foundation name at a fixed position to the right of the logo
+                doc.fontSize(16)
+                    .fillColor('#0070C0')
+                    .font('Times-Roman')  // Set font to Times New Roman
+                    .text('Pearl S. Buck Foundation Philippines', 
+                            textStartX, currentY + 20, { 
+                                align: 'left',
+                                width: pageWidth - textStartX
+                            });
+                
+                // Move down after both elements
+                doc.moveDown(2);
+                
+                // Reset color to black for the rest of the document
+                doc.fillColor('#000000');
+                
+                // Reset the text position to the left margin
+                doc.text('', 50, doc.y);
+                
+            } catch (err) {
+                console.error('Error adding logo to PDF:', err);
+                
+                // Fallback to just the text if image fails
+                doc.fontSize(16)
+                    .fillColor('#0070C0')
+                    .text('Pearl S. Buck Foundation Philippines', { 
+                            align: 'center'
+                    });
+                doc.moveDown(0.5);
+                doc.fillColor('#000000');
             }
             
             // Add header
-            doc.fontSize(20).text('Family Progress Report', { align: 'center' });
+            doc.fontSize(16).text('Family Progress Report', { align: 'center' });
             doc.moveDown();
             
             // Add record metadata
@@ -257,6 +309,39 @@ export const POST: RequestHandler = async ({ request }) => {
             
             doc.moveDown();
             });
+            
+            // 3. Add signature if provided
+            if (signature) {
+                doc.moveDown();
+                doc.fontSize(12).text('Signature', { underline: false, align: 'left' });
+                doc.moveDown(0.5);
+                
+                // Add the signature image - aligned to left
+                try {
+                    // Extract the base64 data (remove the data:image/png;base64, prefix)
+                    const imageData = signature.split(',')[1];
+                    const imgBuffer = Buffer.from(imageData, 'base64');
+                    
+                    // Add the signature image to the PDF - aligned left
+                    doc.image(imgBuffer, {
+                        fit: [150, 100]
+                        // 'left' alignment is the default
+                    });
+                    
+                    // Add signer name if provided - aligned left
+                    if (signerName) {
+                        doc.moveDown(0.5);
+                        doc.fontSize(10).text(signerName, { align: 'left' });
+                    }
+                    
+                    // Add date - aligned left
+                    doc.moveDown(0.5);
+                    doc.fontSize(10).text(`Date: ${new Date().toLocaleDateString()}`, { align: 'left' });
+                } catch (err) {
+                    console.error('Error adding signature to PDF:', err);
+                    doc.text('Signature could not be displayed', { align: 'left' });
+                }
+            }
         });
         
         // Finalize the PDF document

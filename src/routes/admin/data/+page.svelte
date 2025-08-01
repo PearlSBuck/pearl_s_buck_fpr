@@ -14,6 +14,7 @@
   import { getContext, onDestroy, onMount } from 'svelte';  
   import * as XLSX from 'xlsx';
   import { page } from '$app/stores';
+  import SignaturePad from './SignaturePad.svelte';
 
   let pageName = "Individual Records Management";
   let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
@@ -58,6 +59,12 @@ $: {
   let showDeleteInProgress = false;
   let deleteSuccessMessage = '';
   
+  // Add these state variables
+  let showSignaturePad = false;
+  let pendingExportIds: string[] = [];
+  let pendingExportFormat = '';
+  let signerName = '';
+
   function onDeleteConfirmed() {
     console.log("Deleted:", Array.from(get(selectedRecords)));
     selectedRecords.set(new Set()); // clear selection
@@ -199,23 +206,33 @@ $: {
     // Add guard to prevent FPR exports from this page
     if (selected === 'progress_report') {
       alert('For Family Progress Reports, please go to the individual child page to export records.');
-      exportDropdownOpen = false;
       return;
     }
     
-    // Close the dropdown after selection
-    exportDropdownOpen = false;
+    const selectedIds = getSelectedIds();
     
-    // Ensure records are selected
-    const selectedIds = Array.from($selectedRecords);
     if (selectedIds.length === 0) {
       alert('Please select at least one record to export');
       return;
     }
     
+    // For PDF exports, show signature pad first
+    if (format === 'pdf') {
+      pendingExportIds = selectedIds;
+      pendingExportFormat = format;
+      showSignaturePad = true;
+      return;
+    }
+    
+    // For non-PDF exports, proceed as normal
+    await processExport(format, selectedIds);
+  }
+
+  // Add this new function to handle the actual export after signature (or directly for non-PDF)
+  async function processExport(format: string, selectedIds: string[], signatureData?: string) {
+    isExporting = true;
+    
     try {
-      isExporting = true;
-      
       // Handle CSV export
       if (format === 'csv') {
         const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
@@ -271,7 +288,7 @@ $: {
         
         // Process each record individually
         for (const id of selectedIds) {
-          const record = data.records.find(r => r.sc_id == id);
+          const record = data.records.find(r => String(r.sc_id) === id);
           if (!record) continue;
           
           const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
@@ -279,7 +296,9 @@ $: {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               ids: [id],
-              format: 'pdf' 
+              format: 'pdf',
+              signature: signatureData,
+              signerName: signerName
             })
           });
           
@@ -348,6 +367,25 @@ $: {
     });
     
     return wb;
+  }
+
+  // Add these handlers for the signature pad
+  function handleSignatureConfirm(event: CustomEvent) {
+    const { signatureData, name } = event.detail;
+    signerName = name;
+    showSignaturePad = false;
+    processExport(pendingExportFormat, pendingExportIds, signatureData);
+  }
+
+  function handleSignatureCancel() {
+    showSignaturePad = false;
+    pendingExportIds = [];
+    pendingExportFormat = '';
+  }
+
+  function getSelectedIds() {
+    // Convert numbers to strings
+    return Array.from($selectedRecords).map(id => String(id));
   }
 </script>
 
@@ -594,5 +632,35 @@ $: {
         <p>Deleting records...</p>
       </div>
     </div>
+  {/if}
+
+  <!-- Signature Pad Modal -->
+  {#if showSignaturePad}
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
+      <div class="bg-white p-4 rounded-lg shadow-lg w-[90%] max-w-md">
+        <h3 class="text-lg font-semibold mb-4">Signature Required</h3>
+        <p class="text-sm text-gray-600 mb-4">Please provide your signature to proceed with the export.</p>
+        
+        <!-- Signature Pad Component -->
+        <SignaturePad on:signatureConfirm={handleSignatureConfirm} on:signatureCancel={handleSignatureCancel} />
+        
+        <div class="flex justify-end gap-2 mt-4">
+          <button
+            on:click={() => showSignaturePad = false}
+            class="px-4 py-2 bg-gray-200 rounded-md text-sm font-semibold cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+  {#if showSignaturePad}
+  <SignaturePad 
+    bind:name={signerName}
+    title="Sign Document" 
+    on:confirm={handleSignatureConfirm} 
+    on:cancel={handleSignatureCancel} 
+  />
   {/if}
 </div>

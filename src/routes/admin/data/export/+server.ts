@@ -105,16 +105,16 @@ export async function POST({ request }) {
     }
 
     // Organize answers by section with proper type handling
-    const organizedAnswers: SectionWithFields[] = sections.map(section => {
+    const organizedAnswers: SectionWithFields[] = sections.map((section: Section) => {
       return {
         ...section,
         fields: answers
-          .filter(a => {
+          .filter((a: Answer) => {
             // Get the form_fields object and check sectionid
             const formFields = a.form_fields as unknown as FormField;
             return formFields?.sectionid === section.id;
           })
-          .map(a => {
+          .map((a: Answer) => {
             // Get the form_fields object and extract label
             const formFields = a.form_fields as unknown as FormField;
             return {
