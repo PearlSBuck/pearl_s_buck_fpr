@@ -30,10 +30,6 @@
     let toReorder: any;
     let fieldsToReorder:any;
     let showEditFieldOrderPopup: any;
-    
-    // handles popup visibility
-
-    
 
     // Popup Notificaiton for update
     async function call_confirm_edits(formId: string) {
@@ -58,7 +54,7 @@
     }
     $: show = $notification.type !== null;
 
-
+    // Function to toggle popups based on type
     function togglePopup(type:string, id?:string, component?: any, items?: []) {
         switch(type){
             case 'editField':

@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { redirect, type RequestEvent } from "@sveltejs/kit";
 
+// Function to create a Supabase client for server-side use
 export function createSupabaseServerClient(event: RequestEvent) {
   const accessToken = event.cookies.get("sb-access-token");
 
@@ -16,7 +17,7 @@ export function createSupabaseServerClient(event: RequestEvent) {
     }
   );
 }
-
+// Function to require a user to be authenticated
 export async function requireUser(event: RequestEvent) {
   const supabase = createSupabaseServerClient(event);
   const {

@@ -26,7 +26,7 @@ interface FormField {
     type: string;
     sectionid: string;
 }
-
+// Adjust Answer interface to reflect what Supabase actually returns
 export const POST: RequestHandler = async ({ request }) => {
     const { ids, format = 'csv' } = await request.json() as ExportRequestBody;
 
@@ -74,7 +74,8 @@ export const POST: RequestHandler = async ({ request }) => {
                         record.sc_name = fisRecord.sc_name;
                     }
                 }
-                
+                // Get the answers for this record
+                // Fetch answers and sections
                 const answers = await fetchFPRAnswers(record.answer_id);
                 const sections = await fetchFormSections(record.form_id);
                 

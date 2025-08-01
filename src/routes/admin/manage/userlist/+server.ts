@@ -1,5 +1,5 @@
 import { getUsersList } from '../userActions';
-
+// This file handles the retrieval of the user list for the admin panel
 export const GET = async () => {
   try {
     const usersList = await getUsersList();

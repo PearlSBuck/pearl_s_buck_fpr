@@ -5,6 +5,17 @@
     import { goto, invalidateAll } from '$app/navigation';
     import { page } from '$app/stores';
     export let data;
+    /*
+    Variable Definitions:
+    data = object containing the form data and other necessary information
+    show = boolean to control the display of the form list
+    displayText = string to show the type of form being displayed
+    selectedForms = array of forms to be displayed
+    showFormsList = boolean to control the visibility of the forms list modal
+    selectedYear = number representing the year selected for filtering forms
+    availableYears = array of years available for filtering forms
+    currentFormType = string representing the type of form currently being displayed
+    */
     
     let show = false;
     let displayText = '';
@@ -82,7 +93,7 @@ $: {
             }
         }
     });
-
+// Function to handle the display of Family Progress Reports (FPR)
     function handleProgressReport() {
         displayText = 'FPR';
         currentFormType = 'fpr';
@@ -125,7 +136,7 @@ $: {
             showFormsList = true;
         }, 2000);
     }
-
+// Function to handle the display of Family Introduction Sheets (FIS)
     function handleIntroSheet() {
         displayText = 'FIS';
         currentFormType = 'fis';
@@ -167,7 +178,7 @@ $: {
             showFormsList = true;
         }, 2000);
     }
-
+// Function to close the forms list modal
     function closeFormsList() {
         showFormsList = false;
         selectedForms = [];

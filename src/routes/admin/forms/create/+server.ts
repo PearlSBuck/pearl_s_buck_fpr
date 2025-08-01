@@ -1,3 +1,6 @@
+/**
+ * Backend for processing form data
+ */
 import { json } from '@sveltejs/kit';
 import { Pool } from "pg";
 import { createForm, createFormSection, createFormFieldsPerSection } from './manage_forms.server';

@@ -1,12 +1,18 @@
 <script lang="ts">
     import { selectedRecords } from '../routes/admin/data/selectFPRRecord';
     import { goto } from '$app/navigation';
-    
+    /*
+    Variable Definitions:
+    years = array of years to display records for
+    recordsByYear = object mapping years to arrays of records
+    childId = string representing the ID of the child for whom records are displayed
+    selectRecord = boolean to indicate if the record is in selection mode
+    */
     export let years: (string|number)[] = [];
     export let recordsByYear: {[year: string]: any[]}; // Change to string key for consistency
     export let childId: string;
     export let selectRecord: boolean = false;
-    
+    // Reactive store to manage selected records
     function viewRecord(answerId: string) {
         if (selectRecord) {
             toggleSelection(answerId);
@@ -14,7 +20,7 @@
             goto(`/admin/data/fpr/${childId}/${answerId}`);
         }
     }
-    
+    // Function to toggle selection of a record
     function toggleSelection(id: string) {
         selectedRecords.update(records => {
             if (records.has(id)) {

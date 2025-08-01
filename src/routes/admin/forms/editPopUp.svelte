@@ -5,7 +5,27 @@ import { handleSectionChanges } from '$lib/stores/formEditor'
 import type { Field } from '$lib/stores/formEditor';
 import type { Section } from '$lib/stores/formEditor';
 import { dndzone } from 'svelte-dnd-action';
-
+/*
+Variable Definitions:
+openEditPopup = boolean to control visibility of the edit field dialog
+openDeletePopup = boolean to control visibility of the delete field dialog
+openAddPopup = boolean to control visibility of the add field dialog
+openAddSectionPopup = boolean to control visibility of the add section dialog
+openDeleteSectionPopup = boolean to control visibility of the delete section dialog
+openEditSectionPopup = boolean to control visibility of the edit section dialog
+openEditOrderPopup = boolean to control visibility of the edit order dialog
+openEditFieldOrderPopup = boolean to control visibility of the edit field order dialog
+displayedFormData = object to hold the current form data
+field = object to hold the current field data
+section = object to hold the current section data
+fieldId = string to hold the current field ID
+sectionId = any to hold the current section ID
+formId = string to hold the current form ID
+items = array of objects representing form sections
+fieldItems = array of objects representing form fields
+addOthersOption = boolean to indicate if the "Others" option is added
+newOption = string to hold the new option input
+*/
 export let openEditPopup: boolean;
 export let openDeletePopup: boolean;
 export let openAddPopup: boolean;
@@ -47,6 +67,7 @@ export let fieldItems: ({
 
 let addOthersOption:boolean;
 let newOption = '';
+// Function to handle the visibility of the popup
 function setHidden(el: HTMLElement, shouldHide: boolean) {
   el.classList.toggle('hidden', shouldHide);
 }
@@ -63,6 +84,7 @@ let editorField: Field = {
     options: []
 };
 
+// function to clear the editor field
 function clearEditorField() {
 	editorField = {
 		label: '',
@@ -85,12 +107,13 @@ let addNewSection: Section = {
     created_at: ''
 }
 
+// handles adding a new option
 function handleEnter(addedOption:string){
     let option = {label: addedOption, value:addedOption}
     editorField.options = [...editorField.options, option]
     console.log('Successfully Added new option')
 }
-
+// checks the others option
 function checkOthersOption(){
     if(addOthersOption && !editorField.options.find((option:any) => option.label === 'Others')){
         editorField.options.push({label:'Others', value:''});
@@ -99,7 +122,7 @@ function checkOthersOption(){
         editorField.options = editorField.options.filter(option => option.label !== 'Others');
     }
 }
-
+// removes the option
 function removeOption(index:number) {
     editorField.options.splice(index, 1);
     editorField.options = [...editorField.options];
@@ -152,7 +175,7 @@ function handleFieldChanges(updatedField: any, changeType:string, sectionid?: st
     openEditPopup=false;
     clearEditorField();
 }
-
+// handles the changes to the form section
 function handleReactiveUI(updatedField: any, changeType: string, sectionid?:string){
     if(changeType == 'update'){
         let sectionIndex = -1;

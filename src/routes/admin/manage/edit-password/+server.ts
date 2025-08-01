@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { supabaseAdmin } from '$lib/db';
-
+// Update user password
 export const PUT: RequestHandler = async ({ request }) => {
   try {
     const { userID, newPassword, repeatNewPassword } = await request.json();

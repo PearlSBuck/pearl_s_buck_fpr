@@ -1,11 +1,20 @@
 <script lang="ts">
 
+/*
+Variable Definitions:
+show = boolean to control visibility of the confirmation dialog
+ids = array of IDs to be deleted
+deleteMessage = message to display in the confirmation dialog
+onConfirmAction = function to call when the user confirms the deletion
+onCancel = function to call when the user cancels the deletion
+*/
   export let show = false;
   export let ids: unknown[] = [];
   export let deleteMessage: string;
   export let onConfirmAction: (ids: unknown[]) => Promise<void>;
   export let onCancel: () => void = () => {};
 
+  // function to handle the confirmation action
   const handleConfirm = async () => {
     try {
       await onConfirmAction(ids);
@@ -15,12 +24,13 @@
       alert("Something went wrong.");
     }
   };
-
+  // function to handle the cancellation of the dialog
   const handleCancel = () => {
     onCancel();
     show = false;
   };
 </script>
+<!-- Confirmation Dialog Component -->
 {#if show}
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
     <div class="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">

@@ -2,11 +2,18 @@
   import { selectedRecords } from '../routes/admin/data/selectRecord'; 
   import { goto } from '$app/navigation';
 
+  /*
+  VariableDefinitions:
+  id_number = number representing the ID of the record
+  name = string representing the name associated with the record
+  selectRecord = boolean to indicate if the record is in selection mode
+  selected = string to indicate the type of record (e.g., 'fpr' or 'fis')
+  */
   export let id_number: number;
   export let name: string;
   export let selectRecord: boolean;
   export let selected: string;
-
+// Function to toggle selection of the record
   function toggleSelection() {
     selectedRecords.update((current) => {
       const updated = new Set(current);
@@ -18,16 +25,16 @@
       return updated;
     });
   }
-
+// Function to navigate to the FPR based on the selected record
   function goToFPRRecord(id: number) {
   goto(`/admin/data/fpr/${id}`);
   }
-
+// Function to navigate to the FIS based on the selected record
   function goToFISRecord(id: number) {
     goto(`/admin/data/fis/${id}`);
   }
 </script>
-
+<!-- Record Component -->
 <div class="flex justify-between rounded-md text-white bg-[#474C58] h-16 p-3 w-60 m-1 lg:w-275 md:w-150 sm:w-125 relative">
   {#if selected === 'progress_report'}
   <button on:click={() => goToFPRRecord(id_number)} aria-label="Go to Record" class="flex items-left">

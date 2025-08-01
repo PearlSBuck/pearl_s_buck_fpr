@@ -1,8 +1,7 @@
 import { supabase } from "$lib/db";
 import { fail } from '@sveltejs/kit';
-
+// Load function to fetch forms from the database
 export async function load() {
-    // Using correct table name "forms" and mapping columns
     const { data, error } = await supabase
         .from("forms")
         .select('*')

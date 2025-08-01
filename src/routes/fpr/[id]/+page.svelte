@@ -12,6 +12,18 @@
     import { filledOutBy, SCId } from '$lib/stores/formAnswers';
     import { getUserList } from '$lib/utils/userList';
 
+    /*
+    Variable Definitions:
+    data = data passed from the server load function
+    editModeData = temporary data for editing the form
+    openDeletePopup = boolean to control the visibility of the delete confirmation popup
+    openSubmitForm = boolean to control the visibility of the submit confirmation popup
+    editMode = boolean to control if the form is in edit mode
+    isLoading = boolean to indicate if data is being loaded
+    error = string to hold any error messages
+    successMessage = string to hold success messages
+    userList = array to hold the list of users for the forms
+    */
     export let data;
     let editModeData: any;
     let openDeletePopup = false;
@@ -29,12 +41,11 @@
     // Form data for editing
     let formTitle = data.form?.title || '';
 
-    
     onMount(() => {
         loadOfflineAnswers();
         fetchUsers();
     });
-
+    // Function to fetch users for the form
     async function fetchUsers() {
         const { users, error } = await getUserList();
         if (error) {
@@ -97,6 +108,7 @@
 
     }
 
+    // Function to handle date formatting
     function formatDate(dateString: string) {
         if (!dateString) return 'No date';
         try {
@@ -113,6 +125,7 @@
         }
     }
 
+    // Function to handle the display of Family Progress Reports (FPR)
     function validateForm(sections:any) {
         const missingFields = [];
 
@@ -138,17 +151,12 @@
         return missingFields;
     }
 
+    // Clears the messages
     function clearMessages() {
         error = null;
         successMessage = null;
     }
-
-
-
-
-  
-    
-
+    // Get the total number of fields in the form
     function getTotalFieldsCount(): number {
         if (!data.form?.sections) return 0;
         return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
