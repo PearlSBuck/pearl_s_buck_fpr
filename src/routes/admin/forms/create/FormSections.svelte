@@ -1,3 +1,7 @@
+<!-- 
+ - Component that contains data inside the form sections
+ - Contains form section display, form fields, and field options
+-->
 <svelte:options runes={true} />
 <script lang='ts'>
     import type { IFormSections, IFormFields, Options } from "./model.js";
@@ -6,21 +10,19 @@
          orderIndex,
          onFieldsChange = () => {}
     }: IFormSections & { onFieldsChange?: (fields: IFormFields[]) => void } = $props();
-    /*
-    Variable Definitions:
-    currentField = object to hold the current field being edited
-    editField = object to hold the field being edited
-    showFieldModal = boolean to control visibility of the field modal
-    edit = boolean to indicate if the field is being edited
-    editIndex = index of the field being edited
-    otherOption = boolean to indicate if the "Other" option is added
-    formFields = array to hold the fields of the form section
-    */
+    
+    // States for managing fields
     let currentField: IFormFields | undefined = $state();
     let editField: IFormFields | undefined = $state();
+
+    // Shows the modal for editing fields
     let showFieldModal: boolean = $state(false);
+
+    // States for editing fields
     let edit: boolean = $state(false);
     let editIndex: number = $state(-1);
+
+    // State to indicate whether the "Other" option is selected in multiple choice / checkbox fields
     let otherOption: boolean = $state(false);
 
     const formFields: IFormFields[] = $state([]);
@@ -28,7 +30,10 @@
     $effect(() => {
         onFieldsChange(formFields);
     });
-    // Function to reset fields to default values
+
+    /**
+     * Resets all states
+     */
     function resetFields() {
         currentField = undefined;
         editField = undefined;
@@ -38,7 +43,9 @@
         otherOption = false;
     }
 
-    // initializing the form field
+    /**
+     * Initializing the form field
+     */
     function createFieldHandler() {
         currentField = {
             label: "",
@@ -53,7 +60,10 @@
         showFieldModal = true;
     }
 
-    // Function to handle editing a field
+    /**
+     * Gets edit data and changes states accordingly to prompt editing a field
+     * @param index - The index of the field to be edited
+     */
     function editFieldHandler(index: number) {
         editField = JSON.parse(JSON.stringify(formFields[index]));
         edit = true;
@@ -61,13 +71,16 @@
         showFieldModal = true;
     }
 
-    // initializing the field option
+    /**
+     * Initializing the options for multiple choice / checkbox fields
+     */
     function createOptionHandler() {
         let temp = {
                 label: "",
                 value: "",
         }
 
+        // Multiple choice / checkbox fields has to contain at least one option
         if (!edit && currentField) {
             if (!currentField.options) {
                 currentField.options = [];
@@ -83,26 +96,34 @@
         }
     }
 
-    // adding the newly made field
+    /**
+     * Adding the newly made field
+     */
     function addFieldHandler() {
         let pass = 1;
 
+        // Handles creating a new field
         if (currentField && !edit) {
             if (currentField.type === "") {
+                // No type selected
                 pass = 0;
                 alert("Type cannot be empty!");
             } else if (currentField.label === "") {
+                // Field does not have a label
                 pass = 0;
                 alert("Label cannot be empty!");
             } else {
+                // Checks options of multiple choice / checkbox fields
                 if (currentField.type === "multiple_choice" || currentField.type === "checkbox") {
                     if (currentField.options) {
+                        // Checks every option for missing labels
                         for (let option of currentField.options) {
                             if (option.label === "") {
                                 pass = 0;
                                 alert("Empty fields are not allowed!");
                             }
                         }
+                        // Pushes the "Other" option at the end
                         if (otherOption) {
                             currentField.options.push({label: "Others", value: ""});
                         }
@@ -114,23 +135,29 @@
                     currentField.options = undefined;
                 }
             }
+            // Adds the field if everything passes
             if (pass === 1) {
                 formFields.push(currentField);
                 resetFields();
             }
+        // Handles editing an existing field
         } else if (editField && edit) {
             if (editField.label === "") {
+                // Field does not have a label
                 pass = 0;
                 alert("Label cannot be empty!");
             } else {
+                // Checks options of multiple choice / checkbox fields
                 if (editField.type === "multiple_choice" || editField.type === "checkbox") {
                     if (editField.options) {
+                        // Checks every option for missing labels
                         for (let option of editField.options) {
                             if (option.label === "") {
                                 pass = 0;
                                 alert("Empty fields are not allowed!");
                             }
                         }
+                        // Pushes the "Other" option at the end
                         if (otherOption) {
                             editField.options.push({label: "Others", value: ""});
                         }
@@ -142,20 +169,28 @@
                     editField.options = undefined;
                 }
             }
+            // Updates the field if everything passes
             if (pass === 1) {
                 formFields[editIndex] = editField;
                 resetFields();
             }
         }
     }
-    // Function to delete a field
+
+    /**
+     * Handles deleting a field
+     */
     function deleteFieldHandler() {
         if (confirm("Are you sure you want to delete this field?")) {
             formFields.splice(editIndex, 1);
             resetFields();
         }
     }
-    // Function to delete an option
+
+    /** 
+     * Handles deleting an option
+     * @param index - The index of the field to be deleted
+     */
     function deleteOptionHandler(index: number) {
         if (!edit && currentField && currentField.options) {
             currentField.options.splice(index, 1);
@@ -164,7 +199,8 @@
         }
     }
 </script>
-<!-- Form Section Component -->
+
+<!-- Displays form sections and fields -->
 <div class="py-2">
     <hr class="border-[#808080]">
 </div>
@@ -178,6 +214,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                     </svg>
                 </button> 
+                <!-- Displays the category of questions -->
                 <div class="bg-[#1A5A9E] text-white rounded-lg w-[80px] text-center">
                     {#if field.type === "text"}
                         Text
@@ -196,6 +233,8 @@
             </div>
             <p class="text-[#697077] md:px-2">{field.label}:</p>
         </div>
+
+        <!-- Displays each field option for multiple choice / checkbox fields -->
         {#if field.options}
             <div class="pb-1">
                 {#each field.options as option}
@@ -218,11 +257,14 @@
     <button onclick={createFieldHandler} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Add Question</button>
 </div>
 
-<!-- modal for fields -->
+<!-- Modal for fields -->
 {#if showFieldModal && (currentField || editField)}
     <div class="fixed top-0 left-0 h-full w-full flex justify-center items-center bg-black/25">      
         <div class="absolute w-full md:w-2/7 shadow-md/20 rounded-lg bg-white p-7">
+
+            <!-- Prompt for the type of question -->
             {#if !edit && currentField}
+                <!-- For creating -->
                 <div class="flex justify-center">
                     <select id="type" name="type" bind:value={currentField.type} >
                         <option value="" disabled hidden>Select Type of Question</option>
@@ -234,6 +276,7 @@
                     </select>
                 </div>
             {:else if edit && editField}
+                <!-- For editing -->
                 <div class="flex justify-between">       
                     <div></div>
                     <div>    
@@ -256,10 +299,12 @@
                     </div>
                 </div>
             {/if}
+        
             <div class="py-5">
                 <hr class="border-[#808080]">
             </div>
             <div class="pb-1">
+                <!-- Prompts for the label and whether or not a field needs required input -->
                 <label>
                     Label:
                     {#if !edit && currentField}
@@ -277,6 +322,8 @@
                     Required
                 </label>
             </div>
+
+            <!-- Prompts for labeling/editing options in multiple choice / checkbox fields -->
             {#if !edit && currentField && currentField.options && (currentField.type === "multiple_choice" || currentField.type === "checkbox")}
                 {#each currentField.options as option, index}
                     <div class="pt-2">
@@ -319,6 +366,8 @@
                     </div>
                 {/if}
             {/if}
+
+            <!-- Buttons for adding option or "Other" option -->
             {#if !edit && currentField && (currentField.type === "multiple_choice" || currentField.type === "checkbox")}
                 <div class="pt-2">
                     <button onclick={createOptionHandler} class="px-5 cursor-pointer">
@@ -367,6 +416,8 @@
                 </div>
                 {/if}
             {/if}
+
+            <!-- Cancel and Confirm buttons -->
             <div class="flex justify-end pt-5">
                 <div>
                     <button onclick={resetFields} class="bg-[#0C376C] text-white rounded-lg px-5 cursor-pointer">Cancel</button>

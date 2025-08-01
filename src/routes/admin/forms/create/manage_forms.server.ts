@@ -1,3 +1,6 @@
+/**
+ * SQL Functions for adding forms, form sections, and form fields to the Supabase
+ */
 import type { IFormFields, IForms, IFormSections } from "./model";
 import { Pool } from "pg";
 import { POSTGRES_URL } from "$env/static/private";
@@ -5,7 +8,12 @@ const pgDb = new Pool({
     connectionString: POSTGRES_URL,
     ssl: { rejectUnauthorized: false }
 });
-// Function to create a form in the database
+
+/**
+ * Creates the form
+ * @param data - Form data
+ * @returns Form ID
+ */
 export async function createForm(data: IForms): Promise<string> {
   const values = await pgDb.query(
     "INSERT INTO public.forms(title, createdat, version) VALUES($1,$2,$3) RETURNING id",
@@ -14,7 +22,13 @@ export async function createForm(data: IForms): Promise<string> {
   console.log(values);
   return values.rows[0].id ?? "";
 }
-// Function to create a form section in the database
+
+/**
+ * Creates the form sections
+ * @param formId - Form ID
+ * @param data - Form Section data
+ * @returns Form Section ID
+ */
 export async function createFormSection(
   formId: string,
   data: IFormSections
@@ -26,7 +40,13 @@ export async function createFormSection(
 
   return values.rows[0].id ?? "";
 }
-// Function to create form fields for a section in the database
+
+/**
+ * Creates the form fields
+ * @param formFields - Array of Form Fields
+ * @param formId - Form ID
+ * @param sectionId - Form Section ID
+ */
 export async function createFormFieldsPerSection(
   formFields: IFormFields[],
   formId: string,
