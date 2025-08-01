@@ -38,7 +38,10 @@ const authGuard: Handle = async ({ event, resolve }) => {
   const { session, user } = await event.locals.safeGetSession();
   event.locals.session = session;
   event.locals.user = user;
-
+  
+  if (!user && (event.url.pathname.startsWith('/fis') || event.url.pathname.startsWith('/fpr') || event.url.pathname.startsWith('/admin'))) {
+    throw redirect(303, '/login');
+  }
   
   
   // Check admin routes
@@ -59,10 +62,6 @@ const authGuard: Handle = async ({ event, resolve }) => {
     }
   }
 
-  // Protect /dashboard
-  if (!user && (event.url.pathname.startsWith('/fis') || event.url.pathname.startsWith('/fpr'))) {
-    throw redirect(303, '/login');
-  }
 
   return resolve(event);
 };
