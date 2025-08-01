@@ -1,12 +1,19 @@
 <script lang="ts">
-
+/*
+Variable Definitions:
+show = boolean to control visibility of the password change dialog
+onConfirmAction = function to call when the user confirms the password change
+onCancel = function to call when the user cancels the password change
+newPassword = string to hold the new password input
+repeatNewPassword = string to hold the repeated new password input
+*/
   export let show = false;
   export let onConfirmAction: (newPassword: string, repeatNewPassword: string) => Promise<void>;
   export let onCancel: () => void = () => {};
 
   let newPassword: string;
   let repeatNewPassword: string;
-
+// Function to handle the confirmation action
   const handleConfirm = async () => {
     try {
       await onConfirmAction(newPassword, repeatNewPassword);
@@ -16,12 +23,13 @@
       alert("Something went wrong.");
     }
   };
-
+// Function to handle the cancellation of the dialog
   const handleCancel = () => {
     onCancel();
     show = false;
   };
 </script>
+<!-- Password Change Dialog Component -->
 {#if show}
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
     <div class="flex flex-col gap-2 bg-white rounded-xl p-12 w-full max-w-sm shadow-lg">

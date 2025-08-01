@@ -4,6 +4,21 @@
   import { supabaseAdmin } from '$lib/db';
   import { supabase } from '$lib/supabaseBrowser';
 	import { onMount } from 'svelte';
+
+  /*
+  Variable Definitions:
+  name = name of the page
+  search = boolean to show search icon
+  backButton = boolean to show back button
+  isNavOpen = boolean to control navigation visibility
+  formsExpanded = boolean to control forms section visibility
+  recordsExpanded = boolean to control records section visibility
+  managementExpanded = boolean to control management section visibility
+  addRecordsExpanded = boolean to control add records section visibility
+  manageRecordsExpanded = boolean to control manage records section visibility
+  userManagementExpanded = boolean to control user management section visibility
+  isUserAdmin = boolean to check if the user is an admin
+  */
   
   export let name: string = '';
   export let search: boolean = false;
@@ -17,7 +32,6 @@
   let manageRecordsExpanded = true;
   let userManagementExpanded = true;
   let isUserAdmin = false;
-  // $: isUserAdmin = false;
 
   // Check if current route is admin
   $: isAdminRoute = $page.route.id?.startsWith('/admin') || false;
@@ -25,15 +39,17 @@
   // Check if current route is login - hide navbar completely for login page
   $: isLoginRoute = $page.route.id?.startsWith('/login') || $page.url.pathname.startsWith('/login');
   
+  // Toggles navbar
   function toggleNav() {
     isNavOpen = !isNavOpen;
   }
   
+  // Closes navbar
   function closeNav() {
     isNavOpen = false;
   }
   
-
+// Navigate to logout and sign out user
 async function navigateToLogout() {
   window.location.href=('/login');
   const { error } = await supabase.auth.signOut();
@@ -45,27 +61,27 @@ async function navigateToLogout() {
   closeNav();
 }
 
-  
+  // Toggle function for form answering seciton on navbar
   function toggleForms() {
     formsExpanded = !formsExpanded;
   }
-  
+  // Toggle function for record management seciton on navbar
   function toggleRecords() {
     recordsExpanded = !recordsExpanded;
   }
-  
+  // Toggle function for form management seciton on navbar
   function toggleManagement() {
     managementExpanded = !managementExpanded;
   }
-  
+  // Toggle function for form management seciton on navbar
   function toggleAddRecords() {
     addRecordsExpanded = !addRecordsExpanded;
   }
-  
+  // Toggle function for manage records section on navbar
   function toggleManageRecords() {
     manageRecordsExpanded = !manageRecordsExpanded;
   }
-  
+  // Toggle function for user management section on navbar
   function toggleUserManagement() {
     userManagementExpanded = !userManagementExpanded;
   }
@@ -76,6 +92,7 @@ async function navigateToLogout() {
       closeNav();
     }
   }
+  // Gets the current logged in user's UUID
   async function getCurrentUser() {
     const {
       data: { user },
@@ -90,6 +107,7 @@ async function navigateToLogout() {
     return user?.id; // <-- This is the user's UUID
   }
 
+  // Checks if the current user is an admin
   async function isAdmin() {
     const userId = await getCurrentUser();
     if (!userId) return false;
@@ -108,7 +126,7 @@ async function navigateToLogout() {
     return data?.role === 'Admin'; 
 }
 
-
+// Check if the user is an admin on component mount
 onMount(async () => {
   const admin = await isAdmin();
   isUserAdmin = admin; 
@@ -227,14 +245,6 @@ onMount(async () => {
   <!-- Navigation Items -->
   <div class="flex flex-col bg-white overflow-y-auto" style="height: calc(100vh - 56px); /* Adjust for mobile header */">
     {#if isAdminRoute}
-      <!-- Admin Navigation -->
-      <!-- Home -->
-      <!-- <a href="/home" class="w-full bg-white px-4 sm:px-6 py-4 sm:py-4 text-left text-[#666] hover:bg-[#f8f9fa] hover:text-[#1A5A9E] transition-all duration-300 border-l-4 hover:border-[#28a745] font-medium border-b border-[#f0f0f0] text-sm sm:text-base active:bg-[#e9ecef]">
-        <span class="flex items-center gap-3">
-          <span class="text-lg">🏠</span>
-          <span>Home</span>
-        </span>
-      </a> -->
           <div class="border-b-2 border-[#f0f0f0]">
         <button onclick={toggleRecords} class="w-full bg-[#f8f9fa] px-4 sm:px-6 py-4 sm:py-4 text-left text-[#474C58] font-bold flex items-center justify-between hover:bg-[#e9ecef] transition-all duration-300 border-l-4 border-transparent hover:border-[#1A5A9E] text-sm sm:text-base active:bg-[#dee2e6]">
           <span class="flex items-center gap-3">

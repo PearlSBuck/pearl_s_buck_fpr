@@ -1,5 +1,5 @@
 import { supabaseAdmin} from '$lib/db';
-
+// Function to fetch users list
 export async function getUsersList(){
     const { data, error } = await supabaseAdmin
         .from('users')

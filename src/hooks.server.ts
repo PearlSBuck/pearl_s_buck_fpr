@@ -2,7 +2,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { createServerClient } from '@supabase/ssr';
 import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
-
+// Function to create a Supabase client for session management and role checking
 const supabaseHandle: Handle = async ({ event, resolve }) => {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;

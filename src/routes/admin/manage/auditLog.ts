@@ -1,5 +1,5 @@
 import { supabaseAdmin} from '$lib/db';
-
+// Function to fetch audit log data
 export async function getAuditLog() {
 
     const { data, error } = await supabaseAdmin
@@ -16,7 +16,7 @@ export async function getAuditLog() {
         data
     };
 }
-
+// Function to fetch user details by ID
 export async function getUserByID(userId: string): Promise<string> {
     const { data, error } = await supabaseAdmin
         .from('users')

@@ -1,7 +1,11 @@
 <script lang="ts">
       import { onSubmit } from './login';
       import Header from '../../components/Header.svelte';
-
+      /*
+      Variable Definitions:
+      email = string representing the user's email
+      password = string representing the user's password
+      */
       let email = '';
       let password = '';
 </script>

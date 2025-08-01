@@ -6,7 +6,16 @@
          orderIndex,
          onFieldsChange = () => {}
     }: IFormSections & { onFieldsChange?: (fields: IFormFields[]) => void } = $props();
-    
+    /*
+    Variable Definitions:
+    currentField = object to hold the current field being edited
+    editField = object to hold the field being edited
+    showFieldModal = boolean to control visibility of the field modal
+    edit = boolean to indicate if the field is being edited
+    editIndex = index of the field being edited
+    otherOption = boolean to indicate if the "Other" option is added
+    formFields = array to hold the fields of the form section
+    */
     let currentField: IFormFields | undefined = $state();
     let editField: IFormFields | undefined = $state();
     let showFieldModal: boolean = $state(false);
@@ -19,7 +28,7 @@
     $effect(() => {
         onFieldsChange(formFields);
     });
-
+    // Function to reset fields to default values
     function resetFields() {
         currentField = undefined;
         editField = undefined;
@@ -44,6 +53,7 @@
         showFieldModal = true;
     }
 
+    // Function to handle editing a field
     function editFieldHandler(index: number) {
         editField = JSON.parse(JSON.stringify(formFields[index]));
         edit = true;
@@ -138,14 +148,14 @@
             }
         }
     }
-
+    // Function to delete a field
     function deleteFieldHandler() {
         if (confirm("Are you sure you want to delete this field?")) {
             formFields.splice(editIndex, 1);
             resetFields();
         }
     }
-
+    // Function to delete an option
     function deleteOptionHandler(index: number) {
         if (!edit && currentField && currentField.options) {
             currentField.options.splice(index, 1);
@@ -154,7 +164,7 @@
         }
     }
 </script>
-
+<!-- Form Section Component -->
 <div class="py-2">
     <hr class="border-[#808080]">
 </div>

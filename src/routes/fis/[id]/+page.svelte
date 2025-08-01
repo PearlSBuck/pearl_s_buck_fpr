@@ -12,6 +12,20 @@
     import { filledOutBy, SCId } from '$lib/stores/formAnswers';
     import { getUserList } from '$lib/utils/userList';
 
+    /*
+    Variable Definitions:
+    data = object containing form data and sections
+    scname = string representing the name of the sponsored child
+    editModeData = object for temporary edits in edit mode
+    openDeletePopup = boolean to control the visibility of the delete confirmation popup
+    openSubmitForm = boolean to control the visibility of the submit confirmation popup
+    editMode = boolean to indicate if the form is in edit mode
+    isLoading = boolean to indicate if data is being loaded
+    error = string to hold any error messages
+    successMessage = string to hold success messages
+    userList = array of user objects for selection
+    */
+
     export let data;
     let scname = '';
     let editModeData: any;
@@ -30,12 +44,13 @@
     // Form data for editing
     let formTitle = data.form?.title || '';
 
-    
+    // Reactive stores
     onMount(() => {
         loadOfflineAnswers();
         fetchUsers();
     });
 
+    // Function to fetch users for the form
     async function fetchUsers() {
         const { users, error } = await getUserList();
         if (error) {
@@ -98,6 +113,7 @@
 
     }
 
+    // Function to format the date
     function formatDate(dateString: string) {
         if (!dateString) return 'No date';
         try {
@@ -114,6 +130,7 @@
         }
     }
 
+    // Validate the form inputs
     function validateForm(sections:any) {
         const missingFields = [];
 
@@ -141,18 +158,12 @@
         //  if you want to test wihtout having to validate, make this return false
         return missingFields;
     }
-
+// Clears the messages
     function clearMessages() {
         error = null;
         successMessage = null;
     }
-
-
-
-
-  
-    
-
+// Get the total number of fields in the form
     function getTotalFieldsCount(): number {
         if (!data.form?.sections) return 0;
         return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);

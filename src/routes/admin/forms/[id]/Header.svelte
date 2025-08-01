@@ -3,7 +3,7 @@
   export let search: boolean = false;
   export let backButton: boolean = false;
 </script>
-
+<!-- Header Component-->
 <div class="fixed top-0 left-0 right-0 z-50 bg-[#F6F8FF]">
   <div class="bg-white h-16 flex items-center px-4 justify-between">
     <img src="/logo.jpg" alt="Logo" class="h-12 w-12 lg:h-16 lg:w-16 md:h-14 md:w-14 sm:h-12 sm:w-12 p-1"/>

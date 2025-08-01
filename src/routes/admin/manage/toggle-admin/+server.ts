@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { supabaseAdmin } from '$lib/db';
-
+// toggle user role between Admin and Worker
 export const PUT: RequestHandler = async ({ request }) => {
   try {
     const { userID } = await request.json();

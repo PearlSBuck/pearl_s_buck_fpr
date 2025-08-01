@@ -77,7 +77,7 @@ async function logAuditEntryWithName(actionPerformed: string, userId: string | n
         return { data: null, error };
     }
 }
-
+// Fetches the backend for saving the user details
     async function saveChanges(userId: string) {
         try {
             // Get current user (admin) performing the action
@@ -110,12 +110,12 @@ async function logAuditEntryWithName(actionPerformed: string, userId: string | n
             alert('Error saving changes: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
     }
-
+// cancel the edit mode and revert changes
     function cancelEdit() {
         tempUser = { ...user }; 
         editMode = false;
     }
-
+// Function to save the new password
     async function savePassword(userId: string, newPassword: string, repeatNewPassword: string) {
         try {
             // Get current user (admin) performing the action
@@ -149,11 +149,11 @@ async function logAuditEntryWithName(actionPerformed: string, userId: string | n
             alert("Something went wrong.");
         }
     }
-
+// Cancels editing the password
     function cancelPasswordEdit() {
         passwordEditMode = false;
     }
-
+// Function to toggle admin permissions
     async function toggleAdminPerms(){
         try {
             // Get current user (admin) performing the action
@@ -181,26 +181,26 @@ async function logAuditEntryWithName(actionPerformed: string, userId: string | n
             alert('Error updating user permissions: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
     }
-
+// checks if the user exists, if not redirects to manage page
     onMount(() => {
         if (!user) {
             alert('User not found');
             goto('/admin/manage');
         }
     });
-
+// Function to toggle confirmation dialog visibility
     function toggleConfirm(){
         show = !show;
     }
-
+// Function to toggle edit mode
     function toggleEditMode(){
         editMode = !editMode;
     }
-
+// Function to toggle password edit mode
     function togglePasswordEditMode(){
         passwordEditMode = !passwordEditMode;
     }
-
+// Function to delete user and all associated data
 async function deleteUser(userId: string) {
     try {
         // Show confirmation dialog first
@@ -232,7 +232,7 @@ async function deleteUser(userId: string) {
     }
 }
 
-
+// Get the page context to set the title and visibility
     const setPageContext:any = getContext('setPageContext');
     onMount(() => {
         setPageContext("Manage User",false,true);

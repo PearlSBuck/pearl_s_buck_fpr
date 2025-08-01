@@ -17,20 +17,20 @@ interface Answer {
   question_id: string;
   form_fields: any; // Use any for now to handle Supabase's response structure
 }
-
+// Define the structure of the section with fields
 interface Section {
   id: string;
   title: string;
   orderindex: number;
 }
-
+// Define the structure of the section with fields and answers
 interface SectionWithFields extends Section {
   fields: Array<{
     label: string;
     answer: string;
   }>;
 }
-
+// Define the structure of the record returned from Supabase
 interface Record {
   sc_id: string;
   sc_name: string;
@@ -43,7 +43,7 @@ interface Record {
     version: string;
   };
 }
-
+// Endpoint to export FIS records
 export async function POST({ request }) {
   const { ids, format = 'csv' } = await request.json();
 

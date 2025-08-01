@@ -28,18 +28,18 @@
             orderIndex: formSections.length,
         });
     }
-
+    // deleting a section
     function deleteSectionHandler(index: number) {
         if (confirm("Are you sure you want to delete this section?")) {
             formSections.splice(index, 1);
         }
     }
-
+    // Function to handle editing section titles
     function editTitleHandler(val: boolean, index: number) {
         showEditTitle = val;
         sectionIndex = index;
     }
-
+    // Reset fields to default values
     function resetFields() {
         showForm = false;
         form = {
@@ -51,14 +51,14 @@
         sectionFields = {};
         sectionIndex = -1;
     }
-    
+    // Function to create a new form
     function createFormHandler() {
         if (formSections.length === 0) {
             addSectionHandler();
         }
         showForm = true;
     }
-
+    // Function to save the form
     async function saveFormHandler() {
         if (!form) return alert("No form to save!");
         if (form.title === "") return alert("Title cannot be empty!")
@@ -93,7 +93,7 @@
     })
 </script>
 
-
+<!-- Page -->
 <div class="fixed overflow-auto top-0 left-0 h-full w-full flex flex-col bg-[#F6F8FF] mt-10">
     <div class="pt-27 flex flex-col px-10">   
         <div class="w-full shadow-md/20 rounded-lg bg-white p-5">
