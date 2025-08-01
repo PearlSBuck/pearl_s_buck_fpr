@@ -6,12 +6,6 @@ import { Pool } from "pg";
 import { createForm, createFormSection, createFormFieldsPerSection } from './manage_forms.server';
 const POSTGRES_URL = process.env.POSTGRES_URL!;
 
-const pgSingleton = () =>
-    new Pool({
-    connectionString: POSTGRES_URL,
-    ssl: { rejectUnauthorized: false }
-});
-
 const pgDb = new Pool({
     connectionString: POSTGRES_URL,
     ssl: { rejectUnauthorized: false }
