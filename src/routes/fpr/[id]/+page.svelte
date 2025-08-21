@@ -197,6 +197,8 @@
                 {/if}
             </div>
 
+            <!-- TODO: Child selection and family member insertion should happen here. -->
+
 
             <!-- Main Form Container -->
             <div class="bg-white flex flex-col rounded-lg -mt-4 relative z-0 shadow-2xl">
