@@ -70,6 +70,24 @@ export async function submitAnswersToSupabase(formId: string, formType: 'FPR' | 
 	const filledOutByValue = get(filledOutBy);
 	const scIdValue = get(SCId);
 
+    if (formType === 'FPR') {
+        if (!scIdValue) {
+            console.error('Sponsored Child ID is required for FPR forms.');
+            return false;
+        }
+
+        const { data: child, error: childError } = await supabaseAdmin
+            .from('children')
+            .select('child_id')
+            .eq('child_id', scIdValue)
+            .single();
+
+        if (childError || !child) {
+            console.error('Invalid Sponsored Child ID:', scIdValue);
+            return false;
+        }
+    }
+
 	// --- STEP 1: Prepare table names ---
 	const parentTable = formType === 'FPR' ? 'fpr_answers' : 'fis_answers';
 	const listTable = formType === 'FPR' ? 'fpr_answers_list' : 'fis_answers_list';
@@ -81,6 +99,7 @@ export async function submitAnswersToSupabase(formId: string, formType: 'FPR' | 
 		parentInsertPayload = {
 			form_id: formId,
 			filled_out_by: filledOutByValue,
+			child_id: scIdValue,
 			sc_id: scIdValue
 		};
 		// if formType === 'FIS'
