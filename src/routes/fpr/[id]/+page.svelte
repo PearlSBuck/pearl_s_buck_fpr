@@ -1,3 +1,5 @@
+
+
 <script lang="ts">
     // +page.svelte - Enhanced form display component with version support and fixed slug handling
     import { page } from '$app/stores';
@@ -17,7 +19,7 @@
     import { getUserList } from '$lib/utils/userList';
     import { supabaseAdmin } from "$lib/db";
 
-	/*
+    /*
     Variable Definitions:
     data = data passed from the server load function
     editModeData = temporary data for editing the form
@@ -29,16 +31,16 @@
     successMessage = string to hold success messages
     userList = array to hold the list of users for the forms
     */
-	export let data;
-	let editModeData: any;
-	let openDeletePopup = false;
-	let openSubmitForm = false;
-	let editMode = false;
-	let isLoading = false;
-	let error: string | null = null;
-	let successMessage: string | null = null;
-	let userList:[];
-	$: show = $notification.type !== null;
+    export let data;
+    let editModeData: any;
+    let openDeletePopup = false;
+    let openSubmitForm = false;
+    let editMode = false;
+    let isLoading = false;
+    let error: string | null = null;
+    let successMessage: string | null = null;
+    let userList:[];
+    $: show = $notification.type !== null;
 
     // Form data for editing
     let formTitle = data.form?.title || '';
@@ -71,12 +73,12 @@
     export function setEditMode(value: boolean) {
         editMode = value;
 
-		// Validate that the Sponsored Child's ID exists in the children table
-		const { data: childData, error: childError } = await supabase
-			.from('children')
-			.select('id')
-			.eq('id', $SCId)
-			.single();
+        if (editMode) {
+        editModeData = cloneDeep(data);
+        } else {
+        editModeData = null;
+        }
+    }
 
     // useful for form submission
     // $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
@@ -177,31 +179,31 @@ async function printInputs(){
     }
 }
 
-	// Function to handle date formatting
-	function formatDate(dateString: string) {
-		if (!dateString) return 'No date';
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleDateString('en-US', {
-				year: 'numeric',
-				month: 'long',
-				day: 'numeric',
-				hour: '2-digit',
-				minute: '2-digit'
-			});
-		} catch (e) {
-			return dateString;
-		}
-	}
+    // Function to handle date formatting
+    function formatDate(dateString: string) {
+        if (!dateString) return 'No date';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return dateString;
+        }
+    }
 
-	// Function to handle the display of Family Progress Reports (FPR)
-	function validateForm(sections:any) {
-		const missingFields = [];
+    // Function to handle the display of Family Progress Reports (FPR)
+    function validateForm(sections:any) {
+        const missingFields = [];
 
-		for (const section of sections) {
-			for (const field of section.fields) {
-				if (field.required) {
-					const value = $formAnswers[field.id];
+        for (const section of sections) {
+            for (const field of section.fields) {
+                if (field.required) {
+                    const value = $formAnswers[field.id];
 
                     const isEmpty =
                         value === undefined || value === '' ||
@@ -233,7 +235,7 @@ async function printInputs(){
 </script>
 
 <head>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
    
 
