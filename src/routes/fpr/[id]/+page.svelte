@@ -1,21 +1,21 @@
 <script lang="ts">
-	// +page.svelte - Enhanced form display component with version support and fixed slug handling
-	import { page } from '$app/stores';
-	import { getContext, onMount } from 'svelte';
-	import {
-		formAnswers,
-		loadOfflineAnswers,
-		clearAnswers,
-		submitAnswersToSupabase
-	} from '$lib/stores/formAnswers';
-	import cloneDeep from 'lodash/cloneDeep';
-	import { displayedData } from '$lib/stores/formEditor';
-	import { notification } from '$lib/stores/formEditor';
-	import { isOnline } from '$lib/stores/online';
-	import DataInput from '../DataInput.svelte';
-	import { filledOutBy, SCId } from '$lib/stores/formAnswers';
-	import { getUserList } from '$lib/utils/userList';
-    import { supabase } from "$lib/db";
+    // +page.svelte - Enhanced form display component with version support and fixed slug handling
+    import { page } from '$app/stores';
+    import { getContext, onMount } from 'svelte';
+    import {
+        formAnswers,
+        loadOfflineAnswers,
+        clearAnswers,
+        submitAnswersToSupabase
+    } from '$lib/stores/formAnswers';
+    import cloneDeep from 'lodash/cloneDeep';
+    import { displayedData } from '$lib/stores/formEditor';
+    import { notification } from '$lib/stores/formEditor';
+    import { isOnline } from '$lib/stores/online';
+    import DataInput from '../DataInput.svelte';
+    import { filledOutBy, SCId } from '$lib/stores/formAnswers';
+    import { getUserList } from '$lib/utils/userList';
+    import { supabaseAdmin } from "$lib/db";
 
 	/*
     Variable Definitions:
@@ -40,55 +40,36 @@
 	let userList:[];
 	$: show = $notification.type !== null;
 
-	// Form data for editing
-	let formTitle = data.form?.title || '';
-	const setPageName:any = getContext('setPageName');
+    // Form data for editing
+    let formTitle = data.form?.title || '';
+    const setPageName:any = getContext('setPageName');
 
-	onMount(() => {
-		setPageName(data.form.title ?? 'Form View', false, true);
-		loadOfflineAnswers();
-		fetchUsers();
-	});
-	// Function to fetch users for the form
-	async function fetchUsers() {
-		const { users, error } = await getUserList();
-		if (error) {
-			console.error('Failed to fetch user list:', error);
-		} else {
-			userList = users.map((user: any) => ({
-				label:user.username,
-				value:user.username
-			}));
-		}
-	}
+    onMount(() => {
+        setPageName(data.form.title ?? 'Form View', false, true);
+        loadOfflineAnswers();
+        fetchUsers();
+    });
+    // Function to fetch users for the form
+    async function fetchUsers() {
+        const { users, error } = await getUserList();
+        if (error) {
+            console.error('Failed to fetch user list:', error);
+        } else {
+            userList = users.map((user: any) => ({
+                label:user.username,
+                value:user.username
+            }));
+        }
+    }
 
-	// changes the referenced fields and sections so that UI is reactive
-	// [NOTE to developer]: must implement a type for form data when everything is set in stone
-	$: {
-	displayedData.set(editMode ? editModeData : data);
-	}
-	// setter function for making displayedData reactive to temporary changes
-	export function setEditMode(value: boolean) {
-		editMode = value;
-
-		if (editMode) {
-		editModeData = cloneDeep(data);
-		} else {
-		editModeData = null;
-		}
-	}
-
-	// useful for form submission
-	// $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
-	async function printInputs(){
-	try {
-		if (!$filledOutBy || !$SCId) {
-			notification.set({ message: 'Please fill out both "Filled out by" and "Sponsored Child\'s ID" fields.', type: 'error' });
-			setTimeout(() => {
-				notification.set({ message: '', type: null });
-			}, 3000);
-			return;
-		}
+    // changes the referenced fields and sections so that UI is reactive
+    // [NOTE to developer]: must implement a type for form data when everything is set in stone
+    $: {
+    displayedData.set(editMode ? editModeData : data);
+    }
+    // setter function for making displayedData reactive to temporary changes
+    export function setEditMode(value: boolean) {
+        editMode = value;
 
 		// Validate that the Sponsored Child's ID exists in the children table
 		const { data: childData, error: childError } = await supabase
@@ -97,43 +78,103 @@
 			.eq('id', $SCId)
 			.single();
 
-		if (childError || !childData) {
-			notification.set({ message: 'The Sponsored Child\'s ID does not exist. Please enter a valid ID.', type: 'error' });
-			setTimeout(() => {
-				notification.set({ message: '', type: null });
-			}, 3000);
-			return;
-		}
+    // useful for form submission
+    // $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
+    // Replace your validation section in printInputs() with this improved version:
 
-		//all required answers were submitted successfully
-		const missingFields = validateForm(data.form.sections)
-		if(missingFields.length === 0){
-			console.log($formAnswers);
-			console.log($filledOutBy);
-			console.log($SCId);
-			const success = await submitAnswersToSupabase(data.form.id, 'FPR');
-			if (success) {
-				notification.set({ message: 'Successfully submitted form entry', type: 'success' });
-				clearAnswers();
-			} else {
-				notification.set({ message: 'Form submission failed', type: 'error' });
-			}
-		} else{
-			console.log($filledOutBy);
-			console.log($SCId);
-			notification.set({ message: `Fill out ${missingFields[0]}`, type: 'error' });
-		}
+async function printInputs(){
+    try {
+        if (!$filledOutBy || !$SCId) {
+            notification.set({ message: 'Please fill out both "Filled out by" and "Sponsored Child\'s ID" fields.', type: 'error' });
+            setTimeout(() => {
+                notification.set({ message: '', type: null });
+            }, 3000);
+            return;
+        }
 
-		setTimeout(() => {
-		notification.set({ message: '', type: null });
-	}, 3000);
-	} catch(error){
-		console.error('Error in printInputs:', error);
-		notification.set({ message: 'An error occurred while processing the form. Please try again.', type: 'error' });
-		setTimeout(() => {
-			notification.set({ message: '', type: null });
-		}, 3000);
-	}
+        // Convert SCId to number and validate
+        const childId = parseInt($SCId, 10);
+        if (isNaN(childId)) {
+            notification.set({ message: 'Please enter a valid numeric ID for the Sponsored Child.', type: 'error' });
+            setTimeout(() => {
+                notification.set({ message: '', type: null });
+            }, 3000);
+            return;
+        }
+
+        // Validate that the Sponsored Child's ID exists in the children table
+        console.log('Validating child ID:', childId);
+        
+        // Use .maybeSingle() instead of .single() to avoid error when no rows found
+        const { data: childData, error: childError } = await supabaseAdmin
+            .from('children')
+            .select('child_id, child_name')
+            .eq('child_id', childId)
+            .maybeSingle();
+
+        console.log('Child validation result:', { childData, childError });
+
+        // Check for actual database errors (not just "no rows found")
+        if (childError) {
+            console.error('Database error:', childError);
+            notification.set({ message: 'Database error occurred while validating child ID.', type: 'error' });
+            setTimeout(() => {
+                notification.set({ message: '', type: null });
+            }, 3000);
+            return;
+        }
+
+        // Check if child was found
+        if (!childData) {
+            // Let's also show what IDs are available for debugging
+            const { data: availableChildren } = await supabaseAdmin
+                .from('children')
+                .select('child_id, child_name')
+                .limit(10);
+            
+            console.log('Available children:', availableChildren);
+            
+            notification.set({ 
+                message: `Sponsored Child ID ${childId} does not exist. Please enter a valid ID.`, 
+                type: 'error' 
+            });
+            setTimeout(() => {
+                notification.set({ message: '', type: null });
+            }, 3000);
+            return;
+        }
+
+        console.log(`Found child: ${childData.child_name} (ID: ${childData.child_id})`);
+
+        // Rest of your validation and submission logic...
+        const missingFields = validateForm(data.form.sections)
+        if(missingFields.length === 0){
+            console.log($formAnswers);
+            console.log($filledOutBy);
+            console.log($SCId);
+            const success = await submitAnswersToSupabase(data.form.id, 'FPR');
+            if (success) {
+                notification.set({ message: 'Successfully submitted form entry', type: 'success' });
+                clearAnswers();
+            } else {
+                notification.set({ message: 'Form submission failed', type: 'error' });
+            }
+        } else{
+            console.log($filledOutBy);
+            console.log($SCId);
+            notification.set({ message: `Fill out ${missingFields[0]}`, type: 'error' });
+        }
+
+        setTimeout(() => {
+            notification.set({ message: '', type: null });
+        }, 3000);
+    } catch(error){
+        console.error('Error in printInputs:', error);
+        notification.set({ message: 'An error occurred while processing the form. Please try again.', type: 'error' });
+        setTimeout(() => {
+            notification.set({ message: '', type: null });
+        }, 3000);
+    }
 }
 
 	// Function to handle date formatting
@@ -162,33 +203,33 @@
 				if (field.required) {
 					const value = $formAnswers[field.id];
 
-					const isEmpty =
-						value === undefined || value === '' ||
-								(Array.isArray(value) && value.length === 0);
+                    const isEmpty =
+                        value === undefined || value === '' ||
+                                (Array.isArray(value) && value.length === 0);
 
-					if (isEmpty) {
-						missingFields.push(field.label || field.name || field.id);
-					}
-				}
-			}
-		}
-		console.log(missingFields);
-		console.log($formAnswers);
-		// NOTE for QA: 
-		//  if you want to test wihtout having to validate, make this return false
-		return missingFields;
-	}
+                    if (isEmpty) {
+                        missingFields.push(field.label || field.name || field.id);
+                    }
+                }
+            }
+        }
+        console.log(missingFields);
+        console.log($formAnswers);
+        // NOTE for QA: 
+        //  if you want to test wihtout having to validate, make this return false
+        return missingFields;
+    }
 
-	// Clears the messages
-	function clearMessages() {
-		error = null;
-		successMessage = null;
-	}
-	// Get the total number of fields in the form
-	function getTotalFieldsCount(): number {
-		if (!data.form?.sections) return 0;
-		return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
-	}
+    // Clears the messages
+    function clearMessages() {
+        error = null;
+        successMessage = null;
+    }
+    // Get the total number of fields in the form
+    function getTotalFieldsCount(): number {
+        if (!data.form?.sections) return 0;
+        return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
+    }
 </script>
 
 <head>
@@ -392,37 +433,37 @@
 <!-- clear all fields confirmation popup -->
 {#if openDeletePopup}
 <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4">
-	<!-- Modal content -->
-	<div class="bg-white w-full max-w-sm rounded-xl shadow-lg p-6 text-center space-y-4">
-		<!-- Icon -->
-		<div class="mx-auto w-16 h-16">
-			<svg fill="#e01f1f" viewBox="0 -8 72 72" xmlns="http://www.w3.org/2000/svg" stroke="#e01f1f">
-				<path d="M15.8,49.7H56.22a3.78,3.78,0,0,0,3.36-5.5L39.38,8.39a3.8,3.8,0,0,0-6.78,0L12.4,44.2A3.81,3.81,0,0,0,15.8,49.7Zm23.38-8.33a3.29,3.29,0,1,1-6.58,0V41.3a3.29,3.29,0,0,1,6.58,0ZM34.11,17.18h3.8a1.63,1.63,0,0,1,1.54,2L37.79,33.75a1.78,1.78,0,0,1-3.56,0L32.56,19.19A1.64,1.64,0,0,1,34.11,17.18Z" />
-			</svg>
-		</div>
+    <!-- Modal content -->
+    <div class="bg-white w-full max-w-sm rounded-xl shadow-lg p-6 text-center space-y-4">
+        <!-- Icon -->
+        <div class="mx-auto w-16 h-16">
+            <svg fill="#e01f1f" viewBox="0 -8 72 72" xmlns="http://www.w3.org/2000/svg" stroke="#e01f1f">
+                <path d="M15.8,49.7H56.22a3.78,3.78,0,0,0,3.36-5.5L39.38,8.39a3.8,3.8,0,0,0-6.78,0L12.4,44.2A3.81,3.81,0,0,0,15.8,49.7Zm23.38-8.33a3.29,3.29,0,1,1-6.58,0V41.3a3.29,3.29,0,0,1,6.58,0ZM34.11,17.18h3.8a1.63,1.63,0,0,1,1.54,2L37.79,33.75a1.78,1.78,0,0,1-3.56,0L32.56,19.19A1.64,1.64,0,0,1,34.11,17.18Z" />
+            </svg>
+        </div>
 
-		<!-- Message -->
-		<p class="text-lg font-medium text-gray-800">Are you sure you want to clear all entries?</p>
+        <!-- Message -->
+        <p class="text-lg font-medium text-gray-800">Are you sure you want to clear all entries?</p>
 
-		<!-- Buttons -->
-		<div class="flex flex-col sm:flex-row justify-center gap-2 mt-4">
-			<button
-				class="w-full sm:w-auto px-4 py-2 border rounded-lg text-gray-700 bg-white hover:bg-gray-100 transition"
-				on:click={() => (openDeletePopup = false)}
-			>
-				Cancel
-			</button>
-			<button
-				class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-				on:click={() => {
-					// Replace with your delete logic
-					clearAnswers();
-					openDeletePopup = false;
-				}}
-			>
-				Delete
-			</button>
-		</div>
-	</div>
+        <!-- Buttons -->
+        <div class="flex flex-col sm:flex-row justify-center gap-2 mt-4">
+            <button
+                class="w-full sm:w-auto px-4 py-2 border rounded-lg text-gray-700 bg-white hover:bg-gray-100 transition"
+                on:click={() => (openDeletePopup = false)}
+            >
+                Cancel
+            </button>
+            <button
+                class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                on:click={() => {
+                    // Replace with your delete logic
+                    clearAnswers();
+                    openDeletePopup = false;
+                }}
+            >
+                Delete
+            </button>
+        </div>
+    </div>
 </div>
-{/if}                                            
+{/if}
