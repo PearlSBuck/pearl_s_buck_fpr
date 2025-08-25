@@ -10,6 +10,9 @@
 	import DataInput from '../DataInput.svelte';
     import { filledOutBy, SCId } from '$lib/stores/formAnswers';
     import { getUserList } from '$lib/utils/userList';
+    import { mappedForm, loadOfflineForm } from '$lib/stores/formStructure';
+
+    let RegisterSW: typeof import('virtual:pwa-register/svelte').RegisterSW | null = null;
 
     /*
     Variable Definitions:
@@ -41,11 +44,40 @@
     let formTitle = data.form?.title || '';
 	const setPageName:any = getContext('setPageName');
 
-    onMount(() => {
-        setPageName(data.form.title ?? 'Form View',false,true)
+    onMount(async () => {
+        setPageName(data.form.title ?? 'Form View', false, true);
         loadOfflineAnswers();
+
+        try {
+            // Try fetching the latest form from your API / Supabase
+            const res = await fetch(`/api/forms/${data.form.id}`);
+            if (!res.ok) throw new Error('Network failed');
+            console.log(res);
+            
+            const freshForm = await res.json();
+            console.log(freshForm);
+            // ✅ Cache it for offline use
+            localStorage.setItem(`form-cache-${data.form.id}`, JSON.stringify(freshForm));
+            
+            // Update store/UI
+            mappedForm.set(freshForm);
+        } catch (err) {
+            console.warn('⚠️ Offline or failed to fetch form, using cache', err);
+            const cached = localStorage.getItem(`form-cache-${data.form.id}`);
+            if (cached) {
+                mappedForm.set(JSON.parse(cached));
+            } else {
+                console.error('❌ No cached form found');
+            }
+        }
+
+        // Offline users list fallback can be added later
         fetchUsers();
+
+        const mod = await import('virtual:pwa-register/svelte');
+        RegisterSW = mod.RegisterSW;
     });
+
     // Function to fetch users for the form
     async function fetchUsers() {
         const { users, error } = await getUserList();
@@ -64,7 +96,7 @@
     // changes the referenced fields and sections so that UI is reactive
     // [NOTE to developer]: must implement a type for form data when everything is set in stone
     $: {
-    displayedData.set(editMode ? editModeData : data);
+        displayedData.set(editMode ? editModeData : $mappedForm || data);
     }
     // setter function for making displayedData reactive to temporary changes
     export function setEditMode(value: boolean) {
@@ -164,9 +196,10 @@
     }
 
 </script>
-
-
-<head>
+{#if RegisterSW}
+  <svelte:component this={RegisterSW} />
+{/if}
+    <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
    
