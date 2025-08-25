@@ -1,32 +1,24 @@
 <script lang="ts">
-    // +page.svelte - Enhanced form display component with version support and fixed slug handling
+    // +page.svelte - Enhanced form display component with offline caching/fallback
     import { page } from '$app/stores';
-    import { getContext, onMount } from 'svelte';
+    import { onMount } from 'svelte';
     import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
+    import Header from '../../../components/Header.svelte';
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
-    import {notification} from '$lib/stores/formEditor';
+    import { notification } from '$lib/stores/formEditor';
     import { isOnline } from '$lib/stores/online';
-	import DataInput from '../DataInput.svelte';
+    import DataInput from '../DataInput.svelte';
     import { filledOutBy, SCId } from '$lib/stores/formAnswers';
     import { getUserList } from '$lib/utils/userList';
-    import { mappedForm, loadOfflineForm } from '$lib/stores/formStructure';
 
-    let RegisterSW: typeof import('virtual:pwa-register/svelte').RegisterSW | null = null;
-
-    /*
-    Variable Definitions:
-    data = data passed from the server load function
-    editModeData = temporary data for editing the form
-    openDeletePopup = boolean to control the visibility of the delete confirmation popup
-    openSubmitForm = boolean to control the visibility of the submit confirmation popup
-    editMode = boolean to control if the form is in edit mode
-    isLoading = boolean to indicate if data is being loaded
-    error = string to hold any error messages
-    successMessage = string to hold success messages
-    userList = array to hold the list of users for the forms
-    */
+    // --- incoming server data (when online) ---
     export let data;
+
+    // --- NEW: this is the effective data the UI uses (server or cached) ---
+    let clientData: any = data;
+
+    // edit/UI state (unchanged)
     let editModeData: any;
     let openDeletePopup = false;
     let openSubmitForm = false;
@@ -34,114 +26,132 @@
     let isLoading = false;
     let error: string | null = null;
     let successMessage: string | null = null;
-    let userList:[];
+    let userList: [];
     $: show = $notification.type !== null;
 
-    
+    // Form data for editing (keep as-is; title won’t block offline)
+    let formTitle = data?.form?.title || '';
 
+    // --- OFFLINE CACHING HELPERS (NEW) ---
+    function cacheKeyFromContext() {
+        // Prefer the id from server data; fallback to last path segment
+        const idFromData = data?.form?.id;
+        let idFromUrl: string | undefined;
+        if (typeof window !== 'undefined') {
+            const segs = window.location.pathname.split('/').filter(Boolean);
+            idFromUrl = segs[segs.length - 1];
+        }
+        const id = idFromData ?? idFromUrl ?? 'unknown';
+        return `form-cache-${id}`;
+    }
 
-    // Form data for editing
-    let formTitle = data.form?.title || '';
-	const setPageName:any = getContext('setPageName');
-
-    onMount(async () => {
-        setPageName(data.form.title ?? 'Form View', false, true);
-        loadOfflineAnswers();
-
+    function saveFormToCache(d: any) {
         try {
-            // Try fetching the latest form from your API / Supabase
-            const res = await fetch(`/api/forms/${data.form.id}`);
-            if (!res.ok) throw new Error('Network failed');
-            console.log(res);
-            
-            const freshForm = await res.json();
-            console.log(freshForm);
-            // ✅ Cache it for offline use
-            localStorage.setItem(`form-cache-${data.form.id}`, JSON.stringify(freshForm));
-            
-            // Update store/UI
-            mappedForm.set(freshForm);
-        } catch (err) {
-            console.warn('⚠️ Offline or failed to fetch form, using cache', err);
-            const cached = localStorage.getItem(`form-cache-${data.form.id}`);
-            if (cached) {
-                mappedForm.set(JSON.parse(cached));
+            const key = cacheKeyFromContext();
+            localStorage.setItem(key, JSON.stringify(d));
+        } catch (e) {
+            console.error('Failed to cache form data:', e);
+        }
+    }
+
+    function loadFormFromCache(): any | null {
+        try {
+            const key = cacheKeyFromContext();
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            console.error('Failed to read cached form data:', e);
+            return null;
+        }
+    }
+
+    // --- MOUNT: hydrate answers + users; then set clientData from server or cache ---
+    onMount(() => {
+        loadOfflineAnswers();
+        fetchUsers();
+
+        // If we received server data, cache it for offline use.
+        if (data?.form) {
+            saveFormToCache(data);
+            clientData = data;
+        } else {
+            // No server data (likely offline reload) -> use cached copy if available
+            const cached = loadFormFromCache();
+            if (cached?.form) {
+                clientData = cached;
+                // optional heads-up
+                notification.set({ message: 'Loaded cached form for offline use', type: 'success' });
+                setTimeout(() => notification.set({ message: '', type: null }), 2000);
             } else {
-                console.error('❌ No cached form found');
+                console.warn('No cached form found for offline reload.');
             }
         }
 
-        // Offline users list fallback can be added later
-        fetchUsers();
-
-        const mod = await import('virtual:pwa-register/svelte');
-        RegisterSW = mod.RegisterSW;
+        // Ensure the UI renders the effective data
+        displayedData.set(editMode ? editModeData : clientData);
     });
 
-    // Function to fetch users for the form
     async function fetchUsers() {
         const { users, error } = await getUserList();
         if (error) {
             console.error('Failed to fetch user list:', error);
         } else {
-            userList = users.map((user:any) => ({
-                label:user.username,
-                value:user.username
+            userList = users.map((user: any) => ({
+                label: user.username,
+                value: user.username
             }));
         }
     }
 
-
-
-    // changes the referenced fields and sections so that UI is reactive
-    // [NOTE to developer]: must implement a type for form data when everything is set in stone
+    // Make displayedData reactive to edit mode & clientData (use effective data)
     $: {
-        displayedData.set(editMode ? editModeData : $mappedForm || data);
+        displayedData.set(editMode ? editModeData : clientData);
     }
-    // setter function for making displayedData reactive to temporary changes
+
+    // Toggle edit mode using the effective data
     export function setEditMode(value: boolean) {
         editMode = value;
-
         if (editMode) {
-        editModeData = cloneDeep(data);
+            editModeData = cloneDeep(clientData);
         } else {
-        editModeData = null;
+            editModeData = null;
         }
     }
 
-    // useful for form submission
-    // $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
-    async function printInputs(){
+    // Submit handler: use the effective data for id/sections
+    async function printInputs() {
         try {
-            //all required answers were submitted successfully
-            const missingFields = validateForm(data.form.sections)
-            if(missingFields.length === 0){
+            const sections = clientData?.form?.sections ?? [];
+            const missingFields = validateForm(sections);
+
+            if (missingFields.length === 0) {
                 console.log($formAnswers);
                 console.log($filledOutBy);
                 console.log($SCId);
-                const success = await submitAnswersToSupabase(data.form.id, 'FPR');
+
+                const formId = clientData?.form?.id;
+                const success = await submitAnswersToSupabase(formId, 'FPR');
+
                 if (success) {
                     notification.set({ message: 'Successfully submitted form entry', type: 'success' });
                     clearAnswers();
                 } else {
                     notification.set({ message: 'Form submission failed', type: 'error' });
                 }
-            } else{
+            } else {
                 console.log($filledOutBy);
                 console.log($SCId);
                 notification.set({ message: `Fill out ${missingFields[0]}`, type: 'error' });
             }
 
             setTimeout(() => {
-            notification.set({ message: '', type: null });
-        }, 3000);
-        } catch(error){
+                notification.set({ message: '', type: null });
+            }, 3000);
+        } catch (error) {
             console.error(error);
         }
-
     }
 
-    // Function to handle date formatting
     function formatDate(dateString: string) {
         if (!dateString) return 'No date';
         try {
@@ -158,15 +168,12 @@
         }
     }
 
-    // Function to handle the display of Family Progress Reports (FPR)
-    function validateForm(sections:any) {
-        const missingFields = [];
-
+    function validateForm(sections: any) {
+        const missingFields: string[] = [];
         for (const section of sections) {
-            for (const field of section.fields) {
+            for (const field of section.fields ?? []) {
                 if (field.required) {
                     const value = $formAnswers[field.id];
-
                     const isEmpty =
                         value === undefined || value === '' ||
                         (Array.isArray(value) && value.length === 0);
@@ -179,32 +186,35 @@
         }
         console.log(missingFields);
         console.log($formAnswers);
-        // NOTE for QA: 
-        //  if you want to test wihtout having to validate, make this return false
         return missingFields;
     }
 
-    // Clears the messages
     function clearMessages() {
         error = null;
         successMessage = null;
     }
-    // Get the total number of fields in the form
-    function getTotalFieldsCount(): number {
-        if (!data.form?.sections) return 0;
-        return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
-    }
 
+    function getTotalFieldsCount(): number {
+        const sections = clientData?.form?.sections ?? [];
+        return sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
+    }
 </script>
-{#if RegisterSW}
-  <svelte:component this={RegisterSW} />
-{/if}
-    <head>
+
+
+<head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
    
 
 <div class="bg-[#F6F8FF] min-h-screen">
+    <!-- Header Section -->
+
+    <Header 
+        name={data.form?.title || 'Form View'} 
+        search={false} 
+        backButton={true} 
+    />
+
 <!-------------- ---------------------------->
     <!-- Main Content Container -->
      <div
