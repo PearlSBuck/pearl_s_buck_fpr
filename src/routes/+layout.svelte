@@ -1,5 +1,8 @@
+<!-- src/routes/+layout.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
+  // Remove the import for registerSW as we're no longer using it
+  // import { registerSW } from 'virtual:pwa-register'; 
   import Header from '../components/Header.svelte';
   import '../app.css';
 
@@ -9,18 +12,14 @@
 
   onMount(() => {
     if ('serviceWorker' in navigator) {
-      import('virtual:pwa-register').then(({ registerSW }) => {
-        registerSW({
-          immediate: true,
-          // shown when a new SW is waiting – show your “refresh” UI here
-          onNeedRefresh() { console.log('🔄 Update available'); },
-          // called once caches are ready for offline
-          onOfflineReady() { console.log('✅ Offline ready'); },
-          // the right hook name for Svelte/Vite
-          onRegistered(reg) { console.log('✅ SW registered:', reg); },
-          onRegisterError(error) { console.error('❌ SW registration failed:', error); }
+      // Manually register the service worker
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then(reg => {
+          console.log('✅ Service Worker Registered. Scope:', reg.scope, 'Script URL:', reg.active?.scriptURL);
+        })
+        .catch(error => {
+          console.error('❌ Service Worker registration failed:', error);
         });
-      });
     }
   });
 </script>

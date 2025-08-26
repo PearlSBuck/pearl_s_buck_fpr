@@ -74,6 +74,7 @@
         if (data?.form) {
             saveFormToCache(data);
             clientData = data;
+            console.log("Cached data for offline use");
         } else {
             // No server data (likely offline reload) -> use cached copy if available
             const cached = loadFormFromCache();
