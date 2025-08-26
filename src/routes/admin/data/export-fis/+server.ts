@@ -46,7 +46,8 @@ export const POST: RequestHandler = async ({ request }) => {
                 // Transform answers to match expected format
                 const transformedAnswers = answers.map(answer => ({
                     ...answer,
-                    form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields
+                    form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields,
+                    answer: (answer.answer && String(answer.answer).trim() !== '') ? answer.answer : 'N/A'
                 }));
 
                 // Organize answers by section
@@ -70,7 +71,7 @@ export const POST: RequestHandler = async ({ request }) => {
                         title: section.title,
                         questions: section.fields.map(field => ({
                             question: field.label,
-                            answer: field.answer
+                            answer: (field.answer && String(field.answer).trim() !== '') ? field.answer : 'N/A'
                         }))
                     };
                     recordData.sections.push(sectionData);
@@ -125,7 +126,8 @@ export const POST: RequestHandler = async ({ request }) => {
                 // Transform answers to match the expected format
                 const transformedAnswers = answers.map(answer => ({
                     ...answer,
-                    form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields
+                    form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields,
+                    answer: (answer.answer && String(answer.answer).trim() !== '') ? answer.answer : 'N/A'
                 }));
 
                 const organizedAnswers = organizeAnswersBySection(record, sections, transformedAnswers);
