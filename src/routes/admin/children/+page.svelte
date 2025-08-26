@@ -4,20 +4,17 @@
 </style>
 
 <script lang="ts">
-  import Header from '../../../components/Header.svelte';
-  import Record from '../../../components/Record.svelte'; 
+  import ChildRecord from '../../../components/ChildRecord.svelte'; 
   import Confirm from '../../../components/Confirm.svelte';
-  import { deleteSCRecords } from './recordQuery';
+  import { deleteChildrenRecords } from './childrenQuery';
   import { get } from 'svelte/store';  
   import { goto } from '$app/navigation';
-  import { selectedRecords } from './selectRecord';
+  import { selectedChildren } from './selectChildren';
   import { getContext, onDestroy, onMount } from 'svelte';  
   import * as XLSX from 'xlsx';
   import { page } from '$app/stores';
-  import SignaturePad from './SignaturePad.svelte';
 
   let pageName = "Individual Records Management";
-  let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
   let showModal = false;
 
   const setPageName:any = getContext('setPageName');
@@ -26,23 +23,14 @@
     setPageName(pageName);
   })
 
-// Alternative reactive approach 
-$: {
-  const tabParam = $page.url.searchParams.get('tab');
-  if (tabParam === 'intro_sheet' || tabParam === 'progress_report') {
-    selected = tabParam;
-  }
-}
-
-
   
   export let data: {
-    records: { sc_id: number; sc_name: string }[];
+    records: { child_id: number; child_name: string }[];
     totalPages: number;
     currentPage: number;
     query: string;
   };
-  export let selectRecord: boolean = false;
+  export let selectChildren: boolean = false;
   
   let checked = false;
   let selectAll = false;
@@ -59,21 +47,15 @@ $: {
   let showDeleteInProgress = false;
   let deleteSuccessMessage = '';
   
-  // Add these state variables
-  let showSignaturePad = false;
-  let pendingExportIds: string[] = [];
-  let pendingExportFormat = '';
-  let signerName = '';
-
-  function onDeleteConfirmed() {
-    console.log("Deleted:", Array.from(get(selectedRecords)));
-    selectedRecords.set(new Set()); // clear selection
-    goToPage(1);
-    setTimeout(() => {
-      goto('/admin/data');
-    }, 1000);
-    selectRecord = false;
-  }
+//   function onDeleteConfirmed() {
+//     console.log("Deleted:", Array.from(get(selectedChildren)));
+//     selectedChildren.set(new Set()); // clear selection
+//     goToPage(1);
+//     setTimeout(() => {
+//       goto('/admin/data');
+//     }, 1000);
+//     selectChildren = false;
+//   }
 
   function toggleFilter() {
     if (filterMode) {
@@ -98,8 +80,11 @@ $: {
   }
 
   function activateSelectAllMode() {
-    selectRecord = true;
-    selectedRecords.set(new Set(data.records.map(record => record.sc_id)));
+    selectChildren = true;
+    selectedChildren.update(set => {
+    data.records.forEach(r => set.add(r.child_id));
+    return set;
+  });
   }
 
   const confirmDeleteAction = async (ids: unknown[]) => {
@@ -112,16 +97,16 @@ $: {
       showDeleteInProgress = true;
       
       // Call your API to delete records
-      await deleteSCRecords(ids);
+      await deleteChildrenRecords(ids);
       
       // Clear selection
-      selectedRecords.set(new Set());
+      selectedChildren.set(new Set());
       
       // Success message
       deleteSuccessMessage = `Successfully deleted ${ids.length} record(s)`;
       
       // Force a full page reload to refresh data
-      window.location.href = `/admin/data?t=${Date.now()}`;
+      window.location.href = `/admin/children?t=${Date.now()}`;
     } catch (error) {
       console.error('Delete error:', error);
       alert('An error occurred during deletion');
@@ -130,12 +115,8 @@ $: {
   };
 
   onDestroy(() => {
-      selectedRecords.set(new Set());
+      selectedChildren.set(new Set());
   });
-
-  const selectedData = data.records.filter(record =>
-    $selectedRecords.has(record.sc_id)
-  );
 
   function exportFullCSV(fullData: any[]) {
     const headersSet = new Set<string>();
@@ -199,222 +180,160 @@ $: {
   }
 
   // Update handleExport to accept format parameter
-  async function handleExport(format: string) {
-    // Prevent multiple exports at once
-    if (isExporting) return;
-    
-    // Add guard to prevent FPR exports from this page
-    if (selected === 'progress_report') {
-      alert('For Family Progress Reports, please go to the individual child page to export records.');
-      return;
-    }
-    
-    const selectedIds = getSelectedIds();
-    
-    if (selectedIds.length === 0) {
-      alert('Please select at least one record to export');
-      return;
-    }
-    
-    // For PDF exports, show signature pad first
-    if (format === 'pdf') {
-      pendingExportIds = selectedIds;
-      pendingExportFormat = format;
-      showSignaturePad = true;
-      return;
-    }
-    
-    // For non-PDF exports, proceed as normal
-    await processExport(format, selectedIds);
-  }
-
-  // Add this new function to handle the actual export after signature (or directly for non-PDF)
-  async function processExport(format: string, selectedIds: string[], signatureData?: string) {
-    isExporting = true;
-    
-    try {
-      // Handle CSV export
-      if (format === 'csv') {
-        const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            ids: selectedIds,
-            format: 'csv' 
-          })
-        });
+  // async function handleExport(format: string) {
+  //   // Prevent multiple exports at once
+  //   if (isExporting) return;
         
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || 'Failed to export data');
-        }
-        
-        const data = await res.json();
-        if (data && data.length > 0) {
-          exportFullCSV(data);
-        } else {
-          alert('No data to export');
-        }
-      }
-      // Handle XLSX export
-      else if (format === 'xlsx') {
-        const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            ids: selectedIds,
-            format: 'csv' // Request CSV data format for transformation to XLSX
-          })
-        });
-        
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.message || 'Failed to export data');
-        }
-        
-        const data = await res.json();
-        if (data && data.length > 0) {
-          exportFullXLSX(data);
-        } else {
-          alert('No data to export');
-        }
-      }
-      // Handle PDF export
-      else if (format === 'pdf') {
-        // Show progress indicator for multiple records
-        if (selectedIds.length > 1) {
-          alert(`Exporting ${selectedIds.length} files. Please wait...`);
-        }
-        
-        // Process each record individually
-        for (const id of selectedIds) {
-          const record = data.records.find(r => String(r.sc_id) === id);
-          if (!record) continue;
-          
-          const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              ids: [id],
-              format: 'pdf',
-              signature: signatureData,
-              signerName: signerName
-            })
-          });
-          
-          if (!res.ok) {
-            console.error(`Failed to export record ${id}`);
-            continue;
-          }
-          
-          const blob = await res.blob();
-          const cleanName = record.sc_name.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
-          const filename = `${record.sc_id}_${cleanName}.pdf`;
-          
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = filename;
-          link.click();
-          URL.revokeObjectURL(url);
-          
-          // Add a small delay between downloads
-          if (selectedIds.length > 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Export error:', error);
-      alert(error instanceof Error ? error.message : 'An error occurred during export');
-    } finally {
-      isExporting = false;
-    }
-  }
-
-  function createWorkbook(data: any[]) {
-    const wb = XLSX.utils.book_new();
+  //   // Close the dropdown after selection
+  //   exportDropdownOpen = false;
     
-    // Create a separate sheet for each record (child)
-    data.forEach((record, index) => {
-      const childName = record.metadata['Child Name'].replace(/[^\w]/g, '_').substring(0, 15);
-      const sheetName = `${record.metadata['Child ID']}_${childName}`.substring(0, 31); // Excel has 31 char limit
+  //   // Ensure records are selected
+  //   const selectedIds = Array.from($selectedChildren);
+  //   if (selectedIds.length === 0) {
+  //     alert('Please select at least one record to export');
+  //     return;
+  //   }
+    
+  //   try {
+  //     isExporting = true;
       
-      // Create rows for the sheet
-      const rows = [];
-      
-      // Add metadata
-      rows.push(['Child Information']);
-      rows.push(['Child ID', record.metadata['Child ID']]);
-      rows.push(['Child Name', record.metadata['Child Name']]);
-      rows.push(['Created Date', record.metadata['Created Date']]);
-      rows.push(['Form Version', record.metadata['Form Version']]);
-      rows.push(['Filled Out By', record.metadata['Filled Out By']]);
-      rows.push([]);
-      
-      // Add each section with questions and answers
-      record.sections.forEach((section: { title: string, questions: Array<{ question: string, answer: string }> }) => {
-        // rows.push([section.title]);
-        section.questions.forEach((qa: { question: string, answer: string }) => {
-          rows.push([qa.question, qa.answer]);
-        });
-        rows.push([]);
-      });
-      
-      // Create a worksheet from the rows
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    });
+  //     // Handle CSV export
+  //     if (format === 'csv') {
+  //       const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
+  //         method: 'POST',
+  //         headers: { 'Content-Type': 'application/json' },
+  //         body: JSON.stringify({ 
+  //           ids: selectedIds,
+  //           format: 'csv' 
+  //         })
+  //       });
+        
+  //       if (!res.ok) {
+  //         const error = await res.json();
+  //         throw new Error(error.message || 'Failed to export data');
+  //       }
+        
+  //       const data = await res.json();
+  //       if (data && data.length > 0) {
+  //         exportFullCSV(data);
+  //       } else {
+  //         alert('No data to export');
+  //       }
+  //     }
+  //     // Handle XLSX export
+  //     else if (format === 'xlsx') {
+  //       const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
+  //         method: 'POST',
+  //         headers: { 'Content-Type': 'application/json' },
+  //         body: JSON.stringify({ 
+  //           ids: selectedIds,
+  //           format: 'csv' // Request CSV data format for transformation to XLSX
+  //         })
+  //       });
+        
+  //       if (!res.ok) {
+  //         const error = await res.json();
+  //         throw new Error(error.message || 'Failed to export data');
+  //       }
+        
+  //       const data = await res.json();
+  //       if (data && data.length > 0) {
+  //         exportFullXLSX(data);
+  //       } else {
+  //         alert('No data to export');
+  //       }
+  //     }
+  //     // Handle PDF export
+  //     else if (format === 'pdf') {
+  //       // Show progress indicator for multiple records
+  //       if (selectedIds.length > 1) {
+  //         alert(`Exporting ${selectedIds.length} files. Please wait...`);
+  //       }
+        
+  //       // Process each record individually
+  //       for (const id of selectedIds) {
+  //         const record = data.records.find(r => r.child_id == id);
+  //         if (!record) continue;
+          
+  //         const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
+  //           method: 'POST',
+  //           headers: { 'Content-Type': 'application/json' },
+  //           body: JSON.stringify({ 
+  //             ids: [id],
+  //             format: 'pdf' 
+  //           })
+  //         });
+          
+  //         if (!res.ok) {
+  //           console.error(`Failed to export record ${id}`);
+  //           continue;
+  //         }
+          
+  //         const blob = await res.blob();
+  //         const cleanName = record.child_name.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+  //         const filename = `${record.child_id}_${cleanName}.pdf`;
+          
+  //         const url = URL.createObjectURL(blob);
+  //         const link = document.createElement('a');
+  //         link.href = url;
+  //         link.download = filename;
+  //         link.click();
+  //         URL.revokeObjectURL(url);
+          
+  //         // Add a small delay between downloads
+  //         if (selectedIds.length > 1) {
+  //           await new Promise(resolve => setTimeout(resolve, 500));
+  //         }
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Export error:', error);
+  //     alert(error instanceof Error ? error.message : 'An error occurred during export');
+  //   } finally {
+  //     isExporting = false;
+  //   }
+  // }
+
+  // function createWorkbook(data: any[]) {
+  //   const wb = XLSX.utils.book_new();
     
-    return wb;
-  }
-
-  // Add these handlers for the signature pad
-  function handleSignatureConfirm(event: CustomEvent) {
-    const { signatureData, name } = event.detail;
-    signerName = name;
-    showSignaturePad = false;
-    processExport(pendingExportFormat, pendingExportIds, signatureData);
-  }
-
-  function handleSignatureCancel() {
-    showSignaturePad = false;
-    pendingExportIds = [];
-    pendingExportFormat = '';
-  }
-
-  function getSelectedIds() {
-    // Convert numbers to strings
-    return Array.from($selectedRecords).map(id => String(id));
-  }
+  //   // Create a separate sheet for each record (child)
+  //   data.forEach((record, index) => {
+  //     const childName = record.metadata['Child Name'].replace(/[^\w]/g, '_').substring(0, 15);
+  //     const sheetName = `${record.metadata['Child ID']}_${childName}`.substring(0, 31); // Excel has 31 char limit
+      
+  //     // Create rows for the sheet
+  //     const rows = [];
+      
+  //     // Add metadata
+  //     rows.push(['Child Information']);
+  //     rows.push(['Child ID', record.metadata['Child ID']]);
+  //     rows.push(['Child Name', record.metadata['Child Name']]);
+  //     rows.push(['Created Date', record.metadata['Created Date']]);
+  //     rows.push(['Form Version', record.metadata['Form Version']]);
+  //     rows.push(['Filled Out By', record.metadata['Filled Out By']]);
+  //     rows.push([]);
+      
+  //     // Add each section with questions and answers
+  //     record.sections.forEach((section: { title: string, questions: Array<{ question: string, answer: string }> }) => {
+  //       // rows.push([section.title]);
+  //       section.questions.forEach((qa: { question: string, answer: string }) => {
+  //         rows.push([qa.question, qa.answer]);
+  //       });
+  //       rows.push([]);
+  //     });
+      
+  //     // Create a worksheet from the rows
+  //     const ws = XLSX.utils.aoa_to_sheet(rows);
+  //     XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  //   });
+    
+  //   return wb;
+  // }
 </script>
 
 <div class="pt-2 bg-[#F6F8FF]">
-
-
-  <div class="flex justify-end gap-0 mt-32 pr-10 pl-10 relative bg-[#F6F8FF]">
-    <!-- Button 1: Progress Report -->
-    <button
-      on:click={() => selected = 'progress_report'}
-      class={`border rounded-3xl p-4 w-50 cursor-pointer transition-all duration-300
-        ${selected === 'progress_report' ? 'bg-white font-bold shadow-md z-20 text-[#1A5A9E] whitespace-nowrap lg:w-72 lg:text-lg md:w-64 md:text-md sm:w-60 sm:text-sm' : 'bg-[#474C58] text-white z-10 whitespace-nowrap lg:w-72 lg:text-lg md:w-64 md:text-md sm:w-60 sm:text-sm'}`}
-    >
-      <p class="text-center hidden sm:block">Family Progress Report</p>
-      <p class="text-center sm:hidden">FPR</p>
-    </button>
-
-    <!-- Button 2: Introduction Sheet (always overlaps leftward) -->
-    <button
-      on:click={() => selected = 'intro_sheet'}
-      class={`border rounded-3xl p-4 pl-6 w-50 cursor-pointer transition-all duration-300 -ml-10
-        ${selected === 'intro_sheet' ? 'bg-white font-bold shadow-md z-20 text-[#1A5A9E] whitespace-nowrap lg:w-72 lg:text-lg md:w-64 md:text-md sm:w-60 sm:text-sm' : 'bg-[#474C58] text-white z-10 whitespace-nowrap lg:w-72 lg:text-lg md:w-64 md:text-md sm:w-60 sm:text-sm'}`}
-    >
-      <p class="text-center hidden sm:block">Family Introduction Sheet</p>
-      <p class="text-center sm:hidden">FIS</p>
-    </button>
-  </div>
-
-  <div class="flex justify-center items-center mt-10 bg-[#F6F8FF]">
+  <div class="flex justify-center items-center mt-10 pt-20 bg-[#F6F8FF]">
     <div class="relative bg-white border-grey mt-3 lg:w-300 md:w-175 sm:w-150 w-75 rounded-xl flex justify-center items-center shadow-2xl h-150">
       <div class="flex justify-between">
         <div class="absolute lg:top-8 lg:left-4 sm:top-6 sm:right-5 top-4 left-2 flex items-center gap-3 p-2">
@@ -490,35 +409,31 @@ $: {
           </button>
           <Confirm
             bind:show={showModal}
-            ids={Array.from($selectedRecords)}
+            ids={Array.from($selectedChildren)}
             onConfirmAction={confirmDeleteAction}
             deleteMessage="Are you sure you want to delete the selected records?"
           />
           <!-- Select Records (conditionally disabled) -->
           <button 
             class="text-[#1A5A9E] font-bold text-lg cursor-pointer"
-            class:opacity-50={selected === 'progress_report'}
-            class:pointer-events-none={selected === 'progress_report'}
-            on:click={() => selected === 'intro_sheet' && (selectRecord = !selectRecord)}
+            on:click={() => (selectChildren = !selectChildren)}
           >
             Select
           </button>
             <!-- Mobile export -->
               <!-- Mobile Export Button with Dropdown (conditionally disabled) -->
           <div class="flex flex-col relative">
-            <button 
+            <!-- <button 
               class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer"
-              class:opacity-50={selected === 'progress_report'}
-              class:pointer-events-none={selected === 'progress_report'}
-              on:click={() => selected === 'intro_sheet' && (exportDropdownOpen = !exportDropdownOpen)}
+              on:click={() => (exportDropdownOpen = !exportDropdownOpen)}
               aria-label="Export Selected Records"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="p-0.75">
                 <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
               </svg>
               <span>Export</span>
-            </button>
-            {#if exportDropdownOpen && selected === 'intro_sheet'}
+            </button> -->
+            <!-- {#if exportDropdownOpen && selected === 'intro_sheet'}
               <div class="absolute mt-8 z-999">
                 <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("csv")} aria-label="Export CSV Records">
                   <span>Export CSV</span>
@@ -530,7 +445,7 @@ $: {
                   <span>Export PDF</span>
                 </button>
               </div>
-            {/if}
+            {/if} -->
           </div>
         </div>
         <!-- Desktop-->
@@ -545,22 +460,20 @@ $: {
               </button>
               <Confirm
                 bind:show={showModal}
-                ids={Array.from($selectedRecords)}
+                ids={Array.from($selectedChildren)}
                 onConfirmAction={confirmDeleteAction}
                 deleteMessage="Are you sure you want to delete the selected records?"
               />
               <button 
-                class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectRecord ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`}
-                class:opacity-50={selected === 'progress_report'}
-                class:pointer-events-none={selected === 'progress_report'}
-                on:click={() => selected === 'intro_sheet' && (selectRecord = !selectRecord)}
+                class={`text-[#1A5A9E] font-bold text-lg cursor-pointer ${selectChildren ? 'text-[#808080] ' : 'text-[#1A5A9E]'}`}
+                on:click={() => (selectChildren = !selectChildren)}
               >
                 Select
               </button>
               
               <!-- Desktop Export Button with Dropdown -->
               <div class="flex flex-col relative">
-                <button 
+                <!-- <button 
                   class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer" 
                   on:click={() => exportDropdownOpen = !exportDropdownOpen} 
                   aria-label="Export Selected Records"
@@ -569,8 +482,8 @@ $: {
                     <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3469 4.5C19.7731 4.5 20.6771 6.029 19.9898 7.2786L13.6425 18.8192C12.9302 20.1144 11.0691 20.1144 10.3567 18.8192L4.00939 7.2786C3.32211 6.029 4.22617 4.5 5.6523 4.5L18.3469 4.5Z" fill="white"/>
                   </svg>
                   <span>Export</span>
-                </button>
-                {#if exportDropdownOpen}
+                </button> -->
+                <!-- {#if exportDropdownOpen}
                   <div class="absolute mt-8 z-999">
                     <button class="flex justify-center items-center bg-[#1A5A9E] text-white border-1 rounded-md p-1 px-2 gap-1 font-semibold cursor-pointer whitespace-nowrap" on:click={() => handleExport("csv")} aria-label="Export CSV Records">
                       <span>Export CSV</span>
@@ -582,7 +495,7 @@ $: {
                       <span>Export PDF</span>
                     </button>
                   </div>
-                {/if}
+                {/if} -->
               </div>
             </div>
             <div class="flex justify-between items-center gap-2 lg:top-8 lg:right-4 top-4 right-2">
@@ -602,24 +515,11 @@ $: {
         </div>
       </div>
       <div class="flex flex-col items-center justify-center gap-4 mt-16">
-        {#if selected === 'progress_report'}
-            {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
-            {/each}
-            
-        {:else if selected === 'intro_sheet'}
-            {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
-            {/each}
-        {/if}
+        {#each data.records as record}
+            <ChildRecord name={record.child_name} id_number={record.child_id} {selectChildren}/>
+        {/each}
       </div>
     </div>
-  </div>
-  {#if selected === 'progress_report'}
-  <div class="text-center text-sm text-gray-600 mt-4 mb-4">
-    <p>To export Family Progress Reports, please select a child record to view their individual reports.</p>
-  </div>
-  {/if}
 
   <!-- Add this right after the Confirm component (around line 407) -->
   {#if showDeleteInProgress}
@@ -633,34 +533,5 @@ $: {
       </div>
     </div>
   {/if}
-
-  <!-- Signature Pad Modal -->
-  {#if showSignaturePad}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
-      <div class="bg-white p-4 rounded-lg shadow-lg w-[90%] max-w-md">
-        <h3 class="text-lg font-semibold mb-4">Signature Required</h3>
-        <p class="text-sm text-gray-600 mb-4">Please provide your signature to proceed with the export.</p>
-        
-        <!-- Signature Pad Component -->
-        <SignaturePad on:signatureConfirm={handleSignatureConfirm} on:signatureCancel={handleSignatureCancel} />
-        
-        <div class="flex justify-end gap-2 mt-4">
-          <button
-            on:click={() => showSignaturePad = false}
-            class="px-4 py-2 bg-gray-200 rounded-md text-sm font-semibold cursor-pointer"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
-  {#if showSignaturePad}
-  <SignaturePad 
-    bind:name={signerName}
-    title="Sign Document" 
-    on:confirm={handleSignatureConfirm} 
-    on:cancel={handleSignatureCancel} 
-  />
-  {/if}
+  </div>
 </div>

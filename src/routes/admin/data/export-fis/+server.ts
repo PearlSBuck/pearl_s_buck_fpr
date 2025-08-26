@@ -19,8 +19,12 @@ import type {
     ExportRequestBody 
 } from '../export-utils/types';
 
+// Update the POST handler to accept signature data
 export const POST: RequestHandler = async ({ request }) => {
-    const { ids, format = 'csv' } = await request.json() as ExportRequestBody;
+    const { ids, format = 'csv', signature, signerName } = await request.json() as ExportRequestBody & { 
+        signature?: string;
+        signerName?: string;
+    };
 
     if (!Array.isArray(ids) || ids.length === 0) {
         return json({ error: "No IDs provided" }, { status: 400 });
@@ -44,7 +48,7 @@ export const POST: RequestHandler = async ({ request }) => {
                 const sections = await fetchFormSections(record.form_id);
                 
                 // Transform answers to match expected format
-                const transformedAnswers = answers.map(answer => ({
+                const transformedAnswers = answers.map((answer: { form_fields: any }) => ({
                     ...answer,
                     form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields
                 }));
@@ -123,7 +127,7 @@ export const POST: RequestHandler = async ({ request }) => {
                 const sections = await fetchFormSections(record.form_id);
 
                 // Transform answers to match the expected format
-                const transformedAnswers = answers.map(answer => ({
+                const transformedAnswers = answers.map((answer: { form_fields: any }) => ({
                     ...answer,
                     form_fields: Array.isArray(answer.form_fields) ? answer.form_fields[0] : answer.form_fields
                 }));
@@ -164,11 +168,59 @@ export const POST: RequestHandler = async ({ request }) => {
                 const { record, answers } = item;
                 
                 if (index > 0) {
-                doc.addPage();
+                    doc.addPage();
+                }
+                
+                // Add logo and foundation name on the same line
+                try {
+                    // Calculate positions for alignment
+                    const pageWidth = doc.page.width - 100; // Account for margins
+                    const logoWidth = 50; // Slightly smaller logo
+                    const logoHeight = 50;
+                    const textStartX = 150; // Position where text starts
+                    
+                    // Add logo on the left side
+                    doc.image('static/logo.jpg', 50, doc.y, {
+                        fit: [logoWidth, logoHeight]
+                    });
+                    
+                    // Save the current Y position
+                    const currentY = doc.y;
+                    
+                    // Add foundation name at a fixed position to the right of the logo
+                    doc.fontSize(16)
+                        .fillColor('#0070C0')
+                        .font('Times-Roman')  // Set font to Times New Roman
+                        .text('Pearl S. Buck Foundation — Philippines, Inc.', 
+                                textStartX, currentY + 20, { 
+                                    align: 'left',
+                                    width: pageWidth - textStartX
+                                });
+                    
+                    // Move down after both elements
+                    doc.moveDown(2);
+                    
+                    // Reset color to black for the rest of the document
+                    doc.fillColor('#000000');
+                    
+                    // Reset the text position to the left margin - THIS IS THE FIX
+                    doc.text('', 50, doc.y);
+                    
+                } catch (err) {
+                    console.error('Error adding logo to PDF:', err);
+                    
+                    // Fallback to just the text if image fails
+                    doc.fontSize(16)
+                       .fillColor('#0070C0')
+                       .text('Pearl S. Buck Foundation — Philippines, Inc.', { 
+                            align: 'center'
+                       });
+                    doc.moveDown(0.5);
+                    doc.fillColor('#000000');
                 }
                 
                 // Add header
-                doc.fontSize(20).text('Family Introduction Sheet', { align: 'center' });
+                doc.fontSize(16).text('Family Introduction Sheet', { align: 'center' });
                 doc.moveDown();
                 
                 // Add record metadata
@@ -181,17 +233,49 @@ export const POST: RequestHandler = async ({ request }) => {
                 
                 // Add form sections and answers
                 answers.forEach(section => {
-                doc.fontSize(14).text(section.title, { underline: true });
-                doc.moveDown(0.5);
-                
-                section.fields.forEach(field => {
-                    doc.fontSize(10);
-                    doc.font('Helvetica-Bold').text(`${field.label}:`, { continued: true });
-                    doc.font('Helvetica').text(` ${field.answer}`);
+                    doc.fontSize(14).text(section.title, { underline: true });
+                    doc.moveDown(0.5);
+                    
+                    section.fields.forEach(field => {
+                        doc.fontSize(10);
+                        doc.font('Helvetica-Bold').text(`${field.label}:`, { continued: true });
+                        doc.font('Helvetica').text(` ${field.answer}`);
+                    });
+                    
+                    doc.moveDown();
                 });
                 
-                doc.moveDown();
-                });
+                // Add signature if provided
+                if (signature) {
+                    doc.moveDown();
+                    doc.fontSize(12).text('Signature', { underline: false, align: 'left' });
+                    doc.moveDown(0.5);
+                    
+                    // Add the signature image - aligned to left instead of center
+                    try {
+                        // Extract the base64 data (remove the data:image/png;base64, prefix)
+                        const imageData = signature.split(',')[1];
+                        const imgBuffer = Buffer.from(imageData, 'base64');
+                        
+                        // Add the signature image to the PDF - aligned left
+                        doc.image(imgBuffer, {
+                            fit: [150, 100]
+                            // 'left' alignment is the default, so we don't need to specify it
+                        });
+                        // Add signer name if provided - aligned left
+                        if (signerName) {
+                            doc.moveDown(0.5);
+                            doc.fontSize(10).text(signerName, { align: 'left' }); // Changed from 'center' to 'left'
+                        }
+                        
+                        // Add date - aligned left
+                        doc.moveDown(0.5);
+                        doc.fontSize(10).text(`Date: ${new Date().toLocaleDateString()}`, { align: 'left' }); // Changed from 'center' to 'left'
+                    } catch (err) {
+                        console.error('Error adding signature to PDF:', err);
+                        doc.text('Signature could not be displayed', { align: 'left' });
+                    }
+                }
             });
             
             // Finalize the PDF document

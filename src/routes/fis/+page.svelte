@@ -635,7 +635,7 @@ $: {
     .no-forms {
         text-align: center;
         padding: 60px 20px;
-        color: #666;
+        color: #666;    
     }
 
     .no-forms-icon {
