@@ -1,55 +1,47 @@
-import { supabase } from "$lib/db";
-import { fail } from '@sveltejs/kit';
-// Load function to fetch forms from the database
-export async function load() {
-    const { data, error } = await supabase
-        .from("forms")
-        .select('*')
-        .order('createdat', { ascending: false });
+import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+import { supabaseAdmin } from '$lib/db';
 
-    if (error) {
-        console.error('Error fetching forms:', error);
-        console.error('Error details:', error.message);
-        console.error('Error hint:', error.hint);
-        return {
-            forms: [],
-            error: error.message
-        };
+export const load = (async ({ locals }) => {
+    // Check if user is authenticated
+    const session = await locals.supabase.auth.getSession();
+
+    if (!session.data.session) {
+        throw redirect(303, '/login');
     }
 
-    console.log('Server: Fetched forms count:', data?.length || 0);
-    console.log('Server: First form structure:', data?.[0] || 'No forms');
-
-    // Map database columns to camelCase for frontend
-    const mappedForms = data?.map(form => ({
-        ...form,
-        createdAt: form.createdat, // Map createdat to createdAt
-        version: form.version, // Include version column
-        // Add other mappings if needed
-    })) ?? [];
-
-    console.log('Server: Mapped forms:', mappedForms[0]);
-
-    return {
-        forms: mappedForms,
-    };
-}
-
-// Optional: Add actions for form operations
-export const actions = {
-    delete: async ({ request }) => {
-        const data = await request.formData();
-        const formId = data.get('formId');
-
-        const { error } = await supabase
+    try {
+        // Fetch forms data
+        const { data: forms, error } = await supabaseAdmin
             .from('forms')
-            .delete()
-            .eq('id', formId);
+            .select('*')
+            .order('createdat', { ascending: false });
 
-        if (error) {
-            return fail(500, { message: 'Failed to delete form' });
+        // Fetch children data
+        const { data: children, error: childrenError } = await supabaseAdmin
+            .from('children')
+            .select('child_id, child_name, birthday, gender')
+            .order('child_name', { ascending: true });
+
+        console.log('Server: Fetched children for FPR:', children?.length);
+        
+        if (childrenError) {
+            console.error('Error fetching children:', childrenError);
         }
 
-        return { success: true };
+        return {
+            user: session.data.session.user,
+            forms: forms || [],
+            children: children || [],
+            error
+        };
+    } catch (err) {
+        console.error('Error in load function:', err);
+        return {
+            user: session.data.session.user,
+            forms: [],
+            children: [],
+            error: err
+        };
     }
-};
+}) satisfies PageServerLoad;
