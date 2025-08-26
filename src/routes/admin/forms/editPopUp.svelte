@@ -63,8 +63,6 @@ export let fieldItems: ({
 }[] ) = [];
 
 
-
-
 let addOthersOption:boolean;
 let newOption = '';
 // Function to handle the visibility of the popup
@@ -83,6 +81,21 @@ let editorField: Field = {
     orderindex: 0,
     options: []
 };
+
+  let fieldToEdit: Field | null = null;
+  let editingSectionIndex: number | null = null;
+  let editingFieldIndex: number | null = null;
+
+  function openEdit(field: Field, sectionIndex: number, fieldIndex: number) {
+    fieldToEdit = {
+      ...field,
+      required: field.required ?? false, // ensure default
+      options: field.options ?? []
+    };
+    editingSectionIndex = sectionIndex;
+    editingFieldIndex = fieldIndex;
+    openEditPopup = true;
+  }
 
 // function to clear the editor field
 function clearEditorField() {
@@ -128,6 +141,7 @@ function removeOption(index:number) {
     editorField.options = [...editorField.options];
     console.log('Successfully removed');
 }
+
 // handles changes to the formfield
 function handleFieldChanges(updatedField: any, changeType:string, sectionid?: string) {
     // adds a new field
@@ -426,6 +440,17 @@ $: if((openEditPopup||openAddPopup) && field){
                 </div>
             {/if}
             <!-- With Image (Signature and Image Attachments) -->
+
+            <div class="mb-4 mt-2">
+                <label class="flex items-center space-x-2">
+                    <input
+                    type="checkbox"
+                    bind:checked={editorField.required}
+                    class="h-5 w-5 text-indigo-600 rounded"
+                    />
+                    <span class="text-sm text-gray-700">Required</span>
+                </label>
+            </div>
 
 
             <!-- Save Button For Pop Up -->
