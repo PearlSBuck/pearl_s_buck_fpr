@@ -83,9 +83,6 @@ $: {
     }
 }
 
-
-
-
     const setPageContext:any = getContext('setPageContext');
     // Initialize component on mount
     onMount(() => {
@@ -405,7 +402,15 @@ $: {
         role="button"
         tabindex="0"
         aria-label="Close modal"
-        on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && closeFormsList()}
+        on:keydown={(e) => {
+            // Only close if Enter/Space AND not in an input field
+            if ((e.key === 'Enter' || e.key === ' ') && 
+                !(e.target instanceof HTMLInputElement || 
+                  e.target instanceof HTMLTextAreaElement || 
+                  e.target instanceof HTMLSelectElement)) {
+                closeFormsList();
+            }
+        }}
     >
         <div class="forms-container" role="none" on:click|stopPropagation>
             <div class="forms-header">
