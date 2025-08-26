@@ -49,8 +49,8 @@
   <button on:click={() => goToFISRecord(id_number)} aria-label="Go to Record" class="flex items-left">
     <div class="flex items-start flex-col justify-center">
         <div class="flex flex-col justify-center items-start gap-1">
-            <span class="text-sm md:text-md lg:text-lg">SC Name: {name}</span>
-            <span class="text-sm md:text-md lg:text-lg">SC Number: {id_number}</span>
+            <span class="text-sm md:text-md lg:text-lg">Child Name: {name}</span>
+            <span class="text-sm md:text-md lg:text-lg">Child ID: {id_number}</span>
         </div>
     </div>
   </button>  

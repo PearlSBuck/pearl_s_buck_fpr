@@ -25,8 +25,11 @@ export interface SectionWithFields extends Section {
 }
 
 export interface Record {
-    sc_id: string | number;
-    sc_name: string;
+    child_id: string | number;
+    children:{
+        child_id: number;
+        child_name: string;
+    }
     answer_id: string;
     form_id: string;
     created_at: string;

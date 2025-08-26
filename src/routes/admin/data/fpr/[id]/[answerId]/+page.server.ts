@@ -19,7 +19,7 @@ export const load = (async ({ params }) => {
         }
         
         // Check that the record belongs to the specified child
-        if (record.sc_id !== childId) {
+        if (record.children.child_id !== childId) {
             throw error(403, `This record doesn't belong to the specified child`);
         }
 
@@ -47,7 +47,7 @@ export const load = (async ({ params }) => {
         return {
             record,
             organizedData,
-            title: `FPR Record: ${record.sc_name} (${new Date(record.created_at).getFullYear()})`
+            title: `FPR Record: ${record.children.child_name} (${new Date(record.created_at).getFullYear()})`
         };
     } catch (err: any) {
         console.error('Error loading FPR record:', err);

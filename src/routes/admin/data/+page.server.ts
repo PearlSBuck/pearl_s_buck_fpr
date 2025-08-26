@@ -10,6 +10,8 @@ export const load: PageServerLoad = async ({ url }) => {
     query
   );
 
+  console.log(records);
+
   return {
     records,
     totalPages,

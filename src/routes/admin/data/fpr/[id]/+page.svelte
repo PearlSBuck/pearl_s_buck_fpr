@@ -115,28 +115,6 @@
     }
   };
 
-  // Add data sanitization function
-  function sanitizeData(data: any[]) {
-    return data.map(entry => {
-      const newEntry: {[key: string]: any} = {};
-
-      for (const key in entry) {
-        if (!Object.prototype.hasOwnProperty.call(entry, key)) continue;
-
-        const value = entry[key];
-
-        // If value is object and has Name property
-        if (typeof value === 'object' && value !== null && 'Name' in value) {
-          newEntry[key] = value.Name;
-        } else {
-          newEntry[key] = value;
-        }
-      }
-
-      return newEntry;
-    });
-  }
-
   // Function to export data as CSV (improved version)
   function exportFullCSV(data: any[]) {
     // For records with properly structured data

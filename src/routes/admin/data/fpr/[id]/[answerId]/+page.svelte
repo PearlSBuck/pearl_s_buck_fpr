@@ -144,7 +144,7 @@
         <div class="w-full max-w-6xl bg-white rounded-xl shadow p-4 flex flex-col md:flex-row items-center justify-between mb-8">
             <div class="flex flex-col items-center md:items-start">
                 <p class="text-xl mb-2">
-                    <span class="font-bold">SC Name:</span> {record.sc_name}
+                    <span class="font-bold">SC Name:</span> {record.children.child_name}
                 </p>
                 <p class="text-xl">
                     <span class="font-bold">SCN:</span> {record.sc_id}

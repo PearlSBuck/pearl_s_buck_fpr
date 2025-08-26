@@ -15,8 +15,11 @@
     }
 
     interface FISRecord {
-        sc_id: number;
-        sc_name: string;
+        child_id: string | number;
+        children:{
+            child_id: number;
+            child_name: string;
+        }
         answer_id: string;
         form_id: string;
         [key: string]: any;
@@ -167,7 +170,7 @@
             }
             
             // Send update request to server
-            const response = await fetch(`/api/fis/${record.sc_id}`, {
+            const response = await fetch(`/api/fis/${record.children.child_id}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -188,7 +191,7 @@
             
             // Navigate back to view page after short delay
             setTimeout(() => {
-                window.location.href= (`/admin/data/fis/${record.sc_id}`);
+                window.location.href= (`/admin/data/fis/${record.children.child_id}`);
             }, 1500);
             
         } catch (err) {
@@ -200,7 +203,7 @@
     }
     
     function cancelEdit() {
-        window.location.href = (`/admin/data/fis/${record.sc_id}`);
+        window.location.href = (`/admin/data/fis/${record.children.child_id}`);
     }
 </script>
 
@@ -212,10 +215,10 @@
         <div class="w-full max-w-7xl bg-white rounded-xl shadow p-4 flex flex-col md:flex-row items-center justify-between mb-8">
             <div class="flex flex-col items-center md:items-start">
                 <p class="text-xl mb-2">
-                    SC Name: <span class="font-bold">{record.sc_name}</span>
+                    Child Name: <span class="font-bold">{record.children.child_name}</span>
                 </p>
                 <p class="text-xl">
-                    SCN: <span class="font-bold">{record.sc_id}</span>
+                    Child ID: <span class="font-bold">{record.children.child_id}</span>
                 </p>
             </div>
         </div>

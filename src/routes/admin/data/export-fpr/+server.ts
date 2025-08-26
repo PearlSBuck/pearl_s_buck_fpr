@@ -44,6 +44,9 @@ export const POST: RequestHandler = async ({ request }) => {
         .from("fpr_answers")
         .select(`
             *,
+            children:child_id (
+            child_name
+            ),
             forms:form_id (
             id,
             title,
@@ -67,15 +70,15 @@ export const POST: RequestHandler = async ({ request }) => {
             
             for (const record of data) {
                 // Fetch child name from fis_answers if not already present
-                if (!record.sc_name || record.sc_name.trim() === '') {
+                if (!record.children.child_name || record.children.child_name.trim() === '') {
                     const { data: fisRecord } = await supabaseAdmin
                         .from("fis_answers")
-                        .select("sc_name")
-                        .eq("sc_id", record.sc_id)
+                        .select("child_name")
+                        .eq("child_id", record.child_id)
                         .single();
                     
-                    if (fisRecord && fisRecord.sc_name) {
-                        record.sc_name = fisRecord.sc_name;
+                    if (fisRecord && fisRecord.child_name) {
+                        record.children.child_name = fisRecord.child_name;
                     }
                 }
                 // Get the answers for this record
@@ -95,8 +98,8 @@ export const POST: RequestHandler = async ({ request }) => {
                 // Create a record object with metadata
                 const recordData = {
                     metadata: {
-                        'Child ID': record.sc_id,
-                        'Child Name': record.sc_name || `Child ID: ${record.sc_id}`,
+                        'Child ID': record.child_id,
+                        'Child Name': record.children.child_name || `Child ID: ${record.child_id}`,
                         'Created Date': new Date(record.created_at).toLocaleDateString(),
                         'Form Version': record.forms?.version || 'N/A',
                         'Filled Out By': record.filled_out_by || 'Unknown'
@@ -129,18 +132,18 @@ export const POST: RequestHandler = async ({ request }) => {
         
         for (const record of data) {
             // Ensure child name is present
-            if (!record.sc_name || record.sc_name.trim() === '') {
+            if (!record.children.child_name || record.children.child_name.trim() === '') {
                 const { data: fisRecord } = await supabaseAdmin
                 .from("fis_answers")
-                .select("sc_name")
-                .eq("sc_id", record.sc_id)
+                .select("child_name")
+                .eq("child_id", record.child_id)
                 .single();
                 
-                if (fisRecord && fisRecord.sc_name) {
-                    record.sc_name = fisRecord.sc_name;
+                if (fisRecord && fisRecord.child_name) {
+                    record.children.child_name = fisRecord.child_name;
                 } else {
                     // Fallback if name not found in fis_answers
-                    record.sc_name = `Child ID: ${record.sc_id}`;
+                    record.children.child_name = `Child ID: ${record.child_id}`;
                 }
             }
             
@@ -218,8 +221,8 @@ export const POST: RequestHandler = async ({ request }) => {
         
         if (allAnswers.length === 1) {
             const record = allAnswers[0].record;
-            const cleanName = record.sc_name?.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_') || 'unnamed';
-            filename = `${record.sc_id}_${cleanName}.pdf`;
+            const cleanName = record.children.child_name?.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_') || 'unnamed';
+            filename = `${record.child_id}_${cleanName}.pdf`;
         }
         
         // Create a promise to handle PDF completion
@@ -290,8 +293,8 @@ export const POST: RequestHandler = async ({ request }) => {
             
             // Add record metadata
             doc.fontSize(14).text('Child Information', { underline: true });
-            doc.fontSize(12).text(`Name: ${record.sc_name || 'Not provided'}`);
-            doc.text(`ID: ${record.sc_id || 'Not provided'}`);
+            doc.fontSize(12).text(`Name: ${record.children.child_name || 'Not provided'}`);
+            doc.text(`ID: ${record.child_id || 'Not provided'}`);
             doc.text(`Form Version: ${record.forms?.version || '1.0'}`);
             doc.text(`Created: ${new Date(record.created_at).toLocaleDateString()}`);
             doc.moveDown();

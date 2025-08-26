@@ -30,7 +30,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
         const { data: existingRecord, error: recordError } = await supabaseAdmin
             .from('fis_answers')
             .select('*')
-            .eq('sc_id', childId)
+            .eq('child_id', childId)
             .eq('answer_id', answerId)
             .single();
             
