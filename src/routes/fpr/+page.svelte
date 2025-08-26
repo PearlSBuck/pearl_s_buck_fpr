@@ -17,14 +17,22 @@
     currentFormType = string representing the type of form currently being displayed
     */
     
+    // Define Form interface to use throughout the component
+    interface Form {
+        title?: string;
+        createdAt?: string | number | Date;
+        description?: string;
+        version?: string;
+    }
+    
     let show = false;
     let displayText = '';
-    /** @type {{ title?: string, createdAt?: string, description?: string, version?: string }[]} */
-    let selectedForms:any = [];
+    /** @type {Form[]} */
+    let selectedForms: Form[] = [];
     let showFormsList = false;
     let selectedYear = new Date().getFullYear(); // Default to current year
     /** @type {number[]} */
-    let availableYears:any = [];
+    let availableYears: number[] = [];
     let currentFormType = '';
 
 
@@ -74,18 +82,19 @@ $: {
         
         // Initialize available years from all forms
         if (data.forms && data.forms.length > 0) {
-            availableYears = Array.from(
-                new Set(
-                    data.forms
-                        .map(form => {
-                            if (form.createdAt) {
-                                return new Date(form.createdAt).getFullYear();
-                            }
-                            return null;
-                        })
-                        .filter(year => typeof year === 'number')
-                )
-            ).sort((a, b) => b - a); // Sort descending (newest first)
+            // More explicit typing for the filter and sort operations
+            const yearsSet = new Set<number>();
+            
+            // Extract years with explicit typing
+            data.forms.forEach((form: Form) => {
+                if (form.createdAt) {
+                    const year = new Date(form.createdAt).getFullYear();
+                    yearsSet.add(year);
+                }
+            });
+            
+            // Convert to array and sort
+            availableYears = Array.from(yearsSet).sort((a: number, b: number) => b - a);
             
             // Set default year to most recent if available
             if (availableYears.length > 0) {
@@ -93,36 +102,37 @@ $: {
             }
         }
     });
-// Function to handle the display of Family Progress Reports (FPR)
+
+    // Function to handle the display of Family Progress Reports (FPR)
     function handleProgressReport() {
         displayText = 'FPR';
         currentFormType = 'fpr';
         console.log('All forms:', data.forms);
         console.log('First form createdAt:', data.forms[0]?.createdAt);
         
-        selectedForms = data.forms.filter(form => {
+        selectedForms = data.forms.filter((form: Form) => {
             return form.title && form.title.trim().toLowerCase() === 'fpr';
         });
         
-        // Populate availableYears based on filtered forms
-        availableYears = Array.from(
-            new Set(
-                selectedForms
-                    .map((form: { createdAt: string | number | Date; }) => {
-                        if (form.createdAt) {
-                            return new Date(form.createdAt).getFullYear();
-                        }
-                        return null;
-                    })
-                    .filter((year: any) => typeof year === 'number')
-            )
-        ).sort((a:any, b:any) => b - a);
+        // Populate availableYears based on filtered forms - using a more direct approach
+        const yearsSet = new Set<number>();
+            
+        // Extract years with explicit typing
+        selectedForms.forEach((form: Form) => {
+            if (form.createdAt) {
+                const year = new Date(form.createdAt).getFullYear();
+                yearsSet.add(year);
+            }
+        });
+        
+        // Convert to array and sort
+        availableYears = Array.from(yearsSet).sort((a: number, b: number) => b - a);
         
         if (availableYears.length > 0) {
             selectedYear = availableYears[0];
         }
         
-        selectedForms = selectedForms.filter((form: { createdAt: string | number | Date; }) => {
+        selectedForms = selectedForms.filter((form: Form) => {
             if (form.createdAt) {
                 return new Date(form.createdAt).getFullYear() === selectedYear;
             }
@@ -143,28 +153,30 @@ $: {
         console.log('All forms:', data.forms);
         console.log('Looking for title:', 'FIS');
         
-        selectedForms = data.forms.filter(form => {
+        selectedForms = data.forms.filter((form: Form) => {
             console.log('Checking form title:', form.title);
             return form.title && form.title.trim().toLowerCase() === 'fis';
         });
         
-        // Populate availableYears based on filtered forms
-        availableYears = Array.from(
-            new Set(selectedForms.map((form: { createdAt: string | number | Date; }) => {
-                if (form.createdAt) {
-                    return new Date(form.createdAt).getFullYear();
-                }
-                return null;
-            }))
-        )
-        .filter(year => typeof year === 'number')
-        .sort((a, b) => b - a);
+        // Populate availableYears based on filtered forms - using a more direct approach
+        const yearsSet = new Set<number>();
+            
+        // Extract years with explicit typing
+        selectedForms.forEach((form: Form) => {
+            if (form.createdAt) {
+                const year = new Date(form.createdAt).getFullYear();
+                yearsSet.add(year);
+            }
+        });
+        
+        // Convert to array and sort
+        availableYears = Array.from(yearsSet).sort((a: number, b: number) => b - a);
         
         if (availableYears.length > 0) {
             selectedYear = availableYears[0];
         }
         
-        selectedForms = selectedForms.filter((form: { createdAt: string | number | Date; }) => {
+        selectedForms = selectedForms.filter((form: Form) => {
             if (form.createdAt) {
                 return new Date(form.createdAt).getFullYear() === selectedYear;
             }
@@ -192,7 +204,7 @@ $: {
         selectedYear = +/** @type {HTMLSelectElement} */(event.target).value;
         
         // Re-filter selectedForms based on the selected year and current displayText
-        let formsToFilter = data.forms.filter(form => {
+        let formsToFilter = data.forms.filter((form: Form) => {
             if (displayText === 'FPR') {
                 return form.title && form.title.trim().toLowerCase() === 'fpr';
             } else if (displayText === 'FIS') {
@@ -201,7 +213,7 @@ $: {
             return false;
         });
         
-        selectedForms = formsToFilter.filter(form => {
+        selectedForms = formsToFilter.filter((form: Form) => {
             if (form.createdAt) {
                 return new Date(form.createdAt).getFullYear() === selectedYear;
             }
@@ -211,9 +223,9 @@ $: {
 
     /**
      * Handle form click navigation
-     * @param {{ title?: string, version?: string }} form - The form object
+     * @param {Form} form - The form object
      */
-    async function handleFormClick(form: { title: string | number | boolean; version: string | number | boolean; }) {
+    async function handleFormClick(form: Form) {
         if (form.title && form.version) {
         window.location.href = `/fpr/${form.title}-${form.version}`;
         } else {
