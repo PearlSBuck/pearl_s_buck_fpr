@@ -23,8 +23,8 @@ export const load: PageServerLoad = async ({ params, url }) => {
       // Check if child exists in fis_answers
       const { data, error: childCheckError } = await supabaseAdmin
         .from("fis_answers")
-        .select("sc_id")
-        .eq("sc_id", id)
+        .select("child_id")
+        .eq("child_id", id)
         .limit(1);
         
       if (childCheckError || !data || data.length === 0) {
@@ -32,11 +32,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
       }
       
       // Child exists but has no FPR records
-      const childName = await getChildName(id);
+      const childName: string = await getChildName(id);
       
       return {
         childId: id,
-        childName,
+        childName: childName,
         years: [],
         recordsByYear: {},
         totalPages: 0,
@@ -50,14 +50,15 @@ export const load: PageServerLoad = async ({ params, url }) => {
       [year: number]: Array<typeof fprData[number]>;
     }
 
-    const recordsByYear = fprData.reduce<RecordsByYear>((acc, record) => {
+    const recordsByYear = fprData.reduce((acc, record) => {
       const year = new Date(record.created_at).getFullYear();
       if (!acc[year]) {
         acc[year] = [];
       }
       acc[year].push(record);
       return acc;
-    }, {});
+    }, {} as RecordsByYear);
+
 
     // Sort years in descending order (newest first)
     const years = Object.keys(recordsByYear)
@@ -76,7 +77,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
     return {
       childId: id,
-      childName,
+      childName: childName,
       years: paginatedYears,
       recordsByYear,
       totalPages,
@@ -98,25 +99,14 @@ export const load: PageServerLoad = async ({ params, url }) => {
   // Helper function to get child name
   async function getChildName(id: number) {
     // First check FIS records for the child's name
-    const { data: fisRecord } = await supabaseAdmin
-      .from("fis_answers")
-      .select("sc_name")
-      .eq("sc_id", id)
-      .limit(1)
+    const { data: childRecord } = await supabaseAdmin
+      .from("children")
+      .select("child_name")
+      .eq("child_id", id)
       .single();
       
-    if (fisRecord?.sc_name) {
-      return fisRecord.sc_name;
+    if (childRecord?.child_name) {
+      return childRecord.child_name;
     }
-    
-    // Fall back to FPR records if no FIS record
-    const { data: fprRecord } = await supabaseAdmin
-      .from("fpr_answers")
-      .select("sc_name")
-      .eq("sc_id", id)
-      .limit(1)
-      .single();
-    
-    return fprRecord?.sc_name || `Child #${id}`;
   }
 };

@@ -37,7 +37,10 @@ $: {
 
   
   export let data: {
-    records: { sc_id: number; sc_name: string }[];
+    records: {
+      child_id: number;
+      children: { child_id: number; child_name: string };
+    }[];
     totalPages: number;
     currentPage: number;
     query: string;
@@ -99,7 +102,7 @@ $: {
 
   function activateSelectAllMode() {
     selectRecord = true;
-    selectedRecords.set(new Set(data.records.map(record => record.sc_id)));
+    selectedRecords.set(new Set(data.records.map(record => record.child_id)));
   }
 
   const confirmDeleteAction = async (ids: unknown[]) => {
@@ -134,7 +137,7 @@ $: {
   });
 
   const selectedData = data.records.filter(record =>
-    $selectedRecords.has(record.sc_id)
+    $selectedRecords.has(record.child_id)
   );
 
   function exportFullCSV(fullData: any[]) {
@@ -288,7 +291,7 @@ $: {
         
         // Process each record individually
         for (const id of selectedIds) {
-          const record = data.records.find(r => String(r.sc_id) === id);
+          const record = data.records.find(r => String(r.child_id) === id);
           if (!record) continue;
           
           const res = await fetch(`/admin/data/export-${selected === 'intro_sheet' ? 'fis' : 'fpr'}`, {
@@ -308,8 +311,8 @@ $: {
           }
           
           const blob = await res.blob();
-          const cleanName = record.sc_name.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
-          const filename = `${record.sc_id}_${cleanName}.pdf`;
+          const cleanName = record.children.child_name.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+          const filename = `${record.child_id}_${cleanName}.pdf`;
           
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -604,12 +607,12 @@ $: {
       <div class="flex flex-col items-center justify-center gap-4 mt-16">
         {#if selected === 'progress_report'}
             {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
+              <Record name={record.children.child_name} id_number={record.child_id} {selectRecord} selected={selected}/>
             {/each}
             
         {:else if selected === 'intro_sheet'}
             {#each data.records as record}
-              <Record name={record.sc_name} id_number={record.sc_id} {selectRecord} selected={selected}/>
+              <Record name={record.children.child_name} id_number={record.child_id} {selectRecord} selected={selected}/>
             {/each}
         {/if}
       </div>

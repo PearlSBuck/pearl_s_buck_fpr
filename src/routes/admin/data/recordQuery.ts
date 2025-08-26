@@ -8,12 +8,14 @@ export async function getPaginatedSCRecords(page: number, query: string = "") {
 
   let request = supabaseAdmin
     .from("fis_answers")
-    .select("*", { count: "exact" })
+    .select(`
+      child_id,
+      children:child_id (
+        child_id,
+        child_name
+      )
+    `, { count: "exact" })
     .range(from, to);
-
-  if (query.trim()) {
-    request = request.ilike("sc_name", `%${query}%`);
-  }
 
   const { data, count, error } = await request;
 
@@ -30,7 +32,7 @@ export async function deleteSCRecords(ids: number[]) {
   const { error } = await supabaseAdmin
     .from("fis_answers")
     .delete()
-    .in("sc_id", ids); // use .in() for multiple values
+    .in("child_id", ids); // use .in() for multiple values
 
   if (error) throw new Error(error.message);
 }
@@ -42,13 +44,17 @@ export async function getFISRecord(id: number) {
     .from("fis_answers")
     .select(`
       *,
+      children:child_id(
+        child_id,
+        child_name
+      )
       forms:form_id (
         id,
         title,
         version
       )
     `)
-    .eq("sc_id", id)
+    .eq("child_id", id)
     .single();
 
   if (error) {
@@ -131,7 +137,7 @@ export async function getFPRRecordsByChildId(id: number) {
       sc_id,
       filled_out_by
     `)
-    .eq("sc_id", id)
+    .eq("child_id", id)
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -149,6 +155,10 @@ export async function getFPRRecord(answerId: string) {
         id,
         title,
         version
+      ),
+      children:child_id (
+        child_id,
+        child_name
       )
     `)
     .eq("answer_id", answerId)
@@ -156,20 +166,19 @@ export async function getFPRRecord(answerId: string) {
 
   if (error) throw new Error(error.message);
   
-  // Now fetch the child's name from FIS answers using sc_id
   if (fprRecord) {
-    const { data: fisRecord } = await supabaseAdmin
-      .from("fis_answers")
-      .select("sc_name")
-      .eq("sc_id", fprRecord.sc_id)
+    const { data: childRecord } = await supabaseAdmin
+      .from("children")
+      .select("child_name")
+      .eq("child_id", fprRecord.child_id)
       .single();
     
     // Add the name to our FPR record object
-    if (fisRecord) {
-      fprRecord.sc_name = fisRecord.sc_name;
+    if (childRecord) {
+      fprRecord.children.child_name = childRecord.child_name;
     } else {
       // Fallback if no FIS record exists
-      fprRecord.sc_name = `Child #${fprRecord.sc_id}`;
+      fprRecord.children.child_name = `Child #${fprRecord.child_id}`;
     }
   }
   
@@ -179,20 +188,27 @@ export async function getFPRRecord(answerId: string) {
 // Get all answers for a specific FPR record
 export async function getFPRAnswers(answerId: string) {
   const { data, error } = await supabaseAdmin
-    .from("fpr_answers_list")
-    .select(`
-      answer,
-      question_id,
-      form_fields:question_id (
-        id,
-        label,
-        type,
-        sectionid,
-        orderindex,
-        options
+  .from("fpr_answers_list")
+  .select(`
+    answer,
+    question_id,
+    form_fields:question_id (
+      id,
+      label,
+      type,
+      sectionid,
+      orderindex,
+      options
+    ),
+    fpr_answers!inner (
+      child_id,
+      children:child_id (
+        child_name,
+        child_id
       )
-    `)
-    .eq("answer_id", answerId);
+    )
+  `)
+  .eq("answer_id", answerId);
 
   if (error) throw new Error(error.message);
   

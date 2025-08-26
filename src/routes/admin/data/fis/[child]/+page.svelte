@@ -104,15 +104,15 @@
     }
     // Handle Edit button click
     function handleEdit() {
-        console.log('Edit record:', record.sc_id);
-        window.location.href = `/admin/data/fis/${record.sc_id}/edit`;
+        console.log('Edit record:', record.children.child_id);
+        window.location.href = `/admin/data/fis/${record.children.child_id}/edit`;
     }
 
     // Handle Delete button click
     async function handleDelete() {
-        if (confirm(`Are you sure you want to delete the record for ${record.sc_name}?\nThis action cannot be undone.`)) {
+        if (confirm(`Are you sure you want to delete the record for ${record.children.child_name}?\nThis action cannot be undone.`)) {
             try {
-                const response = await fetch(`/api/fis/${record.sc_id}`, {
+                const response = await fetch(`/api/fis/${record.children.child_id}`, {
                     method: 'DELETE'
                 });
                 
@@ -150,10 +150,10 @@
         <div class="w-full max-w-7xl bg-white rounded-xl shadow p-4 flex flex-col md:flex-row items-center justify-between mb-8">
             <div class="flex flex-col items-center md:items-start">
                 <p class="text-xl mb-2">
-                    SC Name: <span class="font-bold">{record.sc_name}</span>
+                    Child Name: <span class="font-bold">{record.children.child_name}</span>
                 </p>
                 <p class="text-xl">
-                    SCN: <span class="font-bold">{record.sc_id}</span>
+                    Child ID: <span class="font-bold">{record.children.child_id}</span>
                 </p>
             </div>
             <div class="flex flex-col items-center md:items-end">

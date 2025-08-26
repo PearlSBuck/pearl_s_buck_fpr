@@ -9,13 +9,17 @@ export async function fetchFISRecords(ids: (string | number)[]) {
         .from("fis_answers")
         .select(`
         *,
+        children:child_id (
+            child_id,
+            child_name
+        ),
         forms:form_id (
             id,
             title,
             version
         )
         `)
-        .in("sc_id", ids);
+        .in("child_id", ids);
 
     if (error) {
         throw new Error(error.message);

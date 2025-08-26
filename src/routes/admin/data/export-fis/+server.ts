@@ -59,8 +59,8 @@ export const POST: RequestHandler = async ({ request }) => {
                 // Create a record object with metadata
                 const recordData = {
                     metadata: {
-                        'Child ID': record.sc_id,
-                        'Child Name': record.sc_name,
+                        'Child ID': record.child_id,
+                        'Child Name': record.children?.child_name,
                         'Created Date': new Date(record.created_at).toLocaleDateString(),
                         'Form Version': record.forms?.version || 'N/A',
                         'Filled Out By': record.filled_out_by || 'Unknown'
@@ -153,8 +153,8 @@ export const POST: RequestHandler = async ({ request }) => {
             
             if (allAnswers.length === 1) {
                 const record = allAnswers[0].record;
-                const cleanName = record.sc_name.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
-                filename = `${record.sc_id}_${cleanName}.pdf`;
+                const cleanName = record.children.child_name.replace(/[^\w\s]/gi, '').replace(/\s+/g, '_');
+                filename = `${record.child_id}_${cleanName}.pdf`;
             }
             
             // Create a promise to handle PDF completion
@@ -225,8 +225,8 @@ export const POST: RequestHandler = async ({ request }) => {
                 
                 // Add record metadata
                 doc.fontSize(14).text('Child Information', { underline: true });
-                doc.fontSize(12).text(`Name: ${record.sc_name || 'Not provided'}`);
-                doc.text(`ID: ${record.sc_id || 'Not provided'}`);
+                doc.fontSize(12).text(`Name: ${record.children.child_name || 'Not provided'}`);
+                doc.text(`ID: ${record.child_id || 'Not provided'}`);
                 doc.text(`Form Version: ${record.forms?.version || '1.0'}`);
                 doc.text(`Created: ${new Date(record.created_at).toLocaleDateString()}`);
                 doc.moveDown();
