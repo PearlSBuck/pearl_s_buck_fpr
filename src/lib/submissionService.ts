@@ -64,7 +64,7 @@ async function sendToSupabase(submission: OfflineSubmission): Promise<boolean> {
     // --- STEP 2: Prepare INSERT payload for parent row ---
     let parentInsertPayload: Record<string, any>;
     if (formType === 'FPR') {
-        parentInsertPayload = { form_id: formId, filled_out_by: filledOutByValue, sc_id: scIdValue };
+        parentInsertPayload = { form_id: formId, filled_out_by: filledOutByValue, sc_id: scIdValue, child_id: scIdValue };
         console.log(parentInsertPayload);
     } else { // formType === 'FIS'
         parentInsertPayload = { form_id: formId, sc_name: scname, filled_out_by: filledOutByValue };

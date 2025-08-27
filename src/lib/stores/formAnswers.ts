@@ -81,7 +81,8 @@ export async function submitAnswersToSupabase(formId: string, formType: 'FPR' | 
 		parentInsertPayload = {
 			form_id: formId,
 			filled_out_by: filledOutByValue,
-			sc_id: scIdValue
+			sc_id: scIdValue,
+			child_id: scIdValue
 		};
 		// if formType === 'FIS'
 	} else {
