@@ -5,27 +5,35 @@
     import { goto, invalidateAll } from '$app/navigation';
     import { page } from '$app/stores';
     export let data;
-    /*
-    Variable Definitions:
-    data = object containing the form data and other necessary information
-    show = boolean to control the display of the form list
-    displayText = string to show the type of form being displayed
-    selectedForms = array of forms to be displayed
-    showFormsList = boolean to control the visibility of the forms list modal
-    selectedYear = number representing the year selected for filtering forms
-    availableYears = array of years available for filtering forms
-    currentFormType = string representing the type of form currently being displayed
-    */
+    
+    // Check if children data is present
+    console.log('Client: Received data for FPR:', data);
+    console.log('Client: Children data for FPR:', data.children);
+    
+    // Define Form interface to use throughout the component
+    interface Form {
+        title?: string;
+        createdat?: string | number | Date;  // Changed from createdAt to createdat
+        description?: string;
+        version?: string;
+    }
     
     let show = false;
     let displayText = '';
-    /** @type {{ title?: string, createdAt?: string, description?: string, version?: string }[]} */
-    let selectedForms:any = [];
+    /** @type {Form[]} */
+    let selectedForms: Form[] = [];
     let showFormsList = false;
     let selectedYear = new Date().getFullYear(); // Default to current year
     /** @type {number[]} */
-    let availableYears:any = [];
+    let availableYears: number[] = [];
     let currentFormType = '';
+
+    // Child selection variables
+    let children = data.children || [];
+    let childSearchQuery = '';
+    let selectedChild: any = null;
+    let filteredChildren = [...children];
+    let loading = false;
 
 
     $: {
@@ -74,18 +82,19 @@ $: {
         
         // Initialize available years from all forms
         if (data.forms && data.forms.length > 0) {
-            availableYears = Array.from(
-                new Set(
-                    data.forms
-                        .map(form => {
-                            if (form.createdAt) {
-                                return new Date(form.createdAt).getFullYear();
-                            }
-                            return null;
-                        })
-                        .filter(year => typeof year === 'number')
-                )
-            ).sort((a, b) => b - a); // Sort descending (newest first)
+            // More explicit typing for the filter and sort operations
+            const yearsSet = new Set<number>();
+            
+            // Extract years with explicit typing
+            data.forms.forEach((form: Form) => {
+                if (form.createdat) {
+                    const year = new Date(form.createdat).getFullYear();
+                    yearsSet.add(year);
+                }
+            });
+            
+            // Convert to array and sort
+            availableYears = Array.from(yearsSet).sort((a: number, b: number) => b - a);
             
             // Set default year to most recent if available
             if (availableYears.length > 0) {
@@ -93,41 +102,51 @@ $: {
             }
         }
     });
-// Function to handle the display of Family Progress Reports (FPR)
+
+    // Function to handle the display of Family Progress Reports (FPR)
     function handleProgressReport() {
         displayText = 'FPR';
         currentFormType = 'fpr';
         console.log('All forms:', data.forms);
-        console.log('First form createdAt:', data.forms[0]?.createdAt);
+        console.log('First form createdat:', data.forms[0]?.createdat);
         
-        selectedForms = data.forms.filter(form => {
+        // Get all FPR forms
+        const allFprForms = data.forms.filter((form: Form) => {
+            console.log('Checking form title:', form.title);
             return form.title && form.title.trim().toLowerCase() === 'fpr';
         });
         
-        // Populate availableYears based on filtered forms
-        availableYears = Array.from(
-            new Set(
-                selectedForms
-                    .map((form: { createdAt: string | number | Date; }) => {
-                        if (form.createdAt) {
-                            return new Date(form.createdAt).getFullYear();
-                        }
-                        return null;
-                    })
-                    .filter((year: any) => typeof year === 'number')
-            )
-        ).sort((a:any, b:any) => b - a);
+        console.log('All FPR forms:', allFprForms);
+        
+        // Populate availableYears with explicit typing
+        const yearsSet = new Set<number>();
+        
+        allFprForms.forEach((form: Form) => {
+            if (form.createdat) {
+                const year = new Date(form.createdat).getFullYear();
+                yearsSet.add(year);
+            }
+        });
+        
+        availableYears = Array.from(yearsSet).sort((a: number, b: number) => b - a);
         
         if (availableYears.length > 0) {
             selectedYear = availableYears[0];
         }
         
-        selectedForms = selectedForms.filter((form: { createdAt: string | number | Date; }) => {
-            if (form.createdAt) {
-                return new Date(form.createdAt).getFullYear() === selectedYear;
+        // Filter by year
+        selectedForms = allFprForms.filter((form: Form) => {
+            if (form.createdat) {
+                return new Date(form.createdat).getFullYear() === selectedYear;
             }
             return false;
         });
+        
+        // If no forms matched the year filter, show all FPR forms
+        if (selectedForms.length === 0) {
+            console.log('No forms for selected year, showing all FPR forms');
+            selectedForms = [...allFprForms];
+        }
         
         console.log('Filtered forms:', selectedForms);
         show = true;
@@ -143,30 +162,32 @@ $: {
         console.log('All forms:', data.forms);
         console.log('Looking for title:', 'FIS');
         
-        selectedForms = data.forms.filter(form => {
+        selectedForms = data.forms.filter((form: Form) => {
             console.log('Checking form title:', form.title);
             return form.title && form.title.trim().toLowerCase() === 'fis';
         });
         
-        // Populate availableYears based on filtered forms
-        availableYears = Array.from(
-            new Set(selectedForms.map((form: { createdAt: string | number | Date; }) => {
-                if (form.createdAt) {
-                    return new Date(form.createdAt).getFullYear();
-                }
-                return null;
-            }))
-        )
-        .filter(year => typeof year === 'number')
-        .sort((a, b) => b - a);
+        // Populate availableYears based on filtered forms - using a more direct approach
+        const yearsSet = new Set<number>();
+            
+        // Extract years with explicit typing
+        selectedForms.forEach((form: Form) => {
+            if (form.createdat) {
+                const year = new Date(form.createdat).getFullYear();
+                yearsSet.add(year);
+            }
+        });
+        
+        // Convert to array and sort
+        availableYears = Array.from(yearsSet).sort((a: number, b: number) => b - a);
         
         if (availableYears.length > 0) {
             selectedYear = availableYears[0];
         }
         
-        selectedForms = selectedForms.filter((form: { createdAt: string | number | Date; }) => {
-            if (form.createdAt) {
-                return new Date(form.createdAt).getFullYear() === selectedYear;
+        selectedForms = selectedForms.filter((form: Form) => {
+            if (form.createdat) {
+                return new Date(form.createdat).getFullYear() === selectedYear;
             }
             return false;
         });
@@ -183,6 +204,7 @@ $: {
         showFormsList = false;
         selectedForms = [];
         currentFormType = '';
+        selectedChild = null; // Reset selected child
     }
 
     /**
@@ -192,7 +214,7 @@ $: {
         selectedYear = +/** @type {HTMLSelectElement} */(event.target).value;
         
         // Re-filter selectedForms based on the selected year and current displayText
-        let formsToFilter = data.forms.filter(form => {
+        let formsToFilter = data.forms.filter((form: Form) => {
             if (displayText === 'FPR') {
                 return form.title && form.title.trim().toLowerCase() === 'fpr';
             } else if (displayText === 'FIS') {
@@ -201,21 +223,28 @@ $: {
             return false;
         });
         
-        selectedForms = formsToFilter.filter(form => {
-            if (form.createdAt) {
-                return new Date(form.createdAt).getFullYear() === selectedYear;
+        selectedForms = formsToFilter.filter((form: Form) => {
+            if (form.createdat) {
+                return new Date(form.createdat).getFullYear() === selectedYear;
             }
             return false;
         });
     }
 
     /**
-     * Handle form click navigation
-     * @param {{ title?: string, version?: string }} form - The form object
+     * Handle form click navigation with child ID
+     * @param {Form} form - The form object
      */
-    async function handleFormClick(form: { title: string | number | boolean; version: string | number | boolean; }) {
+    async function handleFormClick(form: Form) {
+        if (!selectedChild) {
+            // Don't proceed if no child is selected
+            return;
+        }
+        
         if (form.title && form.version) {
-        window.location.href = `/fpr/${form.title}-${form.version}`;
+            // Pass the child ID in the URL
+            window.location.href = `/fpr/${form.title}-${form.version}?childId=${selectedChild.child_id}`;
+            console.log('Navigating to form for child:', selectedChild.child_id);
         } else {
             console.warn('Form missing title or version:', form);
         }
@@ -223,12 +252,25 @@ $: {
 
     /**
      * Format date for display
-     * @param {string} dateString
+     * @param {string | number | Date} dateString
      * @returns {string}
      */
     function formatDate(dateString: string | number | Date) {
         try {
+            // Debug the input value
+            console.log('Formatting date:', dateString);
+            
+            if (!dateString) return 'No Date';
+            
+            // Handle ISO date strings
             const date = new Date(dateString);
+            
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+                console.error('Invalid date parsed:', dateString);
+                return 'Invalid Date';
+            }
+            
             return date.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
@@ -237,8 +279,43 @@ $: {
                 minute: '2-digit'
             });
         } catch (e) {
-            return dateString;
+            console.error('Error formatting date:', e);
+            return 'Date Error';
         }
+    }
+
+    // Child selection functions
+    /**
+     * Filter children based on the search query
+     */
+    $: {
+        if (children && children.length > 0) {
+            const query = childSearchQuery.toLowerCase();
+            filteredChildren = children.filter((child: any) => {
+                return child.child_name.toLowerCase().includes(query) || 
+                       child.child_id.toString().includes(query);
+            });
+        }
+    }
+
+    /**
+     * Select a child from the list
+     */
+    function selectChild(child: any) {
+        selectedChild = child;
+        childSearchQuery = ''; // Clear search query on select
+    }
+
+    /**
+     * Calculate age from birthday
+     */
+    function calculateAge(birthday: string) {
+        if (!birthday) return 'Unknown';
+        
+        const birthDate = new Date(birthday);
+        const ageDiff = Date.now() - birthDate.getTime();
+        const ageDate = new Date(ageDiff);
+        return Math.abs(ageDate.getUTCFullYear() - 1970);
     }
 </script>
 
@@ -322,6 +399,66 @@ $: {
                          displayText === 'FIS' ? 'Family Introduction Sheets' : 
                          'Forms'}
                     </h2>
+                </div>
+                <button class="close-btn" on:click={closeFormsList} aria-label="Close">
+                    ×
+                </button>
+            </div>
+            
+            <!-- Child Selector Section -->
+            <div class="child-selector-section">
+                <h3 class="child-selector-title">Select a Child</h3>
+                <p class="child-selector-description">You must select a child before proceeding with the form.</p>
+                
+                <div class="child-selector-search">
+                    <input 
+                        type="text" 
+                        placeholder="Search by name or ID..." 
+                        bind:value={childSearchQuery}
+                        class="child-search-input"
+                    />
+                </div>
+                
+                <div class="child-selector-list">
+                    {#if !children || children.length === 0}
+                        <div class="no-children">
+                            <p>No children found. Please add children from the Children Database section first.</p>
+                        </div>
+                    {:else}
+                        {#each filteredChildren as child}
+                            <div 
+                                class="child-item {selectedChild?.child_id === child.child_id ? 'selected' : ''}"
+                                on:click={() => selectChild(child)}
+                                on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectChild(child)}
+                                role="button"
+                                tabindex="0"
+                            >
+                                <div class="child-info">
+                                    <div class="child-id">ID: {child.child_id}</div>
+                                    <div class="child-name">{child.child_name}</div>
+                                </div>
+                            </div>
+                        {/each}
+                    {/if}
+                </div>
+            </div>
+            
+            <!-- Form Selection Section -->
+            <div class="forms-content">
+                {#if !selectedChild}
+                    <div class="select-child-message">
+                        <div class="message-icon">👆</div>
+                        <h3>Please select a child first</h3>
+                        <p>You need to select a child from the list above before you can access forms.</p>
+                    </div>
+                {:else if selectedForms.length > 0}
+                    <div class="selected-child-banner">
+                        <div class="selected-child-info">
+                            <p>Selected Child: <strong>{selectedChild.child_name}</strong></p>
+                            <p class="child-id-small">ID: {selectedChild.child_id}</p>
+                        </div>
+                    </div>
+                    
                     {#if availableYears.length > 0}
                         <div class="year-filter">
                             <span class="year-label">Filter by Year:</span>
@@ -336,19 +473,12 @@ $: {
                             </select>
                         </div>
                     {/if}
-                </div>
-                <button class="close-btn" on:click={closeFormsList} aria-label="Close">
-                    ×
-                </button>
-            </div>
-            
-            <div class="forms-content">
-                {#if selectedForms.length > 0}
+                    
                     <div class="forms-grid">
                         {#each selectedForms as form}
                             <div 
                                 class="form-card" 
-                                on:click={() => handleFormClick(form)} 
+                                on:click={() => handleFormClick(form)}
                                 role="button" 
                                 tabindex="0" 
                                 on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleFormClick(form)}
@@ -365,7 +495,13 @@ $: {
                                         <div class="form-date">
                                             <span class="date-icon">📅</span>
                                             <span class="date-label">Created:</span>
-                                            <span class="date-value">{formatDate(form.createdAt ?? '')}</span>
+                                            <span class="date-value">
+                                                {#if form.createdat}
+                                                    {formatDate(form.createdat)}
+                                                {:else}
+                                                    No Date
+                                                {/if}
+                                            </span>
                                         </div>
                                         
                                         {#if form.version}
@@ -373,16 +509,10 @@ $: {
                                                 Version {form.version}
                                             </div>
                                         {/if}
-
-                                        {#if form.description}
-                                            <div class="form-description">
-                                                {form.description}
-                                            </div>
-                                        {/if}
                                     </div>
                                     
                                     <div class="form-click-hint">
-                                        <span>Click to view form</span>
+                                        <span>Click to fill out form for {selectedChild.child_name}</span>
                                         <span>→</span>
                                     </div>
                                 </div>
@@ -392,8 +522,8 @@ $: {
                 {:else}
                     <div class="no-forms">
                         <div class="no-forms-icon">📋</div>
-                        <h3 class="no-forms-title">No forms found for {selectedYear}</h3>
-                        <p class="no-forms-text">Try selecting a different year from the filter above</p>
+                        <h3 class="no-forms-title">No forms found</h3>
+                        <p class="no-forms-text">Try selecting a different year or form type</p>
                     </div>
                 {/if}
             </div>
@@ -478,6 +608,7 @@ $: {
         align-items: center;
         gap: 10px;
         flex-wrap: wrap;
+        margin-bottom: 20px; /* Increase bottom margin */
     }
 
     .year-label {
@@ -603,13 +734,6 @@ $: {
         margin-bottom: 12px;
     }
 
-    .form-description {
-        color: #666;
-        font-size: 14px;
-        line-height: 1.4;
-        margin-bottom: 12px;
-    }
-
     .form-click-hint {
         display: flex;
         align-items: center;
@@ -649,6 +773,126 @@ $: {
     .no-forms-text {
         font-size: 16px;
         line-height: 1.5;
+    }
+
+    /* Child selector styles */
+    .child-selector-section {
+        padding: 15px;
+        border-bottom: 1px solid #e0e0e0;
+        background-color: #f5f9ff;
+    }
+    
+    .child-selector-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 5px 0;
+        color: #1A5A9E;
+    }
+    
+    .child-selector-description {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .child-selector-search {
+        margin-bottom: 10px;
+    }
+    
+    .child-search-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .child-selector-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        background: white;
+    }
+    
+    .child-item {
+        padding: 10px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+    }
+    
+    .child-item:last-child {
+        border-bottom: none;
+    }
+    
+    .child-item:hover {
+        background-color: #f0f7ff;
+    }
+    
+    .child-item.selected {
+        background-color: #e0f0ff;
+        border-left: 3px solid #1A5A9E;
+    }
+    
+    .child-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .child-id {
+        font-size: 12px;
+        color: #666;
+        background: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 4px;
+    }
+    
+    .child-name {
+        font-weight: 500;
+    }
+    
+    .select-child-message {
+        text-align: center;
+        padding: 30px;
+        color: #666;
+    }
+    
+    .message-icon {
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+    
+    .selected-child-banner {
+        display: flex;
+        align-items: center;
+        background: #e0f0ff;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-bottom: 20px; /* Make this consistent with the year filter margin */
+    }
+    
+    .selected-child-info {
+        flex: 1;
+    }
+    
+    .selected-child-info p {
+        margin: 0;
+    }
+    
+    .child-id-small {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    .no-children {
+        padding: 15px;
+        text-align: center;
+        color: #666;
     }
 
     /* Responsive design */
