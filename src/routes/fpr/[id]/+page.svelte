@@ -4,6 +4,7 @@
     // +page.svelte - Enhanced form display component with version support and fixed slug handling
     import { page } from '$app/stores';
     import { getContext, onMount } from 'svelte';
+    import { setChildIdFromUrl } from '$lib/stores/formAnswers';
     import {
         formAnswers,
         loadOfflineAnswers,
@@ -48,6 +49,7 @@
 
     onMount(() => {
         setPageName(data.form.title ?? 'Form View', false, true);
+        setChildIdFromUrl();
         loadOfflineAnswers();
         fetchUsers();
     });
