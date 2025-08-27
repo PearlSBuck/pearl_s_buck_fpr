@@ -2,6 +2,7 @@
     // +page.svelte - Enhanced form display component with version support and fixed slug handling
     import { page } from '$app/stores';
     import { getContext, onMount } from 'svelte';
+    import { setChildIdFromUrl } from '$lib/stores/formAnswers';
     import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
@@ -45,6 +46,7 @@
     const setPageName:any = getContext('setPageName')
     // Reactive stores
     onMount(() => {
+        setChildIdFromUrl();
         setPageName('Form View',false,true)
         loadOfflineAnswers();
         fetchUsers();

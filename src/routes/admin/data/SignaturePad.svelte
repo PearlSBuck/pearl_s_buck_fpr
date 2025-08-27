@@ -16,13 +16,17 @@
     let lastX = 0;
     let lastY = 0;
     
+    // Add signature method toggle
+    let signatureMethod: 'draw' | 'upload' = 'draw';
+    let uploadedSignature: string | null = null;
+    
     // Properly typed event dispatcher
     const dispatch = createEventDispatcher<SignatureEvents>();
     
     onMount(() => {
         if (canvasElement) {
-        ctx = canvasElement.getContext('2d')!;
-        setupCanvas();
+            ctx = canvasElement.getContext('2d')!;
+            setupCanvas();
         }
     });
     
@@ -72,11 +76,11 @@
         const rect = canvasElement.getBoundingClientRect();
         
         if ('touches' in event) {
-        x = event.touches[0].clientX - rect.left;
-        y = event.touches[0].clientY - rect.top;
+            x = event.touches[0].clientX - rect.left;
+            y = event.touches[0].clientY - rect.top;
         } else {
-        x = event.clientX - rect.left;
-        y = event.clientY - rect.top;
+            x = event.clientX - rect.left;
+            y = event.clientY - rect.top;
         }
         
         return { x, y };
@@ -99,18 +103,63 @@
         return canvasElement.toDataURL() === blank.toDataURL();
     }
 
-    function confirm() {
-        if (isEmpty()) {
-            alert('Please sign the document before proceeding.');
+    function handleImageUpload(event: Event) {
+        const input = event.target as HTMLInputElement;
+        const file = input.files?.[0];
+        
+        if (!file) return;
+        
+        // File type validation
+        if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+            alert('Please upload a PNG or JPG image');
             return;
         }
         
-        const signatureData = canvasElement.toDataURL('image/png');
-        dispatch('confirm', { signatureData, name });
+        // File size validation (limit to 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Please upload an image smaller than 2MB');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            uploadedSignature = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function confirm() {
+        if (signatureMethod === 'draw') {
+            if (isEmpty()) {
+                alert('Please sign the document before proceeding.');
+                return;
+            }
+            const signatureData = canvasElement.toDataURL('image/png');
+            dispatch('confirm', { signatureData, name });
+        } else {
+            if (!uploadedSignature) {
+                alert('Please upload a signature image.');
+                return;
+            }
+            dispatch('confirm', { signatureData: uploadedSignature, name });
+        }
     }
     
     function cancel() {
         dispatch('cancel');
+    }
+    
+    function switchMethod(method: 'draw' | 'upload') {
+        signatureMethod = method;
+        if (method === 'draw' && canvasElement) {
+            uploadedSignature = null;
+            // Allow time for canvas to be available in the DOM
+            setTimeout(setupCanvas, 0);
+        }
+    }
+    
+    function removeUploadedImage() {
+        uploadedSignature = null;
     }
 </script>
 
@@ -119,31 +168,73 @@
         <h2>{title}</h2>
         
         <div class="name-input">
-        <label for="signer-name">Your Name:</label>
-        <input type="text" id="signer-name" bind:value={name} placeholder="Enter your name" />
+            <label for="signer-name">Your Name:</label>
+            <input type="text" id="signer-name" bind:value={name} placeholder="Enter your name" />
         </div>
         
-        <div class="signature-pad-container">
-        <p>Sign below:</p>
-        <canvas 
-            bind:this={canvasElement}
-            class="signature-pad"
-            on:mousedown={startDrawing}
-            on:mousemove={draw}
-            on:mouseup={stopDrawing}
-            on:mouseleave={stopDrawing}
-            on:touchstart={startDrawing}
-            on:touchmove={draw}
-            on:touchend={stopDrawing}
-            on:touchcancel={stopDrawing}
-        ></canvas>
-        
-        <button type="button" on:click={clearCanvas} class="clear-btn">Clear</button>
+        <div class="signature-method-toggle">
+            <button 
+                type="button"
+                class:active={signatureMethod === 'draw'} 
+                on:click={() => switchMethod('draw')}>
+                Draw Signature
+            </button>
+            <button 
+                type="button"
+                class:active={signatureMethod === 'upload'} 
+                on:click={() => switchMethod('upload')}>
+                Upload Signature
+            </button>
         </div>
+        
+        {#if signatureMethod === 'draw'}
+            <div class="signature-pad-container">
+                <p>Sign below:</p>
+                <canvas 
+                    bind:this={canvasElement}
+                    class="signature-pad"
+                    on:mousedown={startDrawing}
+                    on:mousemove={draw}
+                    on:mouseup={stopDrawing}
+                    on:mouseleave={stopDrawing}
+                    on:touchstart={startDrawing}
+                    on:touchmove={draw}
+                    on:touchend={stopDrawing}
+                    on:touchcancel={stopDrawing}
+                ></canvas>
+                
+                <button type="button" on:click={clearCanvas} class="clear-btn">Clear</button>
+            </div>
+        {:else}
+            <div class="signature-upload-container">
+                {#if uploadedSignature}
+                    <div class="preview-container">
+                        <p>Signature preview:</p>
+                        <img src={uploadedSignature} alt="Uploaded signature" class="signature-preview" />
+                        <button type="button" on:click={removeUploadedImage} class="clear-btn">Remove</button>
+                    </div>
+                {:else}
+                    <div class="upload-area">
+                        <p>Upload your signature image (PNG or JPG):</p>
+                        <label for="signature-upload" class="upload-label">
+                            <span>Select an image file</span>
+                            <small>(Transparent background recommended)</small>
+                        </label>
+                        <input 
+                            type="file" 
+                            id="signature-upload" 
+                            accept="image/png,image/jpeg,image/jpg" 
+                            on:change={handleImageUpload} 
+                            class="file-input"
+                        />
+                    </div>
+                {/if}
+            </div>
+        {/if}
         
         <div class="button-row">
-        <button type="button" on:click={cancel} class="cancel-btn">Cancel</button>
-        <button type="button" on:click={confirm} class="confirm-btn">OK</button>
+            <button type="button" on:click={cancel} class="cancel-btn">Cancel</button>
+            <button type="button" on:click={confirm} class="confirm-btn">OK</button>
         </div>
     </div>
 </div>
@@ -188,7 +279,30 @@
         border-radius: 4px;
     }
     
-    .signature-pad-container {
+    .signature-method-toggle {
+        display: flex;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid #ccc;
+    }
+    
+    .signature-method-toggle button {
+        flex: 1;
+        padding: 8px 0;
+        background-color: #f0f0f0;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .signature-method-toggle button.active {
+        background-color: #1A5A9E;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .signature-pad-container, 
+    .signature-upload-container {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -201,6 +315,53 @@
         height: 200px;
         background-color: white;
         touch-action: none;
+    }
+    
+    .upload-area {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .upload-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 2px dashed #ccc;
+        border-radius: 4px;
+        padding: 30px 15px;
+        cursor: pointer;
+        margin: 10px 0;
+        transition: background-color 0.2s;
+    }
+    
+    .upload-label:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .upload-label small {
+        color: #777;
+        margin-top: 5px;
+    }
+    
+    .file-input {
+        display: none;
+    }
+    
+    .preview-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .signature-preview {
+        max-width: 100%;
+        max-height: 200px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px 0;
+        background-color: white;
     }
     
     .clear-btn {
@@ -233,5 +394,10 @@
     .confirm-btn {
         background-color: #1A5A9E;
         color: white;
+    }
+    
+    p {
+        margin: 5px 0;
+        width: 100%;
     }
 </style>

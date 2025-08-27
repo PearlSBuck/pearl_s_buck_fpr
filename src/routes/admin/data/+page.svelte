@@ -20,6 +20,13 @@
   let selected: 'progress_report' | 'intro_sheet' = 'progress_report';
   let showModal = false;
 
+  $: if (selected === 'progress_report') {
+    // Clear all selections when on progress report tab
+    selectedRecords.set(new Set());
+    // Also reset selection mode
+    selectRecord = false;
+  }
+
   const setPageName:any = getContext('setPageName');
 
   onMount(() => {
@@ -31,6 +38,11 @@ $: {
   const tabParam = $page.url.searchParams.get('tab');
   if (tabParam === 'intro_sheet' || tabParam === 'progress_report') {
     selected = tabParam;
+    // If switching to progress report, clear selections AND reset selection mode
+    if (tabParam === 'progress_report') {
+      selectedRecords.set(new Set());
+      selectRecord = false;
+    }
   }
 }
 

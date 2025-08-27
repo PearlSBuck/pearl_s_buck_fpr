@@ -34,9 +34,16 @@ export function loadOfflineAnswers() {
     });
 }
 
-
-
-
+// Function to set child ID from URL - call this from a component's onMount
+export function setChildIdFromUrl() {
+    if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const childId = urlParams.get('childId');
+        if (childId) {
+            SCId.set(childId);
+        }
+    }
+}
 
 // 3. Clear answers manually or after submit
 export function clearAnswers() {
@@ -106,9 +113,8 @@ export async function submitAnswersToSupabase(formId: string, formType: 'FPR' | 
     } else {
         parentInsertPayload = {
             form_id: formId,
-            sc_name: scname,
+            child_id: scIdValue,     // Add the child ID from SCId store
             filled_out_by: filledOutByValue
-
         };
     }
 

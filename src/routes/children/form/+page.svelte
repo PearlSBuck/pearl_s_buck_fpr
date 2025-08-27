@@ -4,6 +4,7 @@
     import Header from '../../../components/Header.svelte';
 
     // Form fields
+    let child_id = ''; // New SCN field
     let child_name = '';
     let birthday = '';
     let gender = '';
@@ -79,6 +80,7 @@
 
     // Clear form fields
     function clearForm() {
+        child_id = ''; // Clear SCN field
         child_name = '';
         birthday = '';
         gender = '';
@@ -91,11 +93,62 @@
         duplicateWarningShown = false;
     }
 
+    // Validate SCN format
+    async function validateSCN(scn: string): Promise<boolean> {
+        // Check if SCN is empty
+        if (!scn.trim()) {
+            formErrors.child_id = 'SCN is required';
+            return false;
+        }
+
+        // Check if SCN is a positive integer
+        const scnNumber = parseInt(scn, 10);
+        if (isNaN(scnNumber) || scnNumber.toString() !== scn || scnNumber <= 0) {
+            formErrors.child_id = 'SCN must be a positive whole number';
+            return false;
+        }
+
+        // Check for leading zeros
+        if (scn.startsWith('0')) {
+            formErrors.child_id = 'SCN cannot start with zero';
+            return false;
+        }
+
+        // Check if SCN is already in use
+        try {
+            const { data, error } = await supabaseAdmin
+                .from('children')
+                .select('child_id')
+                .eq('child_id', scnNumber);
+                
+            if (error) {
+                console.error("Error checking SCN uniqueness:", error);
+                formErrors.child_id = 'Error validating SCN';
+                return false;
+            }
+            
+            if (data && data.length > 0) {
+                formErrors.child_id = 'This SCN is already in use';
+                return false;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error("Error in SCN validation:", error);
+            formErrors.child_id = 'Error validating SCN';
+            return false;
+        }
+    }
+
     // Validate the form
-    function validateForm(): boolean {
+    async function validateForm(): Promise<boolean> {
         formErrors = {};
         
-        // Check required fields
+        // Validate SCN first
+        const isScnValid = await validateSCN(child_id);
+        if (!isScnValid) return false;
+        
+        // Check other required fields
         if (!child_name.trim()) formErrors.child_name = 'Child name is required';
         if (!birthday) formErrors.birthday = 'Birthday is required';
         if (!gender) formErrors.gender = 'Gender is required';
@@ -152,7 +205,8 @@
         if (isSubmitting) return; // Prevent double submission
         
         // Validate form first
-        if (!validateForm()) {
+        const isValid = await validateForm();
+        if (!isValid) {
             window.alert("Please fill in all required fields correctly.");
             return;
         }
@@ -176,11 +230,12 @@
         }
         
         try {
-            // Create the child record
+            // Create the child record with SCN
             const { data, error } = await supabaseAdmin
                 .from('children')
                 .insert([
                     {
+                        child_id: parseInt(child_id, 10), // Convert to number
                         child_name,
                         birthday,
                         gender,
@@ -224,6 +279,25 @@
             <h1 class="text-2xl font-bold text-gray-800 mb-6">Add New Child</h1>
             
             <form on:submit|preventDefault={createChild} class="space-y-6">
+                <!-- SCN Field - Added at the top -->
+                <div>
+                    <label for="child_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        SCN (Sponsor Child Number) <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="child_id"
+                        bind:value={child_id}
+                        class="focus-gradient-input w-full"
+                        placeholder="Enter sponsor child number"
+                        class:border-red-500={formErrors.child_id}
+                        required
+                    />
+                    {#if formErrors.child_id}
+                        <p class="text-red-500 text-sm mt-1">{formErrors.child_id}</p>
+                    {/if}
+                </div>
+                
                 <!-- Personal Information -->
                 <div class="space-y-4">
                     <h2 class="text-xl font-semibold text-gray-700">Personal Information</h2>
