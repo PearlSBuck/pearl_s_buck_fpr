@@ -1,32 +1,26 @@
 <script lang="ts">
-    // +page.svelte - Enhanced form display component with version support and fixed slug handling
+    // +page.svelte - Enhanced form display component with offline caching/fallback
     import { page } from '$app/stores';
-    import { getContext, onMount } from 'svelte';
-    import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
+    import { onMount } from 'svelte';
+    // import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
+    import { formAnswers, loadOfflineAnswers, clearAnswers } from '$lib/stores/formAnswers';
+    import { saveToOfflineQueue, syncOfflineQueue } from '$lib/submissionService';
+    import Header from '../../../components/Header.svelte';
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
-    import {notification} from '$lib/stores/formEditor';
+    import { notification } from '$lib/stores/formEditor';
     import { isOnline } from '$lib/stores/online';
-	import DataInput from '../DataInput.svelte';
+    import DataInput from '../DataInput.svelte';
     import { filledOutBy, SCId } from '$lib/stores/formAnswers';
     import { getUserList } from '$lib/utils/userList';
 
-    /*
-    Variable Definitions:
-    data = object containing form data and sections
-    scname = string representing the name of the sponsored child
-    editModeData = object for temporary edits in edit mode
-    openDeletePopup = boolean to control the visibility of the delete confirmation popup
-    openSubmitForm = boolean to control the visibility of the submit confirmation popup
-    editMode = boolean to indicate if the form is in edit mode
-    isLoading = boolean to indicate if data is being loaded
-    error = string to hold any error messages
-    successMessage = string to hold success messages
-    userList = array of user objects for selection
-    */
-
+    // --- incoming server data (when online) ---
     export let data;
-    let scname = '';
+
+    // --- NEW: this is the effective data the UI uses (server or cached) ---
+    let clientData: any = data;
+
+    // edit/UI state (unchanged)
     let editModeData: any;
     let openDeletePopup = false;
     let openSubmitForm = false;
@@ -34,86 +28,152 @@
     let isLoading = false;
     let error: string | null = null;
     let successMessage: string | null = null;
-    let userList:[];
+    let userList: [];
     $: show = $notification.type !== null;
 
-    
+    $: if ($isOnline) {
+        syncOfflineQueue();
+    }
 
+    // Form data for editing (keep as-is; title won’t block offline)
+    let formTitle = data?.form?.title || '';
 
-    // Form data for editing
-    let formTitle = data.form?.title || '';
-    const setPageName:any = getContext('setPageName')
-    // Reactive stores
+    // --- OFFLINE CACHING HELPERS (NEW) ---
+    function cacheKeyFromContext() {
+        // Prefer the id from server data; fallback to last path segment
+        const idFromData = data?.form?.id;
+        let idFromUrl: string | undefined;
+        if (typeof window !== 'undefined') {
+            const segs = window.location.pathname.split('/').filter(Boolean);
+            idFromUrl = segs[segs.length - 1];
+        }
+        const id = idFromData ?? idFromUrl ?? 'unknown';
+        return `form-cache-${id}`;
+    }
+
+    function saveFormToCache(d: any) {
+        try {
+            const key = cacheKeyFromContext();
+            localStorage.setItem(key, JSON.stringify(d));
+        } catch (e) {
+            console.error('Failed to cache form data:', e);
+        }
+    }
+
+    function loadFormFromCache(): any | null {
+        try {
+            const key = cacheKeyFromContext();
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            console.error('Failed to read cached form data:', e);
+            return null;
+        }
+    }
+
+    // --- MOUNT: hydrate answers + users; then set clientData from server or cache ---
     onMount(() => {
-        setPageName('Form View',false,true)
         loadOfflineAnswers();
         fetchUsers();
+
+        // If we received server data, cache it for offline use.
+        if (data?.form) {
+            saveFormToCache(data);
+            clientData = data;
+            console.log("Cached data for offline use");
+        } else {
+            // No server data (likely offline reload) -> use cached copy if available
+            const cached = loadFormFromCache();
+            if (cached?.form) {
+                clientData = cached;
+                // optional heads-up
+                notification.set({ message: 'Loaded cached form for offline use', type: 'success' });
+                setTimeout(() => notification.set({ message: '', type: null }), 2000);
+            } else {
+                console.warn('No cached form found for offline reload.');
+            }
+        }
+
+        // Ensure the UI renders the effective data
+        displayedData.set(editMode ? editModeData : clientData);
     });
 
-    // Function to fetch users for the form
     async function fetchUsers() {
         const { users, error } = await getUserList();
         if (error) {
             console.error('Failed to fetch user list:', error);
         } else {
-            userList = users.map((user:any) => ({
-                label:user.username,
-                value:user.username
+            userList = users.map((user: any) => ({
+                label: user.username,
+                value: user.username
             }));
         }
     }
 
-
-
-    // changes the referenced fields and sections so that UI is reactive
-    // [NOTE to developer]: must implement a type for form data when everything is set in stone
+    // Make displayedData reactive to edit mode & clientData (use effective data)
     $: {
-    displayedData.set(editMode ? editModeData : data);
+        displayedData.set(editMode ? editModeData : clientData);
     }
-    // setter function for making displayedData reactive to temporary changes
+
+    // Toggle edit mode using the effective data
     export function setEditMode(value: boolean) {
         editMode = value;
-
         if (editMode) {
-        editModeData = cloneDeep(data);
+            editModeData = cloneDeep(clientData);
         } else {
-        editModeData = null;
+            editModeData = null;
         }
     }
 
-    // useful for form submission
-    // $: hasChanges = ($formDelta.fields.length > 0 || $formDelta.sections.length > 0);
-    async function printInputs(){
+    async function printInputs() {
         try {
-            //all required answers were submitted successfully
-            const missingFields = validateForm(data.form.sections)
-            if(missingFields.length === 0){
+            const sections = clientData?.form?.sections ?? [];
+            const missingFields = validateForm(sections);
+
+            if (missingFields.length === 0) {
                 console.log($formAnswers);
                 console.log($filledOutBy);
                 console.log($SCId);
-                const success = await submitAnswersToSupabase(data.form.id, 'FIS', scname);
-                if (success) {
-                    notification.set({ message: 'Successfully submitted form entry', type: 'success' });
-                    clearAnswers();
+
+                // Prepare the payload for submission
+                const formId = clientData?.form?.id;
+                const formType = 'FIS'; // Or 'FIS' depending on context
+                const scname = undefined; // Assuming scname is not used for FPR
+
+                const submissionPayload = {
+                    formId,
+                    formType,
+                    scname, // will be undefined for FPR
+                    answers: $formAnswers,
+                };
+
+                // 1. Always save the data to the offline queue first
+                saveToOfflineQueue(submissionPayload);
+
+                // 2. Then, attempt to sync the entire queue immediately if online
+                if ($isOnline) {
+                    await syncOfflineQueue();
+                    notification.set({ message: 'Form submitted successfully!', type: 'success' });
                 } else {
-                    notification.set({ message: 'Form submission failed', type: 'error' });
+                    notification.set({ message: 'Saved offline. Submitting when you reconnect.', type: 'info' });
                 }
-            } else{
+                
+                clearAnswers();
+            } else {
                 console.log($filledOutBy);
                 console.log($SCId);
                 notification.set({ message: `Fill out ${missingFields[0]}`, type: 'error' });
             }
 
             setTimeout(() => {
-            notification.set({ message: '', type: null });
-        }, 3000);
-        } catch(error){
+                notification.set({ message: '', type: null });
+            }, 3000);
+        } catch (error) {
             console.error(error);
+            notification.set({ message: 'An unexpected error occurred.', type: 'error' });
         }
-
     }
 
-    // Function to format the date
     function formatDate(dateString: string) {
         if (!dateString) return 'No date';
         try {
@@ -130,15 +190,12 @@
         }
     }
 
-    // Validate the form inputs
-    function validateForm(sections:any) {
-        const missingFields = [];
-
+    function validateForm(sections: any) {
+        const missingFields: string[] = [];
         for (const section of sections) {
-            for (const field of section.fields) {
+            for (const field of section.fields ?? []) {
                 if (field.required) {
                     const value = $formAnswers[field.id];
-
                     const isEmpty =
                         value === undefined || value === '' ||
                         (Array.isArray(value) && value.length === 0);
@@ -149,26 +206,20 @@
                 }
             }
         }
-        if (scname === '' ) {
-            missingFields.push('Enter Sponsored Child Name');
-        }
         console.log(missingFields);
         console.log($formAnswers);
-        // NOTE for QA: 
-        //  if you want to test wihtout having to validate, make this return false
         return missingFields;
     }
-// Clears the messages
+
     function clearMessages() {
         error = null;
         successMessage = null;
     }
-// Get the total number of fields in the form
-    function getTotalFieldsCount(): number {
-        if (!data.form?.sections) return 0;
-        return data.form.sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
-    }
 
+    function getTotalFieldsCount(): number {
+        const sections = clientData?.form?.sections ?? [];
+        return sections.reduce((acc: number, section: any) => acc + (section.fields?.length || 0), 0);
+    }
 </script>
 
 
@@ -178,7 +229,13 @@
    
 
 <div class="bg-[#F6F8FF] min-h-screen">
+    <!-- Header Section -->
 
+    <Header 
+        name={data.form?.title || 'Form View'} 
+        search={false} 
+        backButton={true} 
+    />
 
 <!-------------- ---------------------------->
     <!-- Main Content Container -->
@@ -246,35 +303,11 @@
                         <span>{successMessage}</span>
                     </div>
                 {/if}
-                    
+
                 <!-- Form Sections -->
                 {#if data.form.sections && data.form.sections.length > 0}
                     <div class="p-6 space-y-8">
                         {#if $displayedData?.form}
-
-                        <!-- Enter Sponsored Child Name
-                                - This is always included as it is required in the database
-                         -->
-                        <div class="bg-[#F6F8FF] my-5 max-w-4xl mx-auto rounded-lg shadow-lg overflow-hidden">
-                            <!-- Section Header -->
-                            <div class="bg-[#474C58] text-white px-6 py-4 flex flex-row">
-                                <h2 class="text-xl font-bold">Sponsored Child Name</h2>
-                            </div>
-                            <div class="mb-4">
-                            <h1 class="block font-bold text-gray-700 lg:text-lg md:text-base ml-6  mt-2 sm:text-sm">Enter Sponsored Child's Name <a class='text-red-400'> *</a></h1>
-                                <div class="p-6">
-                                    <div class="grid grid-cols-1 gap-6">
-                                        <input
-                                        class="border-0 border-b-2 border-gray-300 focus:border-indigo-600 focus:outline-none p-2 w-full"
-                                        type="text"
-                                        required
-                                        placeholder="Last Name, First Name M.I."
-                                        bind:value={scname}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         <div class="w-full max-w-4xl mx-auto">
                         {#each $displayedData.form.sections as section, sectionIndex}
                             <div class="bg-[#F6F8FF] my-5 rounded-lg shadow-lg overflow-hidden">
@@ -314,8 +347,8 @@
                                                                     delete updated[field.id];
                                                                 } else {
                                                                     updated[field.id] = value;
+                                                                    console.log(updated[field.id]);
                                                                 }
-
                                                                 return updated;
                                                             });
                                                         }}
@@ -432,6 +465,14 @@
             required={true}
             options = {userList}
             bind:value={$filledOutBy}
+        /><DataInput
+            type='text'
+            label="Sponsored Child's ID"
+            name="Sponsored Child's ID"
+            placeholder='Enter value...'
+            required={true}
+            
+            bind:value={$SCId}
         />
 		<!-- Buttons -->
 		<div class="flex flex-col sm:flex-row justify-center gap-2 mt-4">
@@ -443,19 +484,17 @@
 			</button>
 
 			<button
-				class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-				on:click={() => {
-                    if($isOnline){
-                        // Replace with your delete logic
-                        openSubmitForm = false;
-                        printInputs();
-                    } else{
-                        notification.set({ message: 'Error: Cannot submit form while offline.', type: 'error' });
-                    }
+                class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                on:click={() => {
+                    // We no longer need to check if we are online here.
+                    // The printInputs() function now handles both scenarios.
+                    openSubmitForm = false;
+                    printInputs();
                 }}
-			>
-				Submit
-			</button>
+            >
+                Submit
+            </button>
+
 		</div>
 	</div>
 </div>
