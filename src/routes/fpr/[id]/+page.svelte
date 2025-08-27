@@ -2,7 +2,9 @@
     // +page.svelte - Enhanced form display component with offline caching/fallback
     import { page } from '$app/stores';
     import { onMount } from 'svelte';
-    import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
+    // import { formAnswers, loadOfflineAnswers, clearAnswers, submitAnswersToSupabase } from '$lib/stores/formAnswers';
+    import { formAnswers, loadOfflineAnswers, clearAnswers } from '$lib/stores/formAnswers';
+    import { saveToOfflineQueue, syncOfflineQueue } from '$lib/submissionService';
     import Header from '../../../components/Header.svelte';
     import cloneDeep from 'lodash/cloneDeep';
     import { displayedData } from '$lib/stores/formEditor';
@@ -28,6 +30,10 @@
     let successMessage: string | null = null;
     let userList: [];
     $: show = $notification.type !== null;
+
+    $: if ($isOnline) {
+        syncOfflineQueue();
+    }
 
     // Form data for editing (keep as-is; title won’t block offline)
     let formTitle = data?.form?.title || '';
@@ -119,7 +125,6 @@
         }
     }
 
-    // Submit handler: use the effective data for id/sections
     async function printInputs() {
         try {
             const sections = clientData?.form?.sections ?? [];
@@ -130,15 +135,30 @@
                 console.log($filledOutBy);
                 console.log($SCId);
 
+                // Prepare the payload for submission
                 const formId = clientData?.form?.id;
-                const success = await submitAnswersToSupabase(formId, 'FPR');
+                const formType = 'FPR'; // Or 'FIS' depending on context
+                const scname = undefined; // Assuming scname is not used for FPR
 
-                if (success) {
-                    notification.set({ message: 'Successfully submitted form entry', type: 'success' });
-                    clearAnswers();
+                const submissionPayload = {
+                    formId,
+                    formType,
+                    scname, // will be undefined for FPR
+                    answers: $formAnswers,
+                };
+
+                // 1. Always save the data to the offline queue first
+                saveToOfflineQueue(submissionPayload);
+
+                // 2. Then, attempt to sync the entire queue immediately if online
+                if ($isOnline) {
+                    await syncOfflineQueue();
+                    notification.set({ message: 'Form submitted successfully!', type: 'success' });
                 } else {
-                    notification.set({ message: 'Form submission failed', type: 'error' });
+                    notification.set({ message: 'Saved offline. Submitting when you reconnect.', type: 'info' });
                 }
+                
+                clearAnswers();
             } else {
                 console.log($filledOutBy);
                 console.log($SCId);
@@ -150,6 +170,7 @@
             }, 3000);
         } catch (error) {
             console.error(error);
+            notification.set({ message: 'An unexpected error occurred.', type: 'error' });
         }
     }
 
@@ -463,19 +484,17 @@
 			</button>
 
 			<button
-				class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-				on:click={() => {
-                    if($isOnline){
-                        // Replace with your delete logic
-                        openSubmitForm = false;
-                        printInputs();
-                    } else{
-                        notification.set({ message: 'Error: Cannot submit form while offline.', type: 'error' });
-                    }
+                class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                on:click={() => {
+                    // We no longer need to check if we are online here.
+                    // The printInputs() function now handles both scenarios.
+                    openSubmitForm = false;
+                    printInputs();
                 }}
-			>
-				Submit
-			</button>
+            >
+                Submit
+            </button>
+
 		</div>
 	</div>
 </div>
