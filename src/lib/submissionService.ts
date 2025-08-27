@@ -1,40 +1,44 @@
 import { get } from 'svelte/store';
-import { filledOutBy, SCId } from '$lib/stores/formAnswers'; // Adjust this path
-import { supabaseAdmin } from '$lib/db';// Adjust this path
+import { filledOutBy, SCId } from '$lib/stores/formAnswers'; // Your original path
+import { supabaseAdmin } from '$lib/db'; // Your original path
 
 // The key to store our offline submissions in localStorage
 const OFFLINE_SUBMISSIONS_KEY = 'offlineSubmissions';
 
 /**
- * Defines the structure for the answers part of a form submission.
- */
-interface AnswersPayload {
-    [question_id: string]: any;
-}
-
-/**
  * Defines the full structure of a single form submission to be stored offline.
+ * NOTE: We now include filledOutBy and scId directly in this interface
+ * to ensure they are saved with the form data.
  */
 interface OfflineSubmission {
     formId: string;
     formType: 'FPR' | 'FIS';
     scname?: string;
-    answers: AnswersPayload;
-    timestamp: string; // ISO 8601 string
+    answers: { [question_id: string]: any; };
+    filledOutBy: string; // Stored from the Svelte store
+    scId: string;       // Stored from the Svelte store
+    timestamp: string;  // ISO 8601 string
 }
 
 /**
  * Saves a single form's payload to the offline queue in localStorage.
+ * This now also includes the filledOutBy and SCId values from the stores.
  * @param payload The complete form data to save.
  */
-export function saveToOfflineQueue(payload: Omit<OfflineSubmission, 'timestamp'>): void {
+export function saveToOfflineQueue(payload: Omit<OfflineSubmission, 'timestamp' | 'filledOutBy' | 'scId'>): void {
     try {
         const stored = localStorage.getItem(OFFLINE_SUBMISSIONS_KEY);
         // Explicitly type the queue as an array of OfflineSubmission
         const queue: OfflineSubmission[] = stored ? JSON.parse(stored) : [];
+
+        // Get the current values from the Svelte stores at the time of saving
+        const filledOutByValue = get(filledOutBy);
+        const scIdValue = get(SCId);
         
         queue.push({
             ...payload,
+            filledOutBy: filledOutByValue,
+            scId: scIdValue,
             timestamp: new Date().toISOString()
         });
 
@@ -47,16 +51,14 @@ export function saveToOfflineQueue(payload: Omit<OfflineSubmission, 'timestamp'>
 
 /**
  * Sends a single offline submission to Supabase.
+ * This now uses the values stored in the submission object itself, not the live stores.
  * @param submission The submission object retrieved from the offline queue.
  * @returns A promise that resolves to true on success, or rejects with an error.
  */
 async function sendToSupabase(submission: OfflineSubmission): Promise<boolean> {
-    const { formId, formType, scname, answers } = submission;
+    // We now get the values from the submission object, not the stores.
+    const { formId, formType, scname, answers, filledOutBy, scId } = submission;
     
-    // Get values from Svelte stores
-    const filledOutByValue = get(filledOutBy);
-    const scIdValue = get(SCId);
-
     // --- STEP 1: Prepare table names ---
     const parentTable = formType === 'FPR' ? 'fpr_answers' : 'fis_answers';
     const listTable = formType === 'FPR' ? 'fpr_answers_list' : 'fis_answers_list';
@@ -64,10 +66,13 @@ async function sendToSupabase(submission: OfflineSubmission): Promise<boolean> {
     // --- STEP 2: Prepare INSERT payload for parent row ---
     let parentInsertPayload: Record<string, any>;
     if (formType === 'FPR') {
-        parentInsertPayload = { form_id: formId, filled_out_by: filledOutByValue, sc_id: scIdValue, child_id: scIdValue };
+        // Use scId from the submission object
+        parentInsertPayload = { form_id: formId, filled_out_by: filledOutBy, sc_id: scId, child_id: scId };
         console.log(parentInsertPayload);
-    } else { // formType === 'FIS'
-        parentInsertPayload = { form_id: formId, sc_name: scname, filled_out_by: filledOutByValue };
+    } else if (formType === 'FIS'){ // formType === 'FIS'
+        // Use scId from the submission object
+        parentInsertPayload = { form_id: formId, filled_out_by: filledOutBy, child_id: scId};
+        console.log(parentInsertPayload);
     }
 
     // --- STEP 3: Insert parent row ---
