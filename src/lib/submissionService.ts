@@ -1,6 +1,8 @@
 import { get } from 'svelte/store';
 import { filledOutBy, SCId } from '$lib/stores/formAnswers'; // Your original path
 import { supabaseAdmin } from '$lib/db'; // Your original path
+import { notification } from '$lib/stores/formEditor';
+
 
 // The key to store our offline submissions in localStorage
 const OFFLINE_SUBMISSIONS_KEY = 'offlineSubmissions';
@@ -44,8 +46,13 @@ export function saveToOfflineQueue(payload: Omit<OfflineSubmission, 'timestamp' 
 
         localStorage.setItem(OFFLINE_SUBMISSIONS_KEY, JSON.stringify(queue));
         console.log('Form saved to offline queue.');
+        notification.set({ message: 'Form saved to offline queue!', type: 'success' });
+        setTimeout(() => notification.set({ message: '', type: null }), 2000);
+        
     } catch (e) {
         console.error('Failed to save to localStorage:', e);
+        notification.set({ message: 'Failed to save to localStorage.', type: 'error' });
+        setTimeout(() => notification.set({ message: '', type: null }), 2000);
     }
 }
 
@@ -143,9 +150,13 @@ export async function syncOfflineQueue(): Promise<void> {
         if (failedSubmissions.length === 0) {
             localStorage.removeItem(OFFLINE_SUBMISSIONS_KEY);
             console.log('All queued submissions successfully synced.');
+            notification.set({ message: 'Form submitted successfully!', type: 'success' });
+            setTimeout(() => notification.set({ message: '', type: null }), 2000);
         } else {
             localStorage.setItem(OFFLINE_SUBMISSIONS_KEY, JSON.stringify(failedSubmissions));
             console.warn(`${failedSubmissions.length} submissions failed to sync and will be retried later.`);
+            notification.set({ message: 'Submissions failed to sync and will be retried later.', type: 'error' });
+            setTimeout(() => notification.set({ message: '', type: null }), 2000);
         }
 
     } catch (e: any) {
