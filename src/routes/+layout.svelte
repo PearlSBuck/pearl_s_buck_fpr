@@ -1,3 +1,4 @@
+<!-- src/routes/+layout.svelte -->
 <script lang="ts">
 	import { setContext } from 'svelte';
 	import '../app.css';

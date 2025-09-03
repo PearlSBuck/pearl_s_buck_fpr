@@ -26,10 +26,10 @@ export function loadOfflineAnswers() {
             formAnswers.set({});
         }
     }
-    hasLoaded=true;
+    hasLoaded = true;
     formAnswers.subscribe((answers) => {
-        if(hasLoaded){
-        localStorage.setItem(OFFLINE_ANSWERS_KEY, JSON.stringify(answers));
+        if (hasLoaded) {
+            localStorage.setItem(OFFLINE_ANSWERS_KEY, JSON.stringify(answers));
         }
     });
 }
