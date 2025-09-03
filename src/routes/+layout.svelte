@@ -56,7 +56,7 @@
 		backButton = isBack;
 		
 		// Also update the context store
-		pageContextStore.set({C
+		pageContextStore.set({
 			title: name,
 			previous: isBack ? 'back' : ''
 		});
