@@ -171,6 +171,8 @@
                 console.log($SCId);
                 notification.set({ message: `Fill out ${missingFields[0]}`, type: 'error' });
             }
+        } catch {
+            
         }
     }
 
