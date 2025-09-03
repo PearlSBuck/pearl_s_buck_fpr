@@ -254,7 +254,7 @@
             
             alert('User created successfully!');
             clearForm();
-            goto('/users/edit');
+            goto('/admin/manage');
             
         } catch (error: any) {
             console.error('Error creating user:', error);
